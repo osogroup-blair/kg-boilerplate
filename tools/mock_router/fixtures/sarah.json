@@ -1,0 +1,32 @@
+[
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEntities", "contains": ["considering starting a software company"]},
+   "response": {"extracted_entities": [
+     {"name": "Sarah Chen", "entity_type_id": 1, "episode_indices": [0]},
+     {"name": "Michael Torres", "entity_type_id": 1, "episode_indices": [0]},
+     {"name": "Acme", "entity_type_id": 2, "episode_indices": [0]},
+     {"name": "Starting a software company", "entity_type_id": 3, "episode_indices": [0]}]}},
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEdges", "contains": ["considering starting a software company"]},
+   "response": {"edges": [
+     {"source_entity_name": "Sarah Chen", "target_entity_name": "Starting a software company", "relation_type": "CONSIDERING",
+      "fact": "Sarah Chen is considering starting a software company", "valid_at": null, "invalid_at": null, "episode_indices": [0]},
+     {"source_entity_name": "Sarah Chen", "target_entity_name": "Michael Torres", "relation_type": "KNOWS",
+      "fact": "Sarah Chen knows Michael Torres", "valid_at": null, "invalid_at": null, "episode_indices": [0]}]}},
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEntities", "contains": ["promoted to Engineering Manager"]},
+   "response": {"extracted_entities": [
+     {"name": "Sarah Chen", "entity_type_id": 1, "episode_indices": [0]},
+     {"name": "Acme", "entity_type_id": 2, "episode_indices": [0]}]}},
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEdges", "contains": ["promoted to Engineering Manager"]},
+   "response": {"edges": [
+     {"source_entity_name": "Sarah Chen", "target_entity_name": "Acme", "relation_type": "WORKS_AT",
+      "fact": "Sarah Chen is an Engineering Manager at Acme", "valid_at": "2024-06-01T00:00:00Z", "invalid_at": null, "episode_indices": [0]}]}},
+  {"when": {"alias": "oso/general", "schema_name": "EdgeDuplicate", "contains": ["Engineering Manager"]},
+   "response": {"duplicate_facts": [], "contradicted_facts": [0]}},
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEntities", "contains": ["joined Acme as a software engineer"]},
+   "response": {"extracted_entities": [
+     {"name": "Sarah Chen", "entity_type_id": 1, "episode_indices": [0]},
+     {"name": "Acme", "entity_type_id": 2, "episode_indices": [0]}]}},
+  {"when": {"alias": "oso/general", "schema_name": "ExtractedEdges", "contains": ["joined Acme as a software engineer"]},
+   "response": {"edges": [
+     {"source_entity_name": "Sarah Chen", "target_entity_name": "Acme", "relation_type": "WORKS_AT",
+      "fact": "Sarah Chen works at Acme as a software engineer", "valid_at": "2022-01-10T00:00:00Z", "invalid_at": null, "episode_indices": [0]}]}}
+]

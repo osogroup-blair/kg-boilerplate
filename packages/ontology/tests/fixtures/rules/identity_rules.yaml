@@ -1,0 +1,13 @@
+kind: identity_rules
+cases:
+  - name: a declared external id system passes
+    command: {kind: entity.create, entity_type: Person, name: Sarah, external_ids: [{system: hr, value: E-1}]}
+    expect: accept
+  - name: an undeclared system is rejected
+    command: {kind: entity.create, entity_type: Person, name: Sarah, external_ids: [{system: crm, value: 9}]}
+    expect: reject
+    codes: [unknown_external_id_system]
+  - name: a type keyed by external id needs one at creation
+    command: {kind: entity.create, entity_type: Organization, name: Acme}
+    expect: reject
+    codes: [external_id_required]

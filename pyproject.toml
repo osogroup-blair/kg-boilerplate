@@ -1,0 +1,202 @@
+[project]
+name = "kg-platform"
+version = "0.1.0"
+description = "Knowledge & Memory Platform (workspace root)"
+requires-python = "==3.12.*"
+dependencies = [
+  "kg-common", "kg-domain", "kg-obs", "kg-db", "kg-governance", "kg-modelgw", "kg-graph", "kg-ontology", "kg-knowledge", "kg-jobs", "kg-ingestion", "kg-api", "kg-worker", "kg-cli",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = ["packages/*", "apps/api", "apps/worker", "apps/cli"]
+exclude = ["spikes"]
+
+[tool.uv.sources]
+kg-common = { workspace = true }
+kg-domain = { workspace = true }
+kg-obs = { workspace = true }
+kg-db = { workspace = true }
+kg-governance = { workspace = true }
+kg-modelgw = { workspace = true }
+kg-graph = { workspace = true }
+kg-ontology = { workspace = true }
+kg-knowledge = { workspace = true }
+kg-jobs = { workspace = true }
+kg-ingestion = { workspace = true }
+kg-api = { workspace = true }
+kg-worker = { workspace = true }
+kg-cli = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+  "import-linter",
+  "types-PyYAML",
+  "asgi-lifespan",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+pythonpath = ["."]
+testpaths = ["packages", "apps", "tests", "tools/mock_router/tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+filterwarnings = [
+  "ignore:.*Support for class-based `config` is deprecated.*:DeprecationWarning",
+  "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+  "ignore:The HMAC key is.*:jwt.warnings.InsecureKeyLengthWarning",
+]
+markers = [
+  "unit: no external services",
+  "integration: needs the kg test stack (postgres, neo4j)",
+  "security: tenant-isolation / authz negative tests",
+  "contract: API or adapter contract tests",
+  "resilience: failure injection against real worker processes (make test-resilience; sets KG_RESILIENCE=1)",
+]
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+extend-exclude = ["spikes", "tools", "apps/admin"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
+ignore = ["B008", "S101", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S", "B"]
+"tests/**" = ["S", "B"]
+"tools/**" = ["S"]
+"scripts/**" = ["S"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = ["packages/common/src", "packages/domain/src", "packages/db/src", "packages/governance/src", "packages/graph/src", "packages/knowledge/src", "packages/jobs/src", "packages/ingestion/src", "packages/ontology/src", "packages/modelgw/src", "packages/observability/src", "apps/api/src", "apps/worker/src", "apps/cli/src"]
+explicit_package_bases = true
+namespace_packages = true
+exclude = ["/tests/"]
+
+[[tool.mypy.overrides]]
+module = ["graphiti_core.*", "tiktoken.*", "alembic.*", "prometheus_client.*", "opentelemetry.*"]
+ignore_missing_imports = true
+follow_untyped_imports = true
+
+[tool.importlinter]
+root_packages = ["kg_common", "kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion", "kg_api", "kg_worker", "kg_cli"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "layers: lower packages never import higher ones"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_common"]
+forbidden_modules = ["kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_domain depends only on kg_common"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_domain"]
+forbidden_modules = ["kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_obs depends only on kg_common"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_obs"]
+forbidden_modules = ["kg_domain", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_db depends on kg_common, kg_obs (and kg_domain for WorkspaceContext)"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_db"]
+forbidden_modules = ["kg_governance", "kg_modelgw", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_governance does not import adapters or apps"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_governance"]
+forbidden_modules = ["kg_modelgw", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_modelgw does not import graph or apps"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_modelgw"]
+forbidden_modules = ["kg_governance", "kg_graph", "kg_api", "kg_worker", "kg_cli", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_graph does not import governance, db or apps"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_graph"]
+forbidden_modules = ["kg_governance", "kg_db", "kg_knowledge", "kg_api", "kg_worker", "kg_cli"]
+
+[[tool.importlinter.contracts]]
+name = "nothing imports kg_api"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_common", "kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_ontology", "kg_knowledge", "kg_worker", "kg_cli"]
+forbidden_modules = ["kg_api"]
+
+[[tool.importlinter.contracts]]
+name = "graphiti_core only inside kg_graph"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_common", "kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion", "kg_api", "kg_worker", "kg_cli"]
+forbidden_modules = ["graphiti_core"]
+
+[[tool.importlinter.contracts]]
+name = "openai SDK only inside kg_modelgw and kg_graph"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_common", "kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion", "kg_api", "kg_worker", "kg_cli"]
+forbidden_modules = ["openai"]
+
+[[tool.importlinter.contracts]]
+name = "production code never imports tools or spikes"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_common", "kg_domain", "kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_ontology", "kg_knowledge", "kg_jobs", "kg_ingestion", "kg_api", "kg_worker", "kg_cli"]
+forbidden_modules = ["tools", "spikes"]
+
+[[tool.importlinter.contracts]]
+name = "kg_ontology is pure: no database, graph, model, framework or app imports"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_ontology"]
+forbidden_modules = ["kg_obs", "kg_db", "kg_governance", "kg_modelgw", "kg_graph", "kg_knowledge", "kg_api", "kg_worker", "kg_cli", "sqlalchemy", "neo4j", "httpx", "graphiti_core", "openai"]
+
+[[tool.importlinter.contracts]]
+name = "kg_knowledge does not import apps or the ledger"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_knowledge"]
+forbidden_modules = ["kg_api", "kg_worker", "kg_cli", "kg_ingestion"]
+
+[[tool.importlinter.contracts]]
+name = "kg_jobs (the generic outbox) depends only on kg_common, kg_db and kg_obs"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_jobs"]
+forbidden_modules = ["kg_domain", "kg_governance", "kg_modelgw", "kg_graph", "kg_ontology", "kg_knowledge", "kg_ingestion", "kg_api", "kg_worker", "kg_cli", "graphiti_core", "openai"]
+
+[[tool.importlinter.contracts]]
+name = "kg_ingestion has no graph, model or knowledge imports (P4 widens this explicitly)"
+type = "forbidden"
+allow_indirect_imports = true
+source_modules = ["kg_ingestion"]
+forbidden_modules = ["kg_graph", "kg_modelgw", "kg_knowledge", "kg_api", "kg_worker", "kg_cli", "graphiti_core", "openai"]

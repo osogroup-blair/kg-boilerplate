@@ -1,0 +1,46 @@
+{
+  "id": "AU-01",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_auth.py::test_au01_api_keys_hashed_prefixed_workspace_bound_and_revocable",
+      "test_auth.py::test_au01_jwt_short_lived_and_strict"
+    ],
+    "library": "PyJWT 2.15.1",
+    "key_format": "kgk_<8 prefix>_<43 secret>; store prefix + sha256(pepper||key)",
+    "jwt_alg": "HS256 (local) / RS256|ES256 (OIDC, JWKS, pinned)",
+    "jwt_ttl_s": 900,
+    "required_claims": [
+      "iss",
+      "aud",
+      "sub",
+      "iat",
+      "exp",
+      "workspace_id"
+    ],
+    "rejected": [
+      "tampered claims",
+      "alg=none",
+      "wrong key",
+      "wrong aud",
+      "missing workspace_id",
+      "expired",
+      "alg confusion"
+    ]
+  },
+  "notes": "DEV AUTH (DEC-03): platform-issued API keys (hashed with a server pepper, prefix stored and shown, constant-time compare, optional expiry, immediate revocation) bound to a workspace-scoped principal; optional 15-minute JWT from a local HS256 signer after key exchange. Library: PyJWT (small, pinned algorithms, required-claim enforcement) rather than authlib (an OAuth framework we do not need). OIDC path (documented, not built): verify RS256/ES256 via the IdP's JWKS with PyJWKClient, pin algorithms, require iss/aud/exp, and map a configured claim (or an IdP group -> workspace table) to workspace_id; the Principal shape is identical so no other code changes. Workspace ALWAYS comes from the key record/claim, never from a header or body. Sessions for the admin UI use the same JWT with kind=user.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

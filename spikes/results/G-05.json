@@ -1,0 +1,28 @@
+{
+  "id": "G-05",
+  "tag": "LIVE-DEFERRED",
+  "status": "deferred",
+  "evidence": {
+    "tests": [
+      "test_gateway_live.py::test_g05_chat_usage_and_request_id_round_trip",
+      "test_gateway_live.py::test_g05_embeddings_are_384",
+      "test_gateway_live.py::test_g05_local_only_never_sent",
+      "test_gateway_live.py::test_g05_oso_fast_rejects_json_schema",
+      "test_gateway_live.py::test_g05_structured_output_on_general"
+    ]
+  },
+  "notes": "",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

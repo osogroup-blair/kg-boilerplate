@@ -1,0 +1,40 @@
+{
+  "id": "GR-09",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_b.py::test_gr09_idempotency"
+    ],
+    "same_name_twice": {
+      "entities": 2,
+      "episodes": 2,
+      "edges": 1,
+      "chat_calls_first": 4,
+      "chat_calls_second": 3
+    },
+    "uuid_without_precreate_raises": "NodeNotFoundError",
+    "same_uuid_twice": {
+      "entities": 2,
+      "episodes": 1,
+      "edges": 1,
+      "edge_episodes": [
+        "31a1675b-83d0-5221-81e9-51dec86d9bfc"
+      ]
+    }
+  },
+  "notes": "Graphiti does NOT deduplicate episodes by name or content: re-adding creates a second Episodic node (entities and the identical-fact edge are deduplicated, but the edge's .episodes list grows). Re-adding with the SAME explicit uuid is idempotent (one Episodic node) - BUT add_episode(uuid=...) only CONTINUES an episode that already exists (NodeNotFoundError otherwise), so the worker must first save an EpisodicNode with the deterministic uuid (graphiti.nodes.episode.save) and then call add_episode(uuid=...). Decision (confirms ING-01): idempotency lives in the platform ledger keyed (workspace, source_key, stage); the worker derives uuid5(namespace, ledger key) so a retry reuses the same episode, and records the Graphiti episode uuid in the ledger before marking the stage done. A repeat add still costs LLM calls (see chat_calls_second), so the ledger must prevent needless replays rather than rely on Graphiti.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

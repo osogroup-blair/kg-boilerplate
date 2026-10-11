@@ -1,0 +1,38 @@
+{
+  "id": "G-03",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_gateway.py::test_g03_429_honours_retry_after_then_succeeds",
+      "test_gateway.py::test_g03_budget_exhaustion_does_not_trigger_fallback",
+      "test_gateway.py::test_g03_client_side_timeout_is_retryable",
+      "test_gateway.py::test_g03_exhausted_primary_falls_back_to_fallback_alias",
+      "test_gateway.py::test_g03_invalid_structured_output_is_its_own_error",
+      "test_gateway.py::test_g03_non_retryable_codes_are_attempted_once[authentication_error-config_terminal]",
+      "test_gateway.py::test_g03_non_retryable_codes_are_attempted_once[budget_exceeded-budget]",
+      "test_gateway.py::test_g03_non_retryable_codes_are_attempted_once[classification_not_permitted-policy_terminal]",
+      "test_gateway.py::test_g03_non_retryable_codes_are_attempted_once[model_not_found-config_terminal]",
+      "test_gateway.py::test_g03_non_retryable_codes_are_attempted_once[unsupported_capability-config_terminal]",
+      "test_gateway.py::test_g03_real_unsupported_capability_from_wrong_alias_is_not_retried",
+      "test_gateway.py::test_g03_retryable_codes_back_off_exponentially_and_are_bounded[provider_unavailable]",
+      "test_gateway.py::test_g03_retryable_codes_back_off_exponentially_and_are_bounded[routing_failed]",
+      "test_gateway.py::test_g03_retryable_codes_back_off_exponentially_and_are_bounded[timeout]",
+      "test_gateway.py::test_g03_retryable_codes_back_off_exponentially_and_are_bounded[unknown_provider_error]"
+    ]
+  },
+  "notes": "",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

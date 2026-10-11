@@ -1,0 +1,68 @@
+{
+  "id": "PV-03",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_pgvector.py::test_pv03_hnsw_recall_vs_exact_under_filters"
+    ],
+    "index_build_seconds": 103.1,
+    "selective_filter": "workspace + scope + status (~1% of 50k rows)",
+    "trials": 60,
+    "results": [
+      {
+        "label": "hnsw ef_search=40 (default), no iterative scan",
+        "recall@10_mean": 0.038,
+        "recall@10_min": 0.0,
+        "queries_returning_fewer_than_k": 60,
+        "p50_ms": 3.46,
+        "p95_ms": 8.61
+      },
+      {
+        "label": "hnsw ef_search=200, no iterative scan",
+        "recall@10_mean": 0.175,
+        "recall@10_min": 0.0,
+        "queries_returning_fewer_than_k": 60,
+        "p50_ms": 7.58,
+        "p95_ms": 23.3
+      },
+      {
+        "label": "hnsw iterative_scan=relaxed_order, max_scan_tuples=20000",
+        "recall@10_mean": 0.757,
+        "recall@10_min": 0.5,
+        "queries_returning_fewer_than_k": 0,
+        "p50_ms": 30.78,
+        "p95_ms": 82.86
+      },
+      {
+        "label": "hnsw iterative_scan=strict_order, max_scan_tuples=20000",
+        "recall@10_mean": 0.703,
+        "recall@10_min": 0.4,
+        "queries_returning_fewer_than_k": 0,
+        "p50_ms": 38.2,
+        "p95_ms": 952.05
+      },
+      {
+        "label": "exact scoped (btree + sort)",
+        "recall@10_mean": 1.0,
+        "p50_ms": 1.65,
+        "p95_ms": 3.14
+      }
+    ],
+    "planner_choice_with_both_indexes": "Limit  (cost=1686.17..1686.20 rows=10 width=24)\n  ->  Sort  (cost=1686.17..1687.23 rows=422 width=24)\n        Sort Key: ((embedding <=> '[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.30151135,0,0,0,0,0,0,-0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.30151135,0,0,0,0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.30151135,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]'::vector))\n        ->  Index Scan using memories_scope_idx on memories  (cost=0.29..1677.05 rows=422 width=24)\n              Index Cond: ((workspace_id = '0cb1e29c-658c-4a14-95e6-0af593bd04cf'::uuid) AND (scope_kind = 'workspace'::text) AND (status = 'active'::text))"
+  },
+  "notes": "Under a selective filter (1 workspace + 1 scope, ~450 of 50k rows) plain HNSW post-filters its ef_search candidates and returns far fewer true neighbours: mean recall@10 0.038 at ef_search=40; iterative scan (pgvector 0.8.x) recovers 0.703 (strict_order) but is still approximate and slower than the exact scoped sort (p50 1.65 ms). Decision (ADR-019 / DEC-08): MVP uses EXACT scoped search (btree-narrowed sort); ANN is deferred until a per-workspace evaluation shows size/latency need, and then only with iterative_scan on and recall re-measured per workspace. The planner with both indexes present: see planner_choice_with_both_indexes.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

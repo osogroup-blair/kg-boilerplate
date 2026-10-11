@@ -1,0 +1,86 @@
+# The blueprint's example ontology (06-reference/02 §A), extended for the platform:
+#  * identity.external_id_systems: strong identifiers that match deterministically (names never do, KGR-02)
+#  * fact_template: deterministic fact text for the graph (no LLM); '{role?: as {role}}' renders only when role is set
+#  * succession on WORKS_AT: a new employment ENDS the previous one at its valid_from (the old fact stays true history)
+#  * tests: scenarios that run at validation and publish time (ONT-06)
+ontology:
+  id: personal-knowledge
+  version: 1.0.0
+  mode: strict
+entity_types:
+  Person:
+    description: A human being
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+      aliases: [name]
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      birth_date: {type: date, required: false, sensitivity: restricted}
+  Organization:
+    description: A company or institution
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Topic:
+    description: A subject someone can consider or discuss
+    identity: {key: platform_uuid}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+relationship_types:
+  WORKS_AT:
+    description: Employment
+    source: Person
+    target: Organization
+    temporal: true
+    fact_template: "{source} works at {target}{role?: as {role}}"
+    attributes:
+      role: {type: string, required: false, max_length: 200}
+    rules:
+      - require_source
+      - preserve_valid_time
+      - kind: succession
+        params: {match: [source, target]}
+        tests:
+          - name: a later role at the same organization succeeds the earlier one
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2022-01-10}
+            command: {valid_from: 2024-06-01, source_system: hr, source_ref: evt_x}
+            expect: accept
+          - name: a role starting before an existing one is out of order
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2024-06-01}
+            command: {valid_from: 2022-01-10, source_system: hr, source_ref: evt_x}
+            expect: reject
+  CONSIDERING:
+    description: A person is weighing up a topic
+    source: Person
+    target: Topic
+    temporal: true
+    fact_template: "{source} is considering {target}"
+    rules:
+      - require_source
+      - require_review_if_inferred
+  KNOWS:
+    description: Acquaintance
+    source: Person
+    target: Person
+    temporal: true
+    fact_template: "{source} knows {target}"
+    rules: [require_source]
+context_profiles:
+  planning:
+    max_tokens: 1200
+    include: [current_facts, episodic, semantic, procedural, uncertainty]
+    evidence_required: true
+memory_policies:
+  default:
+    inferred_shared_procedural: review_required
+    archive_after_days: null

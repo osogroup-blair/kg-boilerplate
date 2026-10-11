@@ -1,0 +1,31 @@
+{
+  "id": "GR-04",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_a.py::test_gr04_namespacing_group_id"
+    ],
+    "scoped_search_isolated": true,
+    "unscoped_search_groups_returned": 4,
+    "get_by_uuid_is_group_unaware": true,
+    "none_group_maps_to_default_partition": true,
+    "group_id_charset": "^[a-zA-Z0-9_-]+$ (UUIDs with hyphens are valid)",
+    "create_database_error": "{neo4j_code: Neo.ClientError.Statement.UnsupportedAdministrationCommand} {message: Unsupported administration command: CREATE DATABASE tenant_probe} {gql_status",
+    "neo4j_driver_clone_is_noop": true
+  },
+  "notes": "Shared database + group_id property is the only option on Neo4j Community (CREATE DATABASE is unsupported; the driver's clone() is a no-op so group_id never selects a database). Isolation holds ONLY if every call passes group_ids: search() with group_ids=None, get_by_uuid and group_id=None (-> '') are NOT scoped. ADR-015: the graph adapter (packages/graph) must derive group_id from the authenticated workspace, refuse None/empty, always pass group_ids, and re-check group_id after any by-uuid fetch. Recommended mapping group_id = 'ws-<workspace uuid>'. Database-per-tenant needs Neo4j Enterprise (decision deferred to production: record in ADR-015).",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

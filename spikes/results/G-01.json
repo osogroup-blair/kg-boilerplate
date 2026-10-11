@@ -1,0 +1,27 @@
+{
+  "id": "G-01",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_gateway.py::test_g01_chat_round_trip_records_usage_and_metadata_only_log",
+      "test_gateway.py::test_g01_embeddings_round_trip",
+      "test_gateway.py::test_g01_json_schema_round_trip_is_typed",
+      "test_gateway.py::test_g01_request_carries_correlation_and_hashed_identity"
+    ]
+  },
+  "notes": "",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

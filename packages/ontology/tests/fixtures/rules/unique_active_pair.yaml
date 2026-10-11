@@ -1,0 +1,26 @@
+kind: unique_active_pair
+rel_rules: [unique_active_pair]
+cases:
+  - name: no existing fact for the pair
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: an overlapping fact for the same pair
+    given: {facts: [{id: f1, target: t, valid_from: 2019-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: reject
+    codes: [duplicate_active_pair]
+  - name: touching intervals do not overlap
+    given: {facts: [{id: f1, target: t, valid_from: 2019-01-01, valid_to: 2020-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: succession resolves the overlap first
+    rel_rules: [unique_active_pair, {kind: succession, params: {match: [source, target]}}]
+    given: {facts: [{id: f1, target: t, valid_from: 2019-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: accept
+    effects: [{fact: f1, valid_to: 2020-01-01}]
+  - name: queue_if(cardinality_violation) queues the clash
+    rel_rules: [unique_active_pair, {kind: queue_if, params: {when: cardinality_violation}}]
+    given: {facts: [{id: f1, target: t, valid_from: 2019-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: queue_review

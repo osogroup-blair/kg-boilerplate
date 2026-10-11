@@ -1,0 +1,28 @@
+[project]
+name = "kg-ingestion"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "cryptography==50.0.2",
+  "kg-common",
+  "kg-domain",
+  "kg-obs",
+  "kg-db",
+  "kg-governance",
+  "kg-jobs",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kg_ingestion"]
+
+[tool.uv.sources]
+kg-common = { workspace = true }
+kg-domain = { workspace = true }
+kg-obs = { workspace = true }
+kg-db = { workspace = true }
+kg-governance = { workspace = true }
+kg-jobs = { workspace = true }

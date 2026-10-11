@@ -1,0 +1,26 @@
+{
+  "id": "G-02",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_gateway.py::test_g02_denied_classifications_never_reach_the_transport[local_only]",
+      "test_gateway.py::test_g02_denied_classifications_never_reach_the_transport[top_secret]",
+      "test_gateway.py::test_g02_router_side_policy_error_is_policy_terminal_and_not_retried"
+    ]
+  },
+  "notes": "",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

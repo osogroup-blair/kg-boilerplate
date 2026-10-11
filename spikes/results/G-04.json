@@ -1,0 +1,28 @@
+{
+  "id": "G-04",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_gateway.py::test_g04_batched_order_is_preserved",
+      "test_gateway.py::test_g04_batches_inputs",
+      "test_gateway.py::test_g04_long_input_is_chunked_within_512_tokens_and_pooled",
+      "test_gateway.py::test_g04_prefixes_are_added_per_kind",
+      "test_gateway.py::test_g04_wrong_dimension_is_rejected"
+    ]
+  },
+  "notes": "",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

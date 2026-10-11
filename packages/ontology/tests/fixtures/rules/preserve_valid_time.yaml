@@ -1,0 +1,17 @@
+kind: preserve_valid_time
+rel_rules: [preserve_valid_time]
+cases:
+  - name: valid_from given
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: valid_from explicitly unknown
+    command: {valid_from_unknown: true}
+    expect: accept
+  - name: valid_from missing is never defaulted to now
+    command: {}
+    expect: reject
+    codes: [valid_from_required]
+  - name: the requirement can be switched off
+    rel_rules: [{kind: preserve_valid_time, params: {require_valid_from: false}}]
+    command: {}
+    expect: accept

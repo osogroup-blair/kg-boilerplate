@@ -1,0 +1,76 @@
+{
+  "id": "GR-03",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_a.py::test_gr03_ontology_compiler_dynamic_types"
+    ],
+    "compiled_entity_types": [
+      "Organization",
+      "Person",
+      "Topic"
+    ],
+    "compiled_edge_types": [
+      "CONSIDERING",
+      "KNOWS",
+      "WORKS_AT"
+    ],
+    "dropped_fields": {
+      "Person": [
+        "name"
+      ],
+      "Organization": [
+        "name"
+      ],
+      "Topic": [
+        "name"
+      ]
+    },
+    "entity_reserved_fields": [
+      "attributes",
+      "created_at",
+      "group_id",
+      "labels",
+      "name",
+      "name_embedding",
+      "summary",
+      "uuid"
+    ],
+    "person_json_schema": {
+      "description": "Person (compiled from ontology)",
+      "properties": {
+        "birth_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "birth_date of the Person",
+          "title": "Birth Date"
+        }
+      },
+      "title": "Person",
+      "type": "object"
+    }
+  },
+  "notes": "PASS with one required adaptation. create_model() builds types at runtime and Graphiti accepts them. The blueprint's own example ontology (Person.attributes.name) COLLIDES with the reserved EntityNode field 'name' and Graphiti raises EntityTypeValidationError. Compiler rule: 'name' is the node's own name, so it is not emitted (kept as the platform identity alias); any other reserved collision is a compile error for the author. All compiled fields are Optional so one missing attribute cannot fail an extraction; 'required' is enforced by the platform validator. Type/edge names are checked against ^[A-Za-z][A-Za-z0-9_]{0,63}$ and Graphiti's reserved labels/edges. The allowlisted-static-class fallback is NOT needed.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

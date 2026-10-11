@@ -1,0 +1,29 @@
+[project]
+name = "kg-graph"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "graphiti-core==0.30.2",
+  "neo4j==6.4.0",
+  "openai==3.29.0",
+  "httpx==0.28.1",
+  "kg-domain",
+  "kg-common",
+  "kg-obs",
+  "kg-modelgw",
+  "kg-ontology",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kg_graph"]
+
+[tool.uv.sources]
+kg-domain = { workspace = true }
+kg-common = { workspace = true }
+kg-obs = { workspace = true }
+kg-modelgw = { workspace = true }
+kg-ontology = { workspace = true }

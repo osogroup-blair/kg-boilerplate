@@ -1,0 +1,35 @@
+{
+  "id": "PV-01",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_pgvector.py::test_pv01_exact_scoped_search_prefilters_in_sql"
+    ],
+    "rows": 50000,
+    "workspaces": 20,
+    "queries": 200,
+    "exact_match_rate": 1.0,
+    "latency_ms": {
+      "p50": 8.99,
+      "p95": 63.25,
+      "max": 224.71
+    },
+    "results_per_query_avg": 10,
+    "plan": "Limit  (cost=2708.56..2708.59 rows=10 width=24)\n  ->  Sort  (cost=2708.56..2710.68 rows=848 width=24)\n        Sort Key: ((embedding <=> '[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.57735026,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.57735026,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.57735026,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]'::vector))\n        ->  Bitmap Heap Scan on memories  (cost=19.39..2690.24 rows=848 width=24)\n              Recheck Cond: ((workspace_id = '6513270e-269e-4d37-b2a7-4de452e6b438'::uuid) AND (scope_kind = ANY ('{workspace,subject:person_a}'::text[])) AND (status = 'active'::text))\n              ->  Bitmap Index Scan on memories_scope_idx  (cost=0.00..19.18 rows=848 width=0)\n                    Index Cond: ((workspace_id = '6513270e-269e-4d37-b2a7-4de452e6b438'::uuid) AND (scope_kind = ANY ('{workspace,subject:person_a}'::text[])) AND (status = 'active'::text))"
+  },
+  "notes": "Exact cosine search with workspace/scope/status predicates IN the SQL returned the brute-force top-10 for all 200 random scoped queries and never left scope. Baseline on 50k rows: p50 9.0 ms, p95 63.2 ms (btree on (workspace_id, scope_kind, status) narrows to ~1/100 of rows, then an exact sort). Confirms exact scoped search as the MVP default (DEC-08).",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

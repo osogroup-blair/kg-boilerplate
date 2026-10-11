@@ -1,0 +1,26 @@
+kind: strict_types
+cases:
+  - name: declared type and attribute pass
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {age: 40}}
+    expect: accept
+  - name: unknown entity type is rejected
+    command: {kind: entity.create, entity_type: Spaceship, name: X}
+    expect: reject
+    codes: [unknown_entity_type]
+  - name: unknown attribute is rejected in strict mode
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {shoe_size: 9}}
+    expect: reject
+    codes: [unknown_attribute]
+  - name: unknown attribute is only warned about in permissive mode
+    mode: permissive
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {shoe_size: 9}}
+    expect: accept
+    warn_codes: [unknown_attribute]
+  - name: name must be sent as the name, not as an attribute
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {name: Sarah}}
+    expect: reject
+    codes: [attribute_is_node_name]
+  - name: unknown relationship type
+    command: {rel_type: LOVES, valid_from: 2020-01-01}
+    expect: reject
+    codes: [unknown_relationship_type]

@@ -1,0 +1,34 @@
+{
+  "id": "GR-05",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_a.py::test_gr05_deterministic_writes_without_llm"
+    ],
+    "attributes_keys_injected_on_read": [
+      "source_uuid",
+      "target_uuid"
+    ],
+    "direct_save_chat_calls": 0,
+    "direct_save_embedding_calls": 3,
+    "add_triplet_first_chat_schemas": [],
+    "add_triplet_second_chat_schemas": [
+      "EdgeDuplicate"
+    ]
+  },
+  "notes": "EntityEdge.created_at is a REQUIRED constructor field (no default), so the caller always chooses the record time. Deterministic path = graphiti.nodes.entity.save + graphiti.edges.entity.save: ZERO chat calls (only embeddings, which a command write needs for search anyway). add_triplet is NOT LLM-free: it dedupes/contradiction-checks via the LLM whenever an edge between the nodes already exists (and for node resolution). Decision (ADR-016): P2 writes trusted commands with direct save through a platform projection writer that sets uuid/valid_at/created_at itself; it never calls add_triplet/add_episode. Supersession for commands is done by the writer (set invalid_at/expired_at on the previous edge), not by Graphiti. Quirk: an edge read back carries source_uuid/target_uuid inside .attributes; the projection reader must strip them before comparing attributes.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

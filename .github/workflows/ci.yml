@@ -1,0 +1,56 @@
+# Mirrors `make check`. Inert until the repository has a remote.
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      KG_REQUIRE_STACK: "1"
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: kg_admin_dev
+          KG_OWNER_PASSWORD: kg_owner_dev
+          KG_APP_PASSWORD: kg_app_dev
+        ports: ["5544:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 3s --health-retries 30
+      neo4j:
+        image: neo4j:5.26-community
+        env:
+          NEO4J_AUTH: neo4j/kg-neo4j-dev
+          NEO4J_PLUGINS: '["apoc"]'
+        ports: ["7688:7687"]
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p kg-neo4j-dev 'RETURN 1'" --health-interval 5s --health-retries 30 --health-start-period 20s
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create roles and databases (service containers cannot mount the init script)
+        run: |
+          export PGPASSWORD=kg_admin_dev
+          for i in $(seq 1 30); do pg_isready -h 127.0.0.1 -p 5544 -U postgres && break; sleep 2; done
+          KG_OWNER_PASSWORD=kg_owner_dev KG_APP_PASSWORD=kg_app_dev POSTGRES_USER=postgres \
+            bash -c 'sed "s#psql -v ON_ERROR_STOP=1#psql -h 127.0.0.1 -p 5544 -v ON_ERROR_STOP=1#" deploy/compose/postgres-init/01-roles.sh | bash'
+      - name: Mock router
+        run: docker compose -f deploy/compose/docker-compose.yml up -d --build --wait mock-router
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: make sync admin-install
+      - run: make check
+      - name: Clean-start demos (seed + demo-p1 + demo-p2 against the compose stack)
+        run: |
+          make up
+          make seed
+          make demo-p1
+          make demo-p2

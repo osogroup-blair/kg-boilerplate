@@ -1,0 +1,139 @@
+# ADR-011: pinned stack. Verified together by the Phase 0 offline checks (see docs/compatibility-report.md).
+# Python packages are locked exactly in spikes/uv.lock; production code (P1+) copies these pins into its own lock file.
+version: 1
+verified_on: "2026-10-11"
+host: "macOS (Apple silicon), Docker Desktop 28.4.0"
+runtime:
+  python: "3.12.15"          # uv-managed CPython; spikes/pyproject.toml requires ==3.12.*
+  uv: "0.13.0"
+services:
+  neo4j:
+    image: "neo4j:5.26-community"
+    digest: "neo4j@sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069"
+    server: "5.26.31"
+    edition: community       # no CREATE DATABASE (GR-04): tenancy is group_id on one database
+    plugins: {apoc: "5.26.31"}
+  postgres:
+    image: "pgvector/pgvector:pg17"
+    digest: "pgvector/pgvector@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d"
+    server: "17.11"
+    pgvector: "0.8.7"        # needed for hnsw.iterative_scan (>=0.8.0); MVP does not use HNSW (ADR-019)
+  mock_router_base_image:
+    image: "python:3.12-slim"
+    digest: "python@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"
+python_packages:
+  graphiti-core: "0.30.2"    # exact pin. Adapter boundary packages/graph from P1 because minors change APIs (see ADR-011)
+  neo4j: "6.4.0"             # Python driver
+  pydantic: "2.14.0"
+  pydantic-core: "2.50.0"
+  openai: "3.29.0"           # client only, pointed at the router; Graphiti uses OpenAIGenericClient (chat completions)
+  tiktoken: "0.14.0"
+  psycopg: "3.3.6"
+  pgvector: "0.5.1"          # python adapter
+  sqlalchemy: "2.1.4"
+  alembic: "1.20.0"
+  fastapi: "0.143.0"
+  starlette: "1.7.0"
+  uvicorn: "0.54.0"
+  httpx: "0.28.1"
+  pyjwt: "2.15.1"
+  cryptography: "50.0.2"
+  numpy: "2.5.4"
+  pyyaml: "6.0.3"
+  pytest: "9.1.1"
+  pytest-asyncio: "1.4.0"
+router:
+  name: "Oso Model Router"
+  api: "v1 (OpenAI-compatible chat completions + embeddings)"
+  seed_reference: "scripts/seed-logical-router.ts prices dated 2026-09-29"
+  embedding_model: {alias: "oso/embedding", model: "intfloat/multilingual-e5-small", dim: 384, max_input_tokens: 512}
+  status: "contract derived from source; live verification pending (make verify-router)"
+
+# Phase 1 additions (pinned at install time, 2026-10-11). Python versions are the exact ones in uv.lock; JS versions are the exact ones in apps/admin/package.json.
+# P1 database driver decision: psycopg async (the driver verified in Phase 0) rather than asyncpg.
+p1_additions:
+  python_packages:
+    pydantic-settings: "2.15.0"
+    structlog: "26.1.0"
+    prometheus-client: "0.26.0"
+    typer: "0.27.3"
+    opentelemetry-api: "1.45.1"
+    opentelemetry-sdk: "1.45.1"
+    opentelemetry-exporter-otlp-proto-http: "1.45.1"
+    pytest-cov: "7.1.0"
+    ruff: "0.17.0"
+    mypy: "2.4.0"
+    import-linter: "2.15"
+    types-pyyaml: "6.0.12.20260906"
+    asgi-lifespan: "2.1.0"
+    # hatchling: not in uv.lock
+  node:
+    runtime: "v20.19.5"
+    note: "React 18 / Vite 6 / Tailwind 3 / Vitest 3 / ESLint 9 / TypeScript 5.9 are deliberate: newer majors exist (React 19, Vite 8, Vitest 5, ESLint 10, TypeScript 7) but were not used for the first admin shell; revisit at P9."
+  admin_packages:
+    "@radix-ui/react-dialog": "1.2.0"
+    "@tanstack/react-query": "5.104.2"
+    "clsx": "2.1.1"
+    "lucide-react": "1.55.0"
+    "openapi-fetch": "0.13.8"
+    "react": "18.3.1"
+    "react-dom": "18.3.1"
+    "react-router-dom": "6.30.6"
+    "@eslint/js": "9.39.5"
+    "@playwright/test": "1.64.0"
+    "@testing-library/jest-dom": "6.9.1"
+    "@testing-library/react": "16.3.3"
+    "@testing-library/user-event": "14.6.7"
+    "@types/node": "20.19.43"
+    "@types/react": "18.3.31"
+    "@types/react-dom": "18.3.7"
+    "@vitejs/plugin-react": "4.7.0"
+    "autoprefixer": "10.6.1"
+    "eslint": "9.39.5"
+    "eslint-plugin-react-hooks": "5.2.0"
+    "globals": "17.13.0"
+    "jsdom": "26.1.0"
+    "openapi-typescript": "7.13.0"
+    "postcss": "8.5.29"
+    "tailwindcss": "3.4.19"
+    "typescript": "5.9.3"
+    "typescript-eslint": "8.71.1"
+    "vite": "6.4.4"
+    "vitest": "3.2.7"
+  services:
+    admin_dev_port: 5273   # 5173/5174 are taken by other projects on this machine
+
+# Phase 2 additions (2026-10-11). P2 added NO third-party Python or JavaScript packages: kg-ontology uses pydantic and pyyaml (already pinned above) and
+# kg-knowledge uses the existing database, graph and router packages. hypothesis was considered for the evaluator purity property tests and not used:
+# purity is asserted by a source scan plus determinism and no-mutation tests.
+p2_additions:
+  workspace_packages:
+    kg-ontology: "0.1.0"    # pure: spec, validator, diff, rule catalog; import-linter keeps it free of db/graph/http imports
+    kg-knowledge: "0.1.0"   # ontology service, command pipeline, reads, projector
+  python_packages: {}
+  admin_packages: {}
+  postgres_extensions:
+    pg_trgm: "1.6"          # an extension of the pinned pgvector/pg17 image, not a package: trigram index behind the entity directory search
+  migrations:
+    head: "0002_ontology_and_commands"
+  model_purposes:
+    graph_projection: "oso/embedding (embedding-only)"
+
+# Phase 3 additions (2026-10-11). P3 added NO third-party packages: kg-jobs uses sqlalchemy/structlog/prometheus (already pinned), and kg-ingestion's
+# encryption uses `cryptography` (pinned above at 50.0.2 since P1, now also a direct dependency of kg-ingestion). The admin console gained pages only.
+p3_additions:
+  workspace_packages:
+    kg-jobs: "0.1.0"        # the generic transactional outbox: enqueue, ops.* client, retry policy, dispatcher, test-only fault injection; import-linter keeps it free of domain, graph and model imports
+    kg-ingestion: "0.1.0"   # event envelope, AES-256-GCM payload cipher, idempotent acceptance, pipeline + orchestrator, normalize, replay/reconcile, key re-encryption
+  python_packages: {}       # cryptography==50.0.2 is already pinned (P1)
+  admin_packages: {}
+  migrations:
+    head: "0003_interactions_and_outbox"
+  postgres_functions:
+    ops: "claim_jobs, heartbeat_jobs, complete_job, release_jobs, cancel_job, backlog_stats, workspaces_with_pending_projection (P2)"
+  pipeline:
+    version: "p3.v1"        # pinned on every interaction and job (ONT-03); stages: normalize (enabled), graph_ingest (P4, disabled), memory_propose (P5, disabled)
+  encryption:
+    algorithm: "AES-256-GCM"
+    associated_data: "workspace_id|interaction_id|form"
+    keyring: "PAYLOAD_KEYS / PAYLOAD_ACTIVE_KID (production refuses the development key)"

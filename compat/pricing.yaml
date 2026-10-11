@@ -1,0 +1,31 @@
+# Local copy of the router price table, USD per million tokens. Used ONLY to ESTIMATE cost in the metadata-only call log.
+# The router response carries no cost; the authoritative cost is the router ledger.
+# Source: oso_model_router scripts/seed-logical-router.ts (DEPLOYMENTS, prices dated 2026-09-29). Re-copy after router changes.
+version: 1
+as_of: "2026-09-29"
+# The physical model is unknown to non-admin keys, so estimates use the alias's PRIMARY candidate (first in the chain).
+# This under-estimates when fallback fires; treat as a floor.
+alias_primary:
+  oso/fast: gpt-oss-20b
+  oso/general: gpt-oss-120b
+  oso/reasoning: kimi-k2-thinking
+  oso/code: qwen3-coder
+  oso/code-high: glm-5.2
+  oso/vision: gemma-4-26b
+  oso/general-vision: gemma-4-26b
+  oso/frontier: glm-5.2
+  oso/embedding: multilingual-e5
+prices:
+  gpt-oss-20b:            {input: 0.07,  output: 0.25}
+  gemma-4-26b:            {input: 0.15,  output: 0.6}
+  glm-5.2:                {input: 1.4,   output: 4.4}
+  kimi-k2-thinking:       {input: 0.6,   output: 2.5}
+  gpt-oss-120b:           {input: 0.09,  output: 0.36}
+  qwen3-235b:             {input: 0.22,  output: 0.88}
+  qwen3-coder:            {input: 0.22,  output: 1.8}
+  gemini-3.8-flash:       {input: 0.75,  output: 3.75}
+  gemini-3.5-flash:       {input: 1.5,   output: 9.0}
+  gemini-3.5-flash-lite:  {input: 0.3,   output: 2.5}
+  gemini-3.1-pro-preview: {input: 2.0,   output: 12.0}
+  claude-sonnet-5-5:      {input: 2.0,   output: 10.0}
+  multilingual-e5:        {input: 0.015, output: 0.0}

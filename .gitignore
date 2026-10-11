@@ -1,0 +1,17 @@
+.tools/
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.local/
+*.env
+spikes/results/live-*.json
+.DS_Store
+apps/admin/node_modules/
+apps/admin/dist/
+apps/admin/playwright-report/
+apps/admin/test-results/
+.coverage
+htmlcov/

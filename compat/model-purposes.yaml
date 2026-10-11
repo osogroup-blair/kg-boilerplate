@@ -1,0 +1,43 @@
+# Purpose -> router alias map (Phase 0 §2.3). The platform refers to PURPOSES, never models.
+# Status: PROVISIONAL until `make verify-router` has run (GR-12 / LV-04 / LV-09).
+# Source for alias and capability facts: oso_model_router scripts/seed-logical-router.ts (ALIASES, DEPLOYMENTS).
+version: 1
+status: provisional
+model_purposes:
+  graph_extraction:
+    alias: oso/general
+    requires: [structured_output]
+    fallback_alias: oso/code        # -> oso/structured once the router admin creates it (see docs/router-contract.md §9)
+    task_type: extraction
+  graph_extraction_small:
+    alias: oso/general              # NOT oso/fast: no structured_output-capable candidate (fails unsupported_capability)
+    requires: [structured_output]
+    task_type: extraction
+  memory_extraction:
+    alias: oso/general
+    requires: [structured_output]
+    task_type: extraction
+  graph_projection:
+    alias: oso/embedding            # embedding-only: deterministic command projections write nodes/edges directly and never call a chat model (ADR-016)
+    requires: []
+    task_type: embedding
+  context_compression:
+    alias: oso/fast                 # P6 'summarized' mode only; plain text output
+    requires: []
+    task_type: summarization
+  embedding:
+    alias: oso/embedding
+    dim: 384
+    max_input_tokens: 512           # model limit (e5-small); the router advertises 8192, which is the deployment figure
+    prefix:
+      query: "query: "
+      passage: "passage: "
+    embedding_model_id: intfloat/multilingual-e5-small
+    embedding_version: 1
+
+# Egress policy (SEC-06 / ING-06): which data classifications may be sent to the router at all.
+# `local_only` is never sent: the standard router setup has no local deployment and rejects it with data_policy_violation.
+egress:
+  allowed_classifications: [public, internal, confidential, restricted]
+  denied_classifications: [local_only]
+  on_denied: skipped_by_policy

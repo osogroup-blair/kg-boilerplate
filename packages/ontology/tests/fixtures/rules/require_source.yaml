@@ -1,0 +1,14 @@
+kind: require_source
+rel_rules: [require_source]
+cases:
+  - name: source system and reference present
+    command: {valid_from: 2020-01-01, source_system: hr, source_ref: evt_1}
+    expect: accept
+  - name: both missing
+    command: {valid_from: 2020-01-01}
+    expect: reject
+    codes: [source_required]
+  - name: a blank reference counts as missing
+    command: {valid_from: 2020-01-01, source_system: hr, source_ref: "  "}
+    expect: reject
+    codes: [source_required]

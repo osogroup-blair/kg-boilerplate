@@ -1,0 +1,39 @@
+{
+  "id": "GR-08",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_b.py::test_gr08_deletion_and_derivatives"
+    ],
+    "after_remove_evt_003": {
+      "nodes": [
+        "Acme",
+        "Sarah Chen"
+      ],
+      "episodes": [
+        "evt_001",
+        "evt_002"
+      ]
+    },
+    "summary_survives_on_shared_node": true,
+    "orphan_cleanup_cypher": "MATCH (n:Entity {group_id: $g}) WHERE NOT (n)<-[:MENTIONS]-(:Episodic) AND NOT (n)-[:RELATES_TO]-() WITH n LIMIT 1000 DETACH DELETE n RETURN count(n) AS removed",
+    "dangling_episode_ref_after_non_owner_removal": true,
+    "owner_removal_deletes_still_supported_edge": true,
+    "clear_data_scoped_to_group": true
+  },
+  "notes": "remove_episode deletes: the Episodic node, edges whose FIRST episode is the removed one, and entities mentioned by no other episode. It does NOT: rewrite summaries/attributes on surviving entities (derived text survives), prune the removed episode uuid from other edges' .episodes (dangling refs), or protect an edge that a later episode also supports when the owner is removed. Orphan entities created outside episodes are never cleaned (platform Cypher drafted). clear_data(driver, [group]) purges one tenant cleanly. P8 deletion therefore = remove_episode for each source episode + re-summarise or delete surviving entities that cite the subject + prune dangling refs + orphan sweep + verification query, not remove_episode alone.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

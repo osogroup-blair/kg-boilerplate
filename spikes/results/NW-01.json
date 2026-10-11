@@ -1,0 +1,42 @@
+{
+  "id": "NW-01",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_networking.py::test_nw01_container_to_host_loopback"
+    ],
+    "stub_bound_to": "127.0.0.1 (host only)",
+    "via_host_docker_internal": {
+      "ok": true,
+      "out": "200 {\"status\":\"ok\",\"stub\":true}"
+    },
+    "via_host_gateway_flag": {
+      "ok": true,
+      "out": "200 {\"status\":\"ok\",\"stub\":true}"
+    },
+    "via_container_loopback": {
+      "ok": false,
+      "out": "urllib.error.URLError: <urlopen error [Errno 111] Connection refused>"
+    },
+    "real_router_health_from_container": {
+      "ok": null,
+      "out": "router not running on this host"
+    },
+    "docker_context": "Docker Desktop for Mac"
+  },
+  "notes": "VERIFIED on macOS Docker Desktop: a container reaches a service bound ONLY to the host's 127.0.0.1 through http://host.docker.internal:<port> (Docker Desktop forwards it to host loopback). The real router's unauthenticated /health was NOT tested from a container because the router was not running during this run. DEFAULTS: OSO_ROUTER_BASE_URL=http://host.docker.internal:8780/v1 for containerised api/worker in dev; http://127.0.0.1:8780/v1 for host-run processes; add `extra_hosts: [\"host.docker.internal:host-gateway\"]` to compose so Linux CI resolves the name. Option (b) (router on 0.0.0.0) is NOT needed and widens exposure; option (c) (api/worker on the host) is the fallback if a Docker Desktop update changes the forwarding.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

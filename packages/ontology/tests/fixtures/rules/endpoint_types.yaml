@@ -1,0 +1,14 @@
+kind: endpoint_types
+cases:
+  - name: matching endpoints pass
+    command: {valid_from: 2020-01-01, source_system: hr, source_ref: r}
+    expect: accept
+  - name: a topic as employer is rejected
+    command: {valid_from: 2020-01-01, target: {type: Topic}}
+    expect: reject
+    codes: [disallowed_endpoint]
+  - name: queue_if(disallowed_endpoint) queues instead of rejecting
+    rel_rules: [{kind: queue_if, params: {when: disallowed_endpoint}}]
+    command: {valid_from: 2020-01-01, target: {type: Topic}}
+    expect: queue_review
+    codes: [disallowed_endpoint]

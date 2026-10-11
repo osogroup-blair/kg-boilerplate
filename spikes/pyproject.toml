@@ -1,0 +1,31 @@
+[project]
+name = "kg-spikes"
+version = "0.0.0"
+description = "Phase 0 compatibility spike (disposable). Not imported by P1."
+requires-python = "==3.12.*"
+dependencies = [
+  "graphiti-core",
+  "neo4j",
+  "psycopg[binary]",
+  "pgvector",
+  "sqlalchemy",
+  "alembic",
+  "pydantic>=2",
+  "openai",
+  "tiktoken",
+  "httpx",
+  "pyjwt[crypto]",
+  "fastapi",
+  "uvicorn",
+  "pytest",
+  "pytest-asyncio",
+  "pyyaml",
+  "numpy",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-p results_plugin"
+pythonpath = [".", "..", "../packages/common/src"]
+testpaths = ["../tools/mock_router/tests", "gateway", "graphiti", "pgvector_checks", "tokenizer", "auth", "networking"]
+markers = ["offline: runs against local containers and the mock router", "live: needs the real router"]

@@ -1,0 +1,38 @@
+{
+  "id": "PV-04",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_pgvector.py::test_pv04_embedding_versioning"
+    ],
+    "columns": [
+      "id",
+      "workspace_id",
+      "scope_kind",
+      "status",
+      "content",
+      "embedding",
+      "embedding_model_id",
+      "embedding_dim",
+      "embedding_version",
+      "embedding_next"
+    ],
+    "wrong_dimension_insert_rejected": true,
+    "mixed_versions_filterable": true
+  },
+  "notes": "Every vector row carries embedding_model_id, embedding_dim and embedding_version, with CHECK (vector_dims(embedding) = embedding_dim); a wrong-sized insert fails. Re-embed paths. (A) SAME dimension, new model: write new vectors with embedding_version = N+1 in batches (worker, resumable via the ledger), keep reads pinned to `embedding_version = <current>` from config, flip the config value when coverage is 100%, then delete old versions; a query never compares vectors from different versions. (B) DIFFERENT dimension: ADD COLUMN embedding_next vector(NEW_DIM), backfill, build the index/ANALYZE, then in ONE migration rename embedding_next -> embedding (and old -> embedding_prev), update embedding_dim default and the CHECK; drop embedding_prev after a soak. Graphiti keeps its own name/fact embeddings in Neo4j; changing the router's embedding model therefore ALSO requires re-embedding the graph (re-save nodes/edges through the namespace API) - plan that as one 'embedding generation' change, tracked in the ledger.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

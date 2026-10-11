@@ -1,0 +1,62 @@
+{
+  "id": "GR-02",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_a.py::test_gr02_default_openai_client_needs_responses_api",
+      "test_graphiti_a.py::test_gr02_wire_format_chat_completions_only"
+    ],
+    "endpoints": [
+      "/v1/chat/completions",
+      "/v1/embeddings"
+    ],
+    "chat_body_fields": [
+      "max_tokens",
+      "messages",
+      "model",
+      "response_format",
+      "temperature"
+    ],
+    "embedding_body_fields": [
+      "encoding_format",
+      "input",
+      "model"
+    ],
+    "response_format_types": [
+      "json_schema"
+    ],
+    "schema_names_seen": [
+      "EdgeDuplicate",
+      "ExtractedEdges",
+      "ExtractedEntities",
+      "Person",
+      "WORKS_AT"
+    ],
+    "strict_sent": false,
+    "embedding_fields_stripped_by_router": [
+      "encoding_format"
+    ],
+    "chat_calls_for_2_episodes": 9,
+    "embedding_calls_for_2_episodes": 13,
+    "default_client_paths": [
+      "/v1/responses",
+      "/v1/responses",
+      "/v1/responses"
+    ]
+  },
+  "notes": "OpenAIGenericClient posts only to /v1/chat/completions with {model,messages,temperature,max_tokens,response_format}; all are kept by the router's zod schema. response_format is json_schema WITHOUT strict. The embedder posts /v1/embeddings (the SDK adds encoding_format, which the router strips). Result: the generic client is router-compatible as is. Graphiti's default OpenAIClient calls /v1/responses -> 404 on the router. Decision: always construct OpenAIGenericClient (json_schema mode). Wrap it in an adapter that keeps this invariant under test.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

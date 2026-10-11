@@ -1,0 +1,51 @@
+ontology:
+  id: personal-knowledge
+  version: 1.0.0
+  mode: strict
+entity_types:
+  Person:
+    identity:
+      key: platform_uuid
+      aliases: [name]
+    attributes:
+      name: {type: string, required: true}
+      birth_date: {type: date, required: false, sensitivity: restricted}
+  Organization:
+    identity: {key: platform_uuid}
+    attributes:
+      name: {type: string, required: true}
+  Topic:
+    identity: {key: platform_uuid}
+    attributes:
+      name: {type: string, required: true}
+relationship_types:
+  WORKS_AT:
+    source: Person
+    target: Organization
+    temporal: true
+    attributes:
+      role: {type: string, required: false}
+    rules:
+      - require_source
+      - preserve_valid_time
+  CONSIDERING:
+    source: Person
+    target: Topic
+    temporal: true
+    rules:
+      - require_source
+      - require_review_if_inferred
+  KNOWS:
+    source: Person
+    target: Person
+    temporal: true
+    rules: [require_source]
+context_profiles:
+  planning:
+    max_tokens: 1200
+    include: [current_facts, episodic, semantic, procedural, uncertainty]
+    evidence_required: true
+memory_policies:
+  default:
+    inferred_shared_procedural: review_required
+    archive_after_days: null

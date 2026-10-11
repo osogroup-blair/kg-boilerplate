@@ -1,0 +1,120 @@
+{
+  "version": "0.1.0",
+  "files": [
+    {
+      "path": "00-overview/01-platform-brief.md",
+      "bytes": 4215,
+      "sha256": "fb19caa66e80f274fb29a2a6eb45ccae2661910a61399f109dfdf16609b4c070"
+    },
+    {
+      "path": "00-overview/02-capability-map.md",
+      "bytes": 3688,
+      "sha256": "aa0df33ac08382733c61e662134dba131d1a032d07a239dff29a3eb3c69746de"
+    },
+    {
+      "path": "01-architecture/01-system-context.md",
+      "bytes": 3076,
+      "sha256": "f5c5223f83b31de1a72c8fbae0ae85b863a7bca17dda8505308d2254ef842266"
+    },
+    {
+      "path": "01-architecture/02-components-and-data-ownership.md",
+      "bytes": 3994,
+      "sha256": "53ff6d1441a6bdb45acb451a4c7af11a10330af9af36826a5b228881a50c12fc"
+    },
+    {
+      "path": "01-architecture/03-end-to-end-flows.md",
+      "bytes": 3587,
+      "sha256": "085b7a1913d03603f5a360ff181fbb8ce12d36c622309ba3285f19e230063eae"
+    },
+    {
+      "path": "02-domain/01-ontology-and-rules.md",
+      "bytes": 4800,
+      "sha256": "30e475dd5a415ff8420e949409bbd72f6cfb90b4b48fa39e7876ba0b28eac561"
+    },
+    {
+      "path": "02-domain/02-temporal-graph.md",
+      "bytes": 4197,
+      "sha256": "4346ca8e0f94464e445157f3374cb0d751f6b2fb818759463e722f2a2ffc6ef3"
+    },
+    {
+      "path": "02-domain/03-events-episodes-and-provenance.md",
+      "bytes": 4040,
+      "sha256": "d8b8bbd4b3806fc62deb7ffdf24aa3fc78866c044ea82e7daba80dc6e7c5a468"
+    },
+    {
+      "path": "02-domain/04-memory-model-and-lifecycle.md",
+      "bytes": 5718,
+      "sha256": "debabd7145bef3fce943e1074d630bcde7e4fa1cb9db0e88d220249dcafd1db0"
+    },
+    {
+      "path": "02-domain/05-context-package.md",
+      "bytes": 4188,
+      "sha256": "1a7b0e49ef61f32fe32ec641148e7c82875c0fad7e4f6b09f88cf5a66d0d2c37"
+    },
+    {
+      "path": "03-runtime/01-service-contracts.md",
+      "bytes": 4446,
+      "sha256": "f61a113c5d82881c062d478a70ffff4a9156b73daa586365e974f612e4155923"
+    },
+    {
+      "path": "03-runtime/02-ingestion-and-knowledge-quality.md",
+      "bytes": 3918,
+      "sha256": "a6d03c1f8b0ced16382e514ca3c33827a9d8ef697de5830390047c55c8ef270e"
+    },
+    {
+      "path": "03-runtime/03-retrieval-ranking-and-compression.md",
+      "bytes": 4485,
+      "sha256": "abcd531fc56b3ed6ad6a18f3afc535c33872afa8519b1276b9839691eb2ffb17"
+    },
+    {
+      "path": "03-runtime/04-agent-integration.md",
+      "bytes": 3508,
+      "sha256": "607ec415045aeca73ee8813cb42b869fb1cc29f4a2c13a3a09946e6d9b24fd6d"
+    },
+    {
+      "path": "03-runtime/05-observability-and-operations.md",
+      "bytes": 3592,
+      "sha256": "9095aa76c724d1440e19127d05770c1b87f15c6f86ec563cd99fb66367d63e5f"
+    },
+    {
+      "path": "04-administration/01-admin-console.md",
+      "bytes": 4871,
+      "sha256": "060dd93d88627210ae7c9845a5b90703f617e24913e6b1ceb886d07682c5f92d"
+    },
+    {
+      "path": "04-administration/02-security-governance-and-privacy.md",
+      "bytes": 4838,
+      "sha256": "ce60f2c2b961dbd30d75f2310f39d9cb62c06bda667b78a697630c2cb839f746"
+    },
+    {
+      "path": "05-delivery/01-implementation-slices.md",
+      "bytes": 5597,
+      "sha256": "2748e0ad1b7cdd58e99f84c9e8c9a4b1781f47c83cd830a121dea6c811b9fad5"
+    },
+    {
+      "path": "05-delivery/02-acceptance-and-evaluations.md",
+      "bytes": 4850,
+      "sha256": "ed87be40d00699e5c3c05ba605a90feba28363a85c308faebbe7f9eec02b1362"
+    },
+    {
+      "path": "05-delivery/03-decisions-assumptions-and-risks.md",
+      "bytes": 5590,
+      "sha256": "0ea2762d66d66d0f55d47f5822d7215df26a7c809f181e81ca5855584f522784"
+    },
+    {
+      "path": "06-reference/01-sarah-end-to-end.md",
+      "bytes": 5167,
+      "sha256": "e4a4c2f67125105b3e5bb8e40ca8d05e2601c00c74116fdfc605e80f8540cc44"
+    },
+    {
+      "path": "06-reference/02-example-config-and-payloads.md",
+      "bytes": 5914,
+      "sha256": "0023df7460f9af7dceaabe8494752f3adb6bde680e2754f60a3de238e7f46e7a"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8089,
+      "sha256": "a5dedb081e0ed1e6d7e5b626cd83bf48bf172c527711749cbb07829ff8ed2f17"
+    }
+  ]
+}

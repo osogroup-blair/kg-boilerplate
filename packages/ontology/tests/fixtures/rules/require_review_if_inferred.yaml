@@ -1,0 +1,14 @@
+kind: require_review_if_inferred
+rel_rules: [require_review_if_inferred]
+cases:
+  - name: a command-sourced fact passes
+    command: {valid_from: 2020-01-01, source_type: command}
+    expect: accept
+  - name: an inferred fact goes to review
+    command: {valid_from: 2020-01-01, source_type: inferred}
+    expect: queue_review
+    codes: [inferred_requires_review]
+  - name: the action can be raised to reject
+    rel_rules: [{kind: require_review_if_inferred, action: reject}]
+    command: {valid_from: 2020-01-01, source_type: inferred}
+    expect: reject

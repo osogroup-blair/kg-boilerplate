@@ -1,0 +1,13 @@
+kind: classification_allowed
+cases:
+  - name: an allowed classification passes
+    command: {kind: entity.create, entity_type: Person, name: Sarah, classification: confidential}
+    expect: accept
+  - name: local_only is not allowed for Person in the fixture ontology
+    command: {kind: entity.create, entity_type: Person, name: Sarah, classification: local_only}
+    expect: reject
+    codes: [classification_not_allowed]
+  - name: a fact must be allowed by both endpoint types
+    command: {valid_from: 2020-01-01, classification: local_only}
+    expect: reject
+    codes: [classification_not_allowed]

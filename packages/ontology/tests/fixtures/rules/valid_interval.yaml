@@ -1,0 +1,36 @@
+kind: valid_interval
+cases:
+  - name: an ordered interval passes
+    command: {valid_from: 2020-01-01, valid_to: 2021-01-01}
+    expect: accept
+  - name: valid_from after valid_to
+    command: {valid_from: 2022-01-01, valid_to: 2021-01-01}
+    expect: reject
+    codes: [invalid_interval]
+  - name: a date before 1900 is out of range
+    command: {valid_from: 1800-01-01}
+    expect: reject
+    codes: [date_out_of_range]
+  - name: valid time on a non-temporal relationship type
+    command: {rel_type: KNOWS_NO_TIME, valid_from: 2020-01-01}
+    expect: reject
+    codes: [not_temporal]
+  - name: ending an open fact after it began passes
+    command: {kind: relationship.end, valid_to: 2023-01-01, fact: {id: f1, valid_from: 2020-01-01}}
+    expect: accept
+  - name: ending needs a valid_to
+    command: {kind: relationship.end, fact: {id: f1, valid_from: 2020-01-01}}
+    expect: reject
+    codes: [valid_to_required]
+  - name: ending a fact that already ended
+    command: {kind: relationship.end, valid_to: 2023-01-01, fact: {id: f1, valid_from: 2020-01-01, valid_to: 2022-01-01}}
+    expect: reject
+    codes: [already_ended]
+  - name: ending before the fact began
+    command: {kind: relationship.end, valid_to: 2019-01-01, fact: {id: f1, valid_from: 2020-01-01}}
+    expect: reject
+    codes: [invalid_interval]
+  - name: ending a fact that is no longer active
+    command: {kind: relationship.end, valid_to: 2023-01-01, fact: {id: f1, valid_from: 2020-01-01, status: superseded}}
+    expect: reject
+    codes: [fact_not_active]

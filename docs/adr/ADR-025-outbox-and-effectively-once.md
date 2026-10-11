@@ -1,0 +1,24 @@
+# ADR-025: Transactional outbox, leases, fencing and the effectively-once contract
+
+**Status:** Accepted  **Decision refs:** ADR-012 (error categories), ADR-019 (RLS pattern), ADR-021 (state-based projection); blueprint `03-runtime/05`  **Evidence:** `tests/integration/test_db_p3.py`, `packages/jobs/tests`, `tests/resilience` (FI-01..08), demo-p3 steps 5–7
+
+## Context
+Interactions must be processed asynchronously and never lost, and the P2 graph projection (a polling sweeper) must move onto the same mechanism. Neither a broker nor LISTEN/NOTIFY is justified at MVP scale (`03-runtime/05`).
+
+## Decision
+1. **The outbox is a Postgres table written in the caller's transaction** (`kg_jobs.enqueue`). A job exists if and only if the state change that needs it committed. `ON CONFLICT (workspace_id, dedupe_key) DO NOTHING` makes enqueue idempotent; dedupe keys carry a **generation** (`interaction:{id}:{stage}:g{n}`, `command:{id}:graph_projection:g{n}`), which only an audited replay or retry increments.
+2. **The generic outbox lives in `kg_jobs`,** not in `kg_ingestion`, because commands (`kg_knowledge`) also enqueue jobs and `kg_knowledge → kg_ingestion` would be the wrong dependency.
+3. **All state changes go through `SECURITY DEFINER` functions** owned by `kg_owner` (BYPASSRLS), with a pinned `search_path` and `EXECUTE` granted to `kg_app` only: `ops.claim_jobs`, `heartbeat_jobs`, `complete_job`, `release_jobs`, `cancel_job`, `backlog_stats`. They return routing metadata only (ids, stage, attempt, lease token, pinned versions), never payloads. `kg_app` has no UPDATE grant on `outbox_jobs`. All handler work runs in a per-workspace tenant session.
+4. **Claim:** `FOR UPDATE SKIP LOCKED`, ordered by `(priority, available_at, id)`; a pending job whose time has come, or a leased job whose lease **expired** (a reclaim), is claimable; each claim increments `attempts`, issues a new `lease_token` and opens a `job_attempts` row (closing a reclaimed attempt as `lease_expired`). **`concurrency_key`** serialises jobs that must not run in parallel (P4's Graphiti episodes per workspace): a transaction-scoped advisory lock closes the race between two claimers that both see "no live lease".
+5. **Complete is fenced.** A completion whose token no longer matches (someone reclaimed the job) answers `stale` and changes nothing. A worker that loses its lease is told by the heartbeat (`heartbeat_jobs` returns the tokens it lost) and cancels the handler cooperatively; its late ack is harmless either way.
+6. **Delivery is at-least-once; handlers are idempotent; the result is effectively-once.** A handler (a) does side effects idempotently (deterministic keys or state-based writes), (b) writes the stage result **and** advances the pipeline in one tenant transaction, (c) returns, and the dispatcher acks. A crash between (b) and (c) re-runs the job; (b) finds the stage terminal at this generation and is a no-op. There is a test per handler and a failure-injection scenario per crash point.
+7. **Retry policy by error category** (ADR-012 semantics): retryable → backoff with full jitter (a Retry-After wins); policy-terminal → `skipped` (stage `skipped_by_policy`); config-terminal → `dead`; budget → pause 15 min **without consuming an attempt**; attempts exhausted → `dead`; unexpected exception → retryable, message dropped (it can echo content). A job claimed again after exceeding `max_attempts` through crashes is dead-lettered **without running the handler**.
+8. **Time is the database's** (N2): leases, `available_at` and backoff are computed inside SQL from durations the dispatcher passes; the worker never compares host time with DB time.
+9. **Visibility:** `job_attempts` (append-only), the per-stage rows, the Operations page, `ops.backlog_stats` feeding global gauges (no identifiers in labels), and one log line per job (`job_id, stage, attempt, outcome, duration_ms, pipeline_version, ontology_version_id, correlation_id`, never content).
+10. **Failure injection is test-only:** `KG_FAULTS` (`stage:point:count`, plus `stage:stall:count:seconds`) with a file-backed counter so "crash N times" survives restarts. Production configuration validation refuses `KG_FAULTS` and `KG_FAULTS_DIR`.
+
+## Consequences
+- Polling costs a little Postgres load: a partial index on claimable rows, adaptive polling (0.2 s busy, 2 s idle) and `SKIP LOCKED` keep it small; P9 measures it. LISTEN/NOTIFY is a later option.
+- A long handler needs heartbeats (lease/3) and tolerates a lost lease; the lease default is 30 s (10 s in the dev compose so a killed worker's jobs resume quickly).
+- A dead-lettered job is history; an operator retry creates the next-generation job, so the audit trail is never rewritten.
+- Rolling back is `kg db downgrade 0002` plus `PROJECTION_SWEEPER_ENABLED=true`; the command fast path never depended on the outbox.

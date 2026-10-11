@@ -1,0 +1,34 @@
+{
+  "id": "GR-07",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_b.py::test_gr07_corrections"
+    ],
+    "supported_operations": [
+      "invalidate (set invalid_at/expired_at + save)",
+      "edit fact/attributes in place + save (re-embeds)",
+      "delete edge by uuid"
+    ],
+    "invalidated_still_returned_by_default_search": true,
+    "excluded_with_expired_at_is_null_filter": true,
+    "dangling_episode_entity_edges": [
+      "evt_003"
+    ]
+  },
+  "notes": "All three operations work through the namespace API. Caveats: (a) invalidated edges are NOT excluded from search unless the caller passes an expired_at IS NULL filter (and valid-time filters for as_of); (b) in-place edit loses the original text, keeps provenance, and records nothing about who/why; (c) delete leaves the edge uuid inside EpisodicNode.entity_edges. DECISION (ADR-018, DEC-04): corrections are authoritative in a Postgres fact-status projection (rejected/disputed/superseded/deleted) that every read path joins/filters on; the graph edge is updated best-effort (expired_at + invalid_at, or delete) and every graph search carries the expired_at filter. Never rely on in-place edits as the audit trail.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

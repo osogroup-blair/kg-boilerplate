@@ -1,0 +1,13 @@
+kind: min_authority
+rel_rules: [{kind: min_authority, params: {level: admin_asserted}}]
+cases:
+  - name: an authoritative system is above admin_asserted
+    command: {valid_from: 2020-01-01, authority: authoritative_system}
+    expect: accept
+  - name: admin_asserted meets the level
+    command: {valid_from: 2020-01-01, authority: admin_asserted}
+    expect: accept
+  - name: user_asserted is below the level
+    command: {valid_from: 2020-01-01, authority: user_asserted}
+    expect: reject
+    codes: [insufficient_authority]

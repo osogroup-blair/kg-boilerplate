@@ -1,0 +1,451 @@
+{
+  "aliases": {
+    "oso/code": [
+      "qwen3-coder",
+      "glm-5.2",
+      "gemini-3.8-flash",
+      "claude-sonnet-5-5"
+    ],
+    "oso/code-high": [
+      "glm-5.2",
+      "qwen3-coder",
+      "claude-sonnet-5-5",
+      "gemini-3.1-pro-preview"
+    ],
+    "oso/embedding": [
+      "multilingual-e5"
+    ],
+    "oso/fast": [
+      "gpt-oss-20b",
+      "gemini-3.5-flash-lite",
+      "claude-haiku-4-5"
+    ],
+    "oso/frontier": [
+      "glm-5.2",
+      "kimi-k2-thinking",
+      "claude-fable-5-1",
+      "claude-opus-5-5",
+      "gemini-3.1-pro-preview",
+      "gpt-6.1-sol"
+    ],
+    "oso/general": [
+      "gpt-oss-120b",
+      "gemini-3.5-flash",
+      "claude-sonnet-5-5"
+    ],
+    "oso/general-vision": [
+      "gemma-4-26b",
+      "gemini-3.5-flash"
+    ],
+    "oso/reasoning": [
+      "kimi-k2-thinking",
+      "gpt-oss-120b",
+      "gemini-3.1-pro-preview",
+      "claude-opus-5-5"
+    ],
+    "oso/vision": [
+      "gemma-4-26b",
+      "gemini-3.5-flash",
+      "claude-sonnet-5-5"
+    ]
+  },
+  "models": {
+    "claude-fable-5-1": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1000000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 10.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 50.0,
+      "provider": "anthropic",
+      "region": "global",
+      "weights": "closed"
+    },
+    "claude-haiku-4-5": {
+      "capabilities": [
+        "text",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 200000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 1.0,
+      "max_output_tokens": 64000,
+      "output_per_mtok": 5.0,
+      "provider": "anthropic",
+      "region": "global",
+      "weights": "closed"
+    },
+    "claude-opus-5-5": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1000000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 4.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 20.0,
+      "provider": "anthropic",
+      "region": "global",
+      "weights": "closed"
+    },
+    "claude-sonnet-5-5": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1000000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 2.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 10.0,
+      "provider": "anthropic",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-2.5-pro": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "structured_output",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 1.25,
+      "max_output_tokens": 65535,
+      "output_per_mtok": 10.0,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-3.1-flash-lite": {
+      "capabilities": [
+        "text",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.25,
+      "max_output_tokens": 65536,
+      "output_per_mtok": 1.5,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-3.1-pro-preview": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "structured_output",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 2.0,
+      "max_output_tokens": 65536,
+      "output_per_mtok": 12.0,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-3.5-flash": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "structured_output",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 1.5,
+      "max_output_tokens": 65535,
+      "output_per_mtok": 9.0,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-3.5-flash-lite": {
+      "capabilities": [
+        "text",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.3,
+      "max_output_tokens": 65536,
+      "output_per_mtok": 2.5,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemini-3.8-flash": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "structured_output",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.75,
+      "max_output_tokens": 65536,
+      "output_per_mtok": 3.75,
+      "provider": "google-gemini",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gemma-4-26b": {
+      "capabilities": [
+        "text",
+        "vision",
+        "streaming"
+      ],
+      "context_window": 262144,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.15,
+      "max_output_tokens": 32768,
+      "output_per_mtok": 0.6,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "glm-5.2": {
+      "capabilities": [
+        "text",
+        "code",
+        "tools",
+        "structured_output",
+        "streaming"
+      ],
+      "context_window": 1000000,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 1.4,
+      "max_output_tokens": 64000,
+      "output_per_mtok": 4.4,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "gpt-6-astra": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 922000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 10.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 50.0,
+      "provider": "openai",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gpt-6-luna": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 922000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 0.1,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 0.5,
+      "provider": "openai",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gpt-6-sol": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 922000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 2.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 10.0,
+      "provider": "openai",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gpt-6.1-sol": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "vision",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 922000,
+      "hosting_boundary": "third_party",
+      "input_per_mtok": 2.0,
+      "max_output_tokens": 128000,
+      "output_per_mtok": 10.0,
+      "provider": "openai",
+      "region": "global",
+      "weights": "closed"
+    },
+    "gpt-oss-120b": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 131072,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.09,
+      "max_output_tokens": 32768,
+      "output_per_mtok": 0.36,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "gpt-oss-20b": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 131072,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.07,
+      "max_output_tokens": 32768,
+      "output_per_mtok": 0.25,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "kimi-k2-thinking": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 256000,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.6,
+      "max_output_tokens": 32768,
+      "output_per_mtok": 2.5,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "kimi-k3": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 1048576,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 3.0,
+      "max_output_tokens": 65536,
+      "output_per_mtok": 15.0,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "multilingual-e5": {
+      "capabilities": [
+        "embedding"
+      ],
+      "context_window": 8192,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.015,
+      "max_output_tokens": 0,
+      "output_per_mtok": 0.0,
+      "provider": "google-vertex",
+      "region": "us-central1",
+      "weights": "open"
+    },
+    "qwen3-235b": {
+      "capabilities": [
+        "text",
+        "reasoning",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 262144,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.22,
+      "max_output_tokens": 16384,
+      "output_per_mtok": 0.88,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    },
+    "qwen3-coder": {
+      "capabilities": [
+        "text",
+        "code",
+        "tools",
+        "streaming"
+      ],
+      "context_window": 262144,
+      "hosting_boundary": "gcp",
+      "input_per_mtok": 0.22,
+      "max_output_tokens": 32768,
+      "output_per_mtok": 1.8,
+      "provider": "google-vertex",
+      "region": "global",
+      "weights": "open"
+    }
+  },
+  "source": "oso_model_router/scripts/seed-logical-router.ts"
+}

@@ -1,0 +1,51 @@
+# Phase 0 spike stack. Host ports are chosen to avoid the other Postgres containers on this machine (5432-5437).
+name: kg-spike
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: neo4j/spike-password
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 768m
+      NEO4J_server_memory_pagecache_size: 256m
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p spike-password 'RETURN 1' >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+    tmpfs:
+      - /data
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: spike
+      POSTGRES_PASSWORD: spike
+      POSTGRES_DB: spike
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_wal_size=1GB"]
+    ports:
+      - "127.0.0.1:5543:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spike -d spike"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql/data
+  mock-router:
+    build:
+      context: ..
+      dockerfile: tools/mock_router/Dockerfile
+    environment:
+      MOCK_ROUTER_API_KEY: ${MOCK_ROUTER_API_KEY:-mock-key}
+    ports:
+      - "127.0.0.1:8781:8781"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8781/health').status==200 else 1)"]
+      interval: 3s
+      timeout: 5s
+      retries: 20

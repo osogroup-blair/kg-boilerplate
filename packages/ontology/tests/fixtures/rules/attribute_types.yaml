@@ -1,0 +1,37 @@
+kind: attribute_types
+cases:
+  - name: valid attributes pass
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {age: 40, birth_date: 1985-03-02}}
+    expect: accept
+  - name: name is required on create
+    command: {kind: entity.create, entity_type: Person}
+    expect: reject
+    codes: [required_attribute]
+  - name: wrong scalar type
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {age: forty}}
+    expect: reject
+    codes: [wrong_type]
+  - name: below minimum
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {age: -1}}
+    expect: reject
+    codes: [below_min]
+  - name: pattern mismatch
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {badge: nope}}
+    expect: reject
+    codes: [pattern_mismatch]
+  - name: too long
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {nickname: this-is-way-too-long}}
+    expect: reject
+    codes: [too_long]
+  - name: a bool is not an integer
+    command: {kind: entity.create, entity_type: Person, name: Sarah, attributes: {age: true}}
+    expect: reject
+    codes: [wrong_type]
+  - name: a non-editable attribute cannot be changed by an update
+    command: {kind: entity.update, entity_type: Person, attributes: {badge: B-9}}
+    expect: reject
+    codes: [attribute_not_editable]
+  - name: an update cannot clear a required attribute
+    command: {kind: entity.update, entity_type: Person, attributes: {employee_level: null}}
+    expect: reject
+    codes: [required_attribute]

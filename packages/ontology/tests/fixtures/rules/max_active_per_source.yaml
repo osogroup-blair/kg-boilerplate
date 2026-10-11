@@ -1,0 +1,30 @@
+kind: max_active_per_source
+rel_rules: [{kind: max_active_per_source, params: {n: 1}}]
+cases:
+  - name: the first fact
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: a second overlapping fact exceeds n=1
+    given: {facts: [{id: f1, target: other, valid_from: 2019-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: reject
+    codes: [max_active_exceeded]
+  - name: a non-overlapping fact is fine
+    given: {facts: [{id: f1, target: other, valid_from: 2019-01-01, valid_to: 2020-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: n=2 allows two at once
+    rel_rules: [{kind: max_active_per_source, params: {n: 2}}]
+    given: {facts: [{id: f1, target: other, valid_from: 2019-01-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: n=2 rejects a third at the same time
+    rel_rules: [{kind: max_active_per_source, params: {n: 2}}]
+    given: {facts: [{id: f1, target: a, valid_from: 2019-01-01}, {id: f2, target: b, valid_from: 2019-06-01}]}
+    command: {valid_from: 2020-01-01}
+    expect: reject
+    codes: [max_active_exceeded]
+  - name: two sequential facts never exceed n=1 together with a new fact between them
+    given: {facts: [{id: f1, target: a, valid_from: 2018-01-01, valid_to: 2019-01-01}, {id: f2, target: b, valid_from: 2021-01-01}]}
+    command: {valid_from: 2019-06-01, valid_to: 2020-06-01}
+    expect: accept

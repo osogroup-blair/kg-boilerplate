@@ -1,0 +1,19 @@
+kind: queue_if
+rel_rules: [{kind: queue_if, params: {when: disallowed_endpoint}}]
+cases:
+  - name: nothing to soften when the command is valid
+    command: {valid_from: 2020-01-01}
+    expect: accept
+  - name: a disallowed endpoint is queued
+    command: {valid_from: 2020-01-01, target: {type: Topic}}
+    expect: queue_review
+    codes: [disallowed_endpoint]
+  - name: other rejections still reject
+    command: {valid_from: 2022-01-01, valid_to: 2021-01-01, target: {type: Topic}}
+    expect: reject
+    codes: [disallowed_endpoint, invalid_interval]
+  - name: without queue_if the same command is rejected
+    rel_rules: []
+    command: {valid_from: 2020-01-01, target: {type: Topic}}
+    expect: reject
+    codes: [disallowed_endpoint]

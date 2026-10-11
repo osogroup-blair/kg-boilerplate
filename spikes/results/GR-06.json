@@ -1,0 +1,48 @@
+{
+  "id": "GR-06",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_b.py::test_gr06_temporal_mapping"
+    ],
+    "mapping": {
+      "valid_from": "EntityEdge.valid_at (from extraction/command)",
+      "valid_to": "EntityEdge.invalid_at (successor.valid_at)",
+      "recorded_at": "EntityEdge.created_at (REQUIRED field; add_episode sets wall-clock now; direct save/SET can carry the platform value)",
+      "superseded_at": "EntityEdge.expired_at (add_episode sets wall-clock now at invalidation)",
+      "episode_event_time": "EpisodicNode.valid_at (= reference_time)",
+      "episode_record_time": "EpisodicNode.created_at (wall clock)"
+    },
+    "old_edge": {
+      "valid_at": "2022-01-10 00:00:00+00:00",
+      "invalid_at": "2024-06-01 00:00:00+00:00",
+      "created_at": "2026-10-11 18:52:08.506395+00:00",
+      "expired_at": "2026-10-11 18:52:09.044196+00:00"
+    },
+    "as_of_2023": [
+      "Sarah Chen works at Acme as a software engineer"
+    ],
+    "as_of_2025": [
+      "Sarah Chen is an Engineering Manager at Acme"
+    ],
+    "edge.reference_time": [
+      "2022-01-10 00:00:00+00:00",
+      "2024-06-01 00:00:00+00:00"
+    ]
+  },
+  "notes": "Valid time maps cleanly: valid_at/invalid_at, and a backdated successor invalidates its predecessor at its own valid_at. RECORD time does not: add_episode stamps created_at/expired_at with wall-clock now, so evt_002 'recorded 2024-06-10' would read as today. Mitigation (ADR-017): the platform's Postgres fact table is the system of record for recorded_at/superseded_at and as_of/known_at; the graph projection carries valid_from/valid_to and, where cheap, overwrites created_at with the ledger's recorded_at after add_episode (shown to work). Formal bitemporal SLA stays out of MVP scope (DEC-12).",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

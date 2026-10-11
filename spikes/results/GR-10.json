@@ -1,0 +1,90 @@
+{
+  "id": "GR-10",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_graphiti_b.py::test_gr10_search_without_cross_encoder"
+    ],
+    "recipes_ok_without_cross_encoder": {
+      "EDGE_HYBRID_SEARCH_RRF": {
+        "facts": [
+          "Sarah Chen knows Michael Torres",
+          "Sarah Chen is considering starting a software company",
+          "Sarah Chen is an Engineering Manager at Acme",
+          "Sarah Chen works at Acme as a software engineer"
+        ],
+        "nodes": []
+      },
+      "EDGE_HYBRID_SEARCH_MMR": {
+        "facts": [
+          "Sarah Chen knows Michael Torres"
+        ],
+        "nodes": []
+      },
+      "EDGE_HYBRID_SEARCH_NODE_DISTANCE": {
+        "facts": [
+          "Sarah Chen knows Michael Torres",
+          "Sarah Chen is considering starting a software company",
+          "Sarah Chen is an Engineering Manager at Acme",
+          "Sarah Chen works at Acme as a software engineer"
+        ],
+        "nodes": []
+      },
+      "NODE_HYBRID_SEARCH_RRF": {
+        "facts": [],
+        "nodes": [
+          "Sarah Chen",
+          "Michael Torres",
+          "Acme",
+          "Starting a software company"
+        ]
+      },
+      "COMBINED_HYBRID_SEARCH_RRF": {
+        "facts": [
+          "Sarah Chen knows Michael Torres",
+          "Sarah Chen is considering starting a software company",
+          "Sarah Chen is an Engineering Manager at Acme",
+          "Sarah Chen works at Acme as a software engineer"
+        ],
+        "nodes": [
+          "Sarah Chen",
+          "Michael Torres",
+          "Acme",
+          "Starting a software company"
+        ]
+      },
+      "COMBINED_HYBRID_SEARCH_MMR": {
+        "facts": [
+          "Sarah Chen knows Michael Torres",
+          "Sarah Chen is considering starting a software company",
+          "Sarah Chen is an Engineering Manager at Acme",
+          "Sarah Chen works at Acme as a software engineer"
+        ],
+        "nodes": [
+          "Sarah Chen",
+          "Acme",
+          "Starting a software company",
+          "Michael Torres"
+        ]
+      }
+    },
+    "cross_encoder_calls_for_non_ce_recipes": 0,
+    "search_mutates_global_recipe_limit": true,
+    "default_search__config_is_cross_encoder": true
+  },
+  "notes": "Chosen recipes: facts = EDGE_HYBRID_SEARCH_RRF (default) or EDGE_HYBRID_SEARCH_NODE_DISTANCE with center_node_uuid for subject-centred retrieval; nodes = NODE_HYBRID_SEARCH_RRF; MMR variants also work. None call the cross-encoder. Graphiti.search_() DEFAULTS to the CROSS_ENCODER recipe, so the adapter must always pass an explicit config; a NoCrossEncoder that raises is installed so any accidental use fails loudly (the router drops logprobs, so OpenAIRerankerClient cannot work). Graphiti.search() mutates the shared recipe's .limit; the adapter should copy the recipe (config.model_copy()) per call. Retrieval QUALITY with E5-small is measured live (LV-05/GR-11); offline vectors are lexical hashes and only prove plumbing and group scope. MMR uses sim_min_score=0.6 (tuned for other embedding models); E5-family cosine similarities are generally reported to cluster high, so thresholds must be re-tuned from live data (LV-05 records related vs unrelated cosine).",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

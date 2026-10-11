@@ -1,0 +1,111 @@
+{
+  "id": "TK-01",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_tokenizer.py::test_tk01_compare_tokenizers_and_choose_default"
+    ],
+    "samples": {
+      "planning_package": {
+        "chars": 466,
+        "o200k_base": 130,
+        "cl100k_base": 131,
+        "chars/4": 117,
+        "o200k_vs_cl100k": 0.992,
+        "chars4_vs_o200k": 0.9
+      },
+      "planning_x20": {
+        "chars": 9358,
+        "o200k_base": 2600,
+        "cl100k_base": 2620,
+        "chars/4": 2340,
+        "o200k_vs_cl100k": 0.992,
+        "chars4_vs_o200k": 0.9
+      },
+      "prose_english": {
+        "chars": 2050,
+        "o200k_base": 401,
+        "cl100k_base": 401,
+        "chars/4": 513,
+        "o200k_vs_cl100k": 1.0,
+        "chars4_vs_o200k": 1.279
+      },
+      "json_facts": {
+        "chars": 6512,
+        "o200k_base": 2442,
+        "cl100k_base": 2442,
+        "chars/4": 1628,
+        "o200k_vs_cl100k": 1.0,
+        "chars4_vs_o200k": 0.667
+      },
+      "uuid_heavy": {
+        "chars": 5699,
+        "o200k_base": 2529,
+        "cl100k_base": 2528,
+        "chars/4": 1425,
+        "o200k_vs_cl100k": 1.0,
+        "chars4_vs_o200k": 0.563
+      },
+      "multilingual": {
+        "chars": 1296,
+        "o200k_base": 441,
+        "cl100k_base": 649,
+        "chars/4": 324,
+        "o200k_vs_cl100k": 0.68,
+        "chars4_vs_o200k": 0.735
+      },
+      "code_and_paths": {
+        "chars": 1548,
+        "o200k_base": 456,
+        "cl100k_base": 456,
+        "chars/4": 387,
+        "o200k_vs_cl100k": 1.0,
+        "chars4_vs_o200k": 0.849
+      },
+      "numbers_dates": {
+        "chars": 2946,
+        "o200k_base": 1838,
+        "cl100k_base": 1838,
+        "chars/4": 737,
+        "o200k_vs_cl100k": 1.0,
+        "chars4_vs_o200k": 0.401
+      }
+    },
+    "heuristic_undercounts": [
+      "planning_package",
+      "planning_x20",
+      "json_facts",
+      "uuid_heavy",
+      "multilingual",
+      "code_and_paths",
+      "numbers_dates"
+    ],
+    "o200k_over_cl100k_ratio": {
+      "planning_package": 0.992,
+      "planning_x20": 0.992,
+      "prose_english": 1.0,
+      "json_facts": 1.0,
+      "uuid_heavy": 1.0,
+      "multilingual": 0.68,
+      "code_and_paths": 1.0,
+      "numbers_dates": 1.0
+    },
+    "default": "max(o200k_base, cl100k_base) * 1.10",
+    "margin": 0.1
+  },
+  "notes": "DEFAULT: count = ceil(max(o200k_base, cl100k_base) * 1.10), tokenizer id 'tiktoken:max(o200k_base,cl100k_base)+margin0.1' recorded in every context trace. The two vocabularies agree to within 1% on English/JSON/UUID text but cl100k_base counts ~47% MORE on multilingual text, and the router's physical model is unknown, so the larger of the two is used. A chars/4 heuristic under-counts planning_package, planning_x20, json_facts, uuid_heavy, multilingual, code_and_paths, numbers_dates and must not be used for hard budgets. The 10% margin is PROVISIONAL: TK-02 (live) measures router prompt_tokens for the same samples on each alias and raises the margin until the platform count >= the observed count for 100% of samples (after subtracting the measured per-request template overhead).",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}

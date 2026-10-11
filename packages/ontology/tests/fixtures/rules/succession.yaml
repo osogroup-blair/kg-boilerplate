@@ -1,0 +1,48 @@
+kind: succession
+rel_rules: [{kind: succession, params: {match: [source, target]}}]
+cases:
+  - name: no existing fact
+    command: {valid_from: 2022-01-10}
+    expect: accept
+    effects: []
+  - name: a later fact ends its predecessor at the new valid_from
+    given: {facts: [{id: f1, target: t, valid_from: 2022-01-10}]}
+    command: {valid_from: 2024-06-01}
+    expect: accept
+    effects: [{fact: f1, valid_to: 2024-06-01}]
+  - name: a fact starting after the predecessor ended leaves it alone
+    given: {facts: [{id: f1, target: t, valid_from: 2020-01-01, valid_to: 2021-01-01}]}
+    command: {valid_from: 2022-01-01}
+    expect: accept
+    effects: []
+  - name: a new fact before an existing one is out of order
+    given: {facts: [{id: f1, target: t, valid_from: 2024-06-01}]}
+    command: {valid_from: 2022-01-10}
+    expect: reject
+    codes: [out_of_order_succession]
+  - name: a new closed fact that fits the gap before an existing one is allowed
+    given: {facts: [{id: f1, target: t, valid_from: 2024-06-01}]}
+    command: {valid_from: 2022-01-10, valid_to: 2023-01-01}
+    expect: accept
+    effects: []
+  - name: a new closed fact wedged inside an open one is a conflict
+    given: {facts: [{id: f1, target: t, valid_from: 2020-01-01}]}
+    command: {valid_from: 2022-01-01, valid_to: 2023-01-01}
+    expect: reject
+    codes: [succession_conflict]
+  - name: two facts starting at the same instant are ambiguous
+    given: {facts: [{id: f1, target: t, valid_from: 2022-01-10}]}
+    command: {valid_from: 2022-01-10}
+    expect: reject
+    codes: [succession_conflict]
+  - name: match [source] lets a different employer end the previous one
+    rel_rules: [{kind: succession, params: {match: [source]}}]
+    given: {facts: [{id: f1, target: other, valid_from: 2020-01-01}]}
+    command: {valid_from: 2022-01-01}
+    expect: accept
+    effects: [{fact: f1, valid_to: 2022-01-01}]
+  - name: match [source, target] ignores a different employer
+    given: {facts: [{id: f1, target: other, valid_from: 2020-01-01}]}
+    command: {valid_from: 2022-01-01}
+    expect: accept
+    effects: []

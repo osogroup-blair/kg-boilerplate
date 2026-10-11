@@ -1,0 +1,15 @@
+.venv
+.tools
+.local
+.git
+.env
+spikes
+**/__pycache__
+**/.pytest_cache
+.mypy_cache
+.ruff_cache
+apps/admin/node_modules
+apps/admin/dist
+solution_inputs
+docs
+.DS_Store

@@ -1,0 +1,35 @@
+{
+  "id": "PV-02",
+  "tag": "OFFLINE",
+  "status": "pass",
+  "evidence": {
+    "tests": [
+      "test_pgvector.py::test_pv02_row_level_security"
+    ],
+    "unfiltered_vector_search_workspaces_seen": 1,
+    "foreign_id_visible": false,
+    "foreign_update_rowcount": 0,
+    "cross_workspace_insert_blocked": true,
+    "fail_closed_without_setting": true,
+    "set_local_does_not_leak": true,
+    "owner_role_flags": {
+      "rolsuper": true,
+      "rolbypassrls": true
+    },
+    "owner_sees_rows": 50000
+  },
+  "notes": "RLS (ENABLE + FORCE, policy on workspace_id = current_setting('app.workspace_id', true)) isolates workspaces even for an UNFILTERED ORDER BY embedding <=> q query and for known foreign ids; cross-workspace INSERT/UPDATE are blocked; with the setting absent the result is empty (fail-closed). Control: the spike's owner role is a SUPERUSER and still sees all 50,000 rows, because superusers and BYPASSRLS roles ignore RLS even with FORCE. SET LOCAL (set_config(..., true)) does not outlive a REAL transaction. PITFALL found while writing this test: on a psycopg connection in non-autocommit mode, `with conn.transaction()` is only a SAVEPOINT inside the implicit outer transaction, so the workspace setting survived into the next block and a 'no workspace set' query saw the previous tenant's 2,442 rows. P1 must open request transactions explicitly (autocommit=True + conn.transaction(), or SQLAlchemy begin()) and include a test that a second request on a reused pooled connection sees nothing until it sets its own workspace. REQUIREMENTS for P1: the app connects as a NON-superuser, NOBYPASSRLS role; every request runs in a transaction that sets app.workspace_id from the authenticated principal; RLS is defence in depth, SQL predicates (PV-01) remain the primary scope mechanism because scope/ACL logic is richer than workspace.",
+  "versions": {
+    "python": "3.12.15",
+    "graphiti-core": "0.30.2",
+    "neo4j": "6.4.0",
+    "pydantic": "2.14.0",
+    "openai": "3.29.0",
+    "tiktoken": "0.14.0",
+    "psycopg": "3.3.6",
+    "pgvector": "0.5.1",
+    "fastapi": "0.143.0",
+    "httpx": "0.28.1",
+    "pyjwt": "2.15.1"
+  }
+}
