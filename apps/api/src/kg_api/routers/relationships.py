@@ -7,7 +7,7 @@ import uuid
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from kg_governance.authz.policy import Action, is_allowed, requires
-from kg_knowledge.models import FactOut, RelationshipAssertIn, RelationshipEndIn
+from kg_knowledge.models import EvidenceOut, FactOut, RelationshipAssertIn, RelationshipEndIn
 
 from kg_api.commands_runner import run_command
 from kg_api.deps import DbDep, PrincipalDep, StateDep, WorkspaceDep
@@ -44,3 +44,11 @@ async def end_relationship(
 @requires(Action.ENTITY_READ)
 async def get_relationship(fact_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep) -> FactOut:
     return await state.knowledge.reads.get_fact(db, ws, fact_id, can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE))
+
+
+@router.get("/{fact_id}/evidence", response_model=list[EvidenceOut])
+@requires(Action.ENTITY_READ)
+async def relationship_evidence(fact_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[EvidenceOut]:
+    """Why does the system hold this fact? (KGR-05) The commands and interaction episodes behind it, as metadata. The content of an interaction is read
+    through the audited evidence endpoints, never here."""
+    return await state.knowledge.graph_reads.fact_evidence(db, ws, fact_id)

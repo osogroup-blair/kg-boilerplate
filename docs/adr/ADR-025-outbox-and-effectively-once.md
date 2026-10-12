@@ -21,4 +21,4 @@ Interactions must be processed asynchronously and never lost, and the P2 graph p
 - Polling costs a little Postgres load: a partial index on claimable rows, adaptive polling (0.2 s busy, 2 s idle) and `SKIP LOCKED` keep it small; P9 measures it. LISTEN/NOTIFY is a later option.
 - A long handler needs heartbeats (lease/3) and tolerates a lost lease; the lease default is 30 s (10 s in the dev compose so a killed worker's jobs resume quickly).
 - A dead-lettered job is history; an operator retry creates the next-generation job, so the audit trail is never rewritten.
-- Rolling back is `kg db downgrade 0002` plus `PROJECTION_SWEEPER_ENABLED=true`; the command fast path never depended on the outbox.
+- The P2 sweeper was kept off in P3 and **deleted in P4** (with `ops.workspaces_with_pending_projection`); there is no fallback driver, and a rollback past `0003` is a restore, not a setting.

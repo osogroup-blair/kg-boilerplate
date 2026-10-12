@@ -20,7 +20,7 @@ const summary = (over: Record<string, unknown> = {}) => ({
 });
 const detail = (over: Record<string, unknown> = {}) => ({
   ...summary(), consent_external: true, pipeline_version: "p3.v1", ontology_version_id: "00000000-0000-4000-8000-0000000000aa",
-  stages: [stage({ derivatives: [{ kind: "normalized_content", id: "d0000000-0000-4000-8000-000000000001" }] }), stage({ stage: "graph_ingest", status: "skipped_disabled", enabled: false, enabled_in: "P4", attempts: 0, started_at: null, finished_at: null }), stage({ stage: "memory_propose", status: "skipped_disabled", enabled: false, enabled_in: "P5", attempts: 0, started_at: null, finished_at: null })],
+  stages: [stage({ derivatives: [{ kind: "normalized_content", id: "d0000000-0000-4000-8000-000000000001" }] }), stage({ stage: "graph_ingest", status: "succeeded" }), stage({ stage: "memory_propose", status: "skipped_disabled", enabled: false, enabled_in: "P5", attempts: 0, started_at: null, finished_at: null })],
   subjects: [{ role: "subject", entity_id: "a0000000-0000-4000-8000-000000000001", resolved: true }, { role: "subject", entity_id: null, resolved: false, ref_type: "Person", ref_system: "hr" }],
   status_url: `/v1/interactions/${EVENT}`, ...over,
 });
@@ -107,7 +107,8 @@ describe("Interaction detail", () => {
     open(["reviewer"]);
     expect(await screen.findByText("p3.v1")).toBeInTheDocument();
     expect(screen.getByText("confidential")).toBeInTheDocument();
-    expect(within(screen.getByTestId("stage-graph_ingest")).getByText("enabled in P4")).toBeInTheDocument();
+    expect(within(screen.getByTestId("stage-graph_ingest")).getByText("succeeded")).toBeInTheDocument(); // enabled since P4
+    expect(within(screen.getByTestId("stage-memory_propose")).getByText("enabled in P5")).toBeInTheDocument();
     expect(screen.getByText("open entity")).toBeInTheDocument();
     expect(screen.getByText("unresolved")).toBeInTheDocument();
     expect(screen.getByText("Person · hr")).toBeInTheDocument();
@@ -148,7 +149,7 @@ describe("Interaction detail", () => {
     expect(confirm).toBeEnabled();
     await userEvent.click(confirm);
     await waitFor(() => expect(posted).not.toBeNull());
-    expect(posted!.body).toEqual({ reason_code: "fault_cleared", stage: null });
+    expect(posted!.body).toEqual({ reason_code: "fault_cleared", stage: null, repin: false });
     expect(posted!.key).toBeTruthy();
     expect(await screen.findByText(/Replay queued/)).toBeInTheDocument();
   });
@@ -163,6 +164,16 @@ describe("Interaction detail", () => {
     open(["operator"]);
     await screen.findByText("p3.v1");
     expect(screen.queryByRole("button", { name: "Replay…" })).toBeNull();
+  });
+
+  it("offers a re-pinning replay of graph_ingest for an event accepted before the stage existed", async () => {
+    mockApi({
+      "GET /v1/me": () => json(meAs("operator")),
+      [`GET /v1/interactions/${EVENT}`]: () => json(detail({ stages: [stage(), stage({ stage: "graph_ingest", status: "skipped_disabled", enabled: true, attempts: 0, started_at: null, finished_at: null })] })),
+    });
+    renderApp(<App />, { route: `/interactions/${EVENT}` });
+    await userEvent.click(await screen.findByRole("button", { name: "Replay…" }));
+    expect(await screen.findByRole("option", { name: "graph_ingest (move to the current ontology)" })).toBeInTheDocument();
   });
 
   it("a foreign or unknown id is simply Not found", async () => {

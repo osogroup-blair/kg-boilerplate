@@ -1,0 +1,34 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "unparseable extraction"
+   ]
+  },
+  "response": "this is {not json at all"
+ },
+ {
+  "gold": {
+   "id": "bad_json",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: please add the unparseable extraction."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "dead",
+    "error_code": "extraction_unparseable",
+    "entities": [],
+    "facts": [],
+    "identity": [],
+    "reviews": {},
+    "reverts": 0
+   }
+  }
+ }
+]

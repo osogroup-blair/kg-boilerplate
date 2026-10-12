@@ -131,7 +131,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Entity */
+        /**
+         * Get Entity
+         * @description A merged entity still answers (200) with `merged_into_id`: an id is never reused or lost (KGR-01).
+         */
         get: operations["get_entity"];
         put?: never;
         post?: never;
@@ -140,6 +143,66 @@ export interface paths {
         head?: never;
         /** Update Entity */
         patch: operations["update_entity"];
+        trace?: never;
+    };
+    "/v1/entities/{entity_id}/attribute-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entity Attribute Claims
+         * @description Attribute values a model proposed. They never change the entity: accepting one is a correction (a later phase).
+         */
+        get: operations["entity_attribute_claims"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entities/{entity_id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entity Graph
+         * @description The neighbourhood of an entity, read from Postgres (the graph store serves retrieval, not this view). Hops, nodes and the status filters are capped here.
+         */
+        get: operations["entity_graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entities/{entity_id}/mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entity Mentions
+         * @description The interactions that mention the entity (metadata only), with how each mention was resolved.
+         */
+        get: operations["entity_mentions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/entities/{entity_id}/relationships": {
@@ -153,6 +216,47 @@ export interface paths {
         get: operations["entity_relationships"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entities/{entity_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entity Summary
+         * @description Graphiti's summary of the entity: derived text, labelled `derived_unverified`, from the graph (best effort: a graph outage answers `graph_available: false`).
+         */
+        get: operations["entity_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/graph/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Graph Search
+         * @description Only facts Postgres holds as active (or, with known_at, as they were) come back, each with its status, authority and evidence. A graph hit the platform
+         *     has not reconciled yet is dropped and counted in `unreconciled_hits`.
+         */
+        post: operations["graph_search"];
         delete?: never;
         options?: never;
         head?: never;
@@ -601,6 +705,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/relationships/{fact_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Relationship Evidence
+         * @description Why does the system hold this fact? (KGR-05) The commands and interaction episodes behind it, as metadata. The content of an interaction is read
+         *     through the audited evidence endpoints, never here.
+         */
+        get: operations["relationship_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reviews */
+        get: operations["list_reviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Review */
+        get: operations["get_review"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Review */
+        post: operations["decide_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reviews/{review_id}/evidence/{interaction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Review Evidence
+         * @description The normalised content of ONE interaction the item rests on (Q14). Any other interaction id is a 404; every read is audited in the same transaction and
+         *     the response is never cached.
+         */
+        get: operations["read_review_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces/current": {
         parameters: {
             query?: never;
@@ -703,6 +900,32 @@ export interface components {
             started_at: string;
             /** Worker Id */
             worker_id: string;
+        };
+        /** AttributeClaimOut */
+        AttributeClaimOut: {
+            /** Attribute Key */
+            attribute_key: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Episode Uuid */
+            episode_uuid: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Interaction Id
+             * Format: uuid
+             */
+            interaction_id: string;
+            /** Status */
+            status: string;
+            /** Value */
+            value: unknown;
         };
         /** AuditEventOut */
         AuditEventOut: {
@@ -807,7 +1030,7 @@ export interface components {
              * Command Type
              * @enum {string}
              */
-            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end";
+            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end" | "review.decide" | "entity.merge";
             /**
              * Created At
              * Format: date-time
@@ -871,7 +1094,7 @@ export interface components {
              * Command Type
              * @enum {string}
              */
-            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end";
+            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end" | "review.decide" | "entity.merge";
             /**
              * Ended Fact Ids
              * @default []
@@ -927,7 +1150,7 @@ export interface components {
              * Command Type
              * @enum {string}
              */
-            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end";
+            command_type: "entity.create" | "entity.update" | "relationship.assert" | "relationship.end" | "review.decide" | "entity.merge";
             /**
              * Created At
              * Format: date-time
@@ -1014,6 +1237,57 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** DecisionIn */
+        DecisionIn: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "same_entity" | "different_entity" | "needs_more_evidence" | "keep_existing" | "mark_disputed" | "accept_claim" | "acknowledge" | "open_correction" | "approve" | "reject";
+            /**
+             * Rationale Code
+             * @enum {string}
+             */
+            rationale_code: "verified_with_source" | "source_is_authoritative" | "reported_by_trusted_party" | "same_real_world_entity" | "different_real_world_entity" | "outdated_information" | "duplicate_report" | "incorrect_extraction" | "insufficient_evidence" | "policy_exception" | "no_action_needed" | "other";
+            /** Rationale Text */
+            rationale_text?: string | null;
+        };
+        /** DecisionOut */
+        DecisionOut: {
+            /** Applied Command Id */
+            applied_command_id?: string | null;
+            /** Command Id */
+            command_id: string | null;
+            /** Decision */
+            decision: string;
+            /**
+             * Entity Ids
+             * @default []
+             */
+            entity_ids: string[];
+            /**
+             * Fact Ids
+             * @default []
+             */
+            fact_ids: string[];
+            /**
+             * Projection Status
+             * @enum {string}
+             */
+            projection_status: "pending" | "projected" | "failed" | "skipped_by_policy" | "not_applicable";
+            /**
+             * Review Id
+             * Format: uuid
+             */
+            review_id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "decided";
+        };
         /** DeletedOut */
         DeletedOut: {
             /**
@@ -1036,6 +1310,30 @@ export interface components {
             id: string;
             /** Kind */
             kind: string;
+        };
+        /**
+         * DerivedSummaryOut
+         * @description Graphiti's running summary of an entity. DERIVED text: it is never a fact source, never used to answer a question, and always labelled so.
+         */
+        DerivedSummaryOut: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /**
+             * Graph Available
+             * @default true
+             */
+            graph_available: boolean;
+            /**
+             * Label
+             * @default derived_unverified
+             * @constant
+             */
+            label: "derived_unverified";
+            /** Summary */
+            summary: string | null;
         };
         /** DiffResult */
         DiffResult: {
@@ -1125,6 +1423,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Merged Into Id */
+            merged_into_id?: string | null;
             /** Name */
             name: string;
             /**
@@ -1132,6 +1432,12 @@ export interface components {
              * Format: uuid
              */
             ontology_version_id: string;
+            /**
+             * Origin
+             * @default command
+             * @enum {string}
+             */
+            origin: "command" | "extracted";
             /** Projected At */
             projected_at: string | null;
             /**
@@ -1152,7 +1458,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "active" | "deleted";
+            status: "active" | "deleted" | "candidate" | "untyped" | "merged";
             /** Type */
             type: string;
             /**
@@ -1186,6 +1492,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Merged Into Id */
+            merged_into_id?: string | null;
             /** Name */
             name: string;
             /**
@@ -1193,6 +1501,12 @@ export interface components {
              * Format: uuid
              */
             ontology_version_id: string;
+            /**
+             * Origin
+             * @default command
+             * @enum {string}
+             */
+            origin: "command" | "extracted";
             /** Projected At */
             projected_at: string | null;
             /**
@@ -1211,7 +1525,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "active" | "deleted";
+            status: "active" | "deleted" | "candidate" | "untyped" | "merged";
             /** Type */
             type: string;
             /**
@@ -1284,6 +1598,36 @@ export interface components {
         ErrorEnvelope: {
             error: components["schemas"]["ErrorBody"];
         };
+        /**
+         * EvidenceOut
+         * @description Why the system holds a fact (KGR-05): a command, or an episode of an interaction. Never content.
+         */
+        EvidenceOut: {
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+            /** Command Id */
+            command_id?: string | null;
+            /** Episode Uuid */
+            episode_uuid?: string | null;
+            /** Interaction Id */
+            interaction_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "command" | "episode";
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Recorded At */
+            recorded_at?: string | null;
+            /** Source Ref */
+            source_ref?: string | null;
+            /** Source System */
+            source_system?: string | null;
+        };
         /** ExternalId */
         ExternalId: {
             /** System */
@@ -1325,12 +1669,29 @@ export interface components {
              * Authority Class
              * @enum {string}
              */
-            authority_class: "authoritative_system" | "admin_asserted" | "user_asserted";
+            authority_class: "authoritative_system" | "admin_asserted" | "user_asserted" | "conversation_report" | "agent_generated";
             /**
              * Classification
              * @enum {string}
              */
             classification: "public" | "internal" | "confidential" | "restricted" | "local_only";
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decision Code */
+            decision_code?: string | null;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: components["schemas"]["EvidenceOut"][];
+            /**
+             * Evidence Status
+             * @default verified
+             * @enum {string}
+             */
+            evidence_status: "verified" | "unverified";
+            /** Fact Text */
+            fact_text?: string | null;
             /**
              * Id
              * Format: uuid
@@ -1361,11 +1722,10 @@ export interface components {
             /** Revision */
             revision: number;
             source: components["schemas"]["FactEndpoint"];
-            /**
-             * Source Command Id
-             * Format: uuid
-             */
-            source_command_id: string;
+            /** Source Command Id */
+            source_command_id: string | null;
+            /** Source Interaction Id */
+            source_interaction_id?: string | null;
             /** Source Recorded At */
             source_recorded_at: string | null;
             /** Source Ref */
@@ -1381,7 +1741,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "active" | "superseded" | "disputed" | "deleted";
+            status: "active" | "superseded" | "disputed" | "deleted" | "proposed" | "rejected";
             /** Succeeded By Fact Id */
             succeeded_by_fact_id: string | null;
             /** Superseded At */
@@ -1393,6 +1753,130 @@ export interface components {
             valid_from_unknown: boolean;
             /** Valid To */
             valid_to: string | null;
+        };
+        /** GraphEdgeOut */
+        GraphEdgeOut: {
+            /**
+             * Authority Class
+             * @enum {string}
+             */
+            authority_class: "authoritative_system" | "admin_asserted" | "user_asserted" | "conversation_report" | "agent_generated";
+            /**
+             * Evidence Status
+             * @enum {string}
+             */
+            evidence_status: "verified" | "unverified";
+            /** Fact Text */
+            fact_text?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "current" | "historical" | "future";
+            /** Rel Type */
+            rel_type: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "superseded" | "disputed" | "deleted" | "proposed" | "rejected";
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Valid From */
+            valid_from: string | null;
+            /** Valid To */
+            valid_to: string | null;
+        };
+        /** GraphNodeOut */
+        GraphNodeOut: {
+            /** Hop */
+            hop: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Origin */
+            origin: string;
+            /** Status */
+            status: string;
+            /** Type */
+            type: string;
+        };
+        /** GraphOut */
+        GraphOut: {
+            /**
+             * Center Id
+             * Format: uuid
+             */
+            center_id: string;
+            /** Edges */
+            edges: components["schemas"]["GraphEdgeOut"][];
+            /** Nodes */
+            nodes: components["schemas"]["GraphNodeOut"][];
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
+        };
+        /** GraphSearchIn */
+        GraphSearchIn: {
+            /** As Of */
+            as_of?: string | null;
+            /** Center Entity Id */
+            center_entity_id?: string | null;
+            /** Known At */
+            known_at?: string | null;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /** Query */
+            query: string;
+        };
+        /** GraphSearchOut */
+        GraphSearchOut: {
+            /** Facts */
+            facts: components["schemas"]["FactOut"][];
+            /**
+             * Unreconciled Hits
+             * @default 0
+             */
+            unreconciled_hits: number;
+        };
+        /** IdentityCandidate */
+        IdentityCandidate: {
+            /** Cosine */
+            cosine?: number | null;
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: string[];
+            /** Trigram */
+            trigram?: number | null;
         };
         /** ImpactCount */
         ImpactCount: {
@@ -1507,6 +1991,30 @@ export interface components {
             source_system: string;
             /** Subject Refs */
             subject_refs?: (components["schemas"]["EntityRef"] | components["schemas"]["ExternalRef"])[];
+        };
+        /**
+         * InteractionRef
+         * @description An interaction behind a review item. The reviewer reads its content through the audited evidence endpoint, never from this list.
+         */
+        InteractionRef: {
+            /** Episode Uuid */
+            episode_uuid?: string | null;
+            /**
+             * Interaction Id
+             * Format: uuid
+             */
+            interaction_id: string;
+            /** Occurred At */
+            occurred_at: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Source System */
+            source_system: string;
         };
         /** InteractionSummary */
         InteractionSummary: {
@@ -1709,6 +2217,36 @@ export interface components {
             principal: components["schemas"]["PrincipalSummary"];
             workspace: components["schemas"]["WorkspaceOut"];
         };
+        /** MentionOut */
+        MentionOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Episode Uuid */
+            episode_uuid: string;
+            /**
+             * Interaction Id
+             * Format: uuid
+             */
+            interaction_id: string;
+            /** Occurred At */
+            occurred_at: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+            /** Resolution */
+            resolution: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Source System */
+            source_system: string;
+            /** Status */
+            status: string;
+        };
         /** OntologyVersionOut */
         OntologyVersionOut: {
             /**
@@ -1874,6 +2412,13 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /** Page[ReviewOut] */
+        Page_ReviewOut_: {
+            /** Items */
+            items: components["schemas"]["ReviewOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /**
          * PrincipalKind
          * @enum {string}
@@ -2011,8 +2556,184 @@ export interface components {
         ReplayIn: {
             /** Reason Code */
             reason_code: string;
+            /**
+             * Repin
+             * @default false
+             */
+            repin: boolean;
             /** Stage */
             stage?: string | null;
+        };
+        /** ReviewDetail */
+        ReviewDetail: {
+            /** Allowed Decisions */
+            allowed_decisions: string[];
+            /** Candidate Entity Id */
+            candidate_entity_id?: string | null;
+            /**
+             * Candidates
+             * @default []
+             */
+            candidates: components["schemas"]["IdentityCandidate"][];
+            /** Command Id */
+            command_id?: string | null;
+            /** Competing Fact Id */
+            competing_fact_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision */
+            decision?: string | null;
+            /** Due At */
+            due_at: string | null;
+            /**
+             * Entities
+             * @default []
+             */
+            entities: components["schemas"]["ReviewEntityView"][];
+            /** Fact Id */
+            fact_id?: string | null;
+            /**
+             * Facts
+             * @default []
+             */
+            facts: components["schemas"]["FactOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Interaction Id */
+            interaction_id?: string | null;
+            /**
+             * Interactions
+             * @default []
+             */
+            interactions: components["schemas"]["InteractionRef"][];
+            /**
+             * Item Type
+             * @enum {string}
+             */
+            item_type: "policy_violation" | "identity_match" | "contradiction" | "graphiti_invalidation";
+            /** Rationale Code */
+            rationale_code?: string | null;
+            /** Rationale Text */
+            rationale_text?: string | null;
+            /** Reason Code */
+            reason_code: string;
+            /** Revision */
+            revision: number;
+            /** Rule Kind */
+            rule_kind: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "decided";
+            /** Subject Entity Id */
+            subject_entity_id?: string | null;
+            /**
+             * Violations
+             * @default []
+             */
+            violations: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * ReviewEntityView
+         * @description One side of an identity comparison. Sensitive attributes are redacted unless the caller may see them.
+         */
+        ReviewEntityView: {
+            /** Aliases */
+            aliases: string[];
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "public" | "internal" | "confidential" | "restricted" | "local_only";
+            /** External Ids */
+            external_ids: components["schemas"]["ExternalId"][];
+            /** Fact Count */
+            fact_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mention Count */
+            mention_count: number;
+            /** Merged Into Id */
+            merged_into_id?: string | null;
+            /** Name */
+            name: string;
+            /** Origin */
+            origin: string;
+            /** Status */
+            status: string;
+            /** Type */
+            type: string;
+        };
+        /** ReviewOut */
+        ReviewOut: {
+            /** Candidate Entity Id */
+            candidate_entity_id?: string | null;
+            /** Command Id */
+            command_id?: string | null;
+            /** Competing Fact Id */
+            competing_fact_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decision */
+            decision?: string | null;
+            /** Due At */
+            due_at: string | null;
+            /** Fact Id */
+            fact_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Interaction Id */
+            interaction_id?: string | null;
+            /**
+             * Item Type
+             * @enum {string}
+             */
+            item_type: "policy_violation" | "identity_match" | "contradiction" | "graphiti_invalidation";
+            /** Rationale Code */
+            rationale_code?: string | null;
+            /** Reason Code */
+            reason_code: string;
+            /** Revision */
+            revision: number;
+            /** Rule Kind */
+            rule_kind: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "decided";
+            /** Subject Entity Id */
+            subject_entity_id?: string | null;
         };
         /**
          * Role
@@ -2579,7 +3300,7 @@ export interface operations {
         parameters: {
             query?: {
                 status?: ("applied" | "rejected" | "needs_review") | null;
-                type?: ("entity.create" | "entity.update" | "relationship.assert" | "relationship.end") | null;
+                type?: ("entity.create" | "entity.update" | "relationship.assert" | "relationship.end" | "review.decide" | "entity.merge") | null;
                 entity_id?: string | null;
                 limit?: number;
                 cursor?: string | null;
@@ -2754,7 +3475,7 @@ export interface operations {
             query?: {
                 type?: string | null;
                 q?: string | null;
-                status?: ("active" | "deleted") | null;
+                status?: ("active" | "deleted" | "candidate" | "untyped" | "merged") | null;
                 limit?: number;
                 cursor?: string | null;
             };
@@ -2953,7 +3674,8 @@ export interface operations {
     get_entity: {
         parameters: {
             query?: {
-                include?: "history" | null;
+                /** @description comma list: history, proposed, disputed, rejected */
+                include?: string | null;
                 as_of?: string | null;
                 known_at?: string | null;
             };
@@ -3168,6 +3890,270 @@ export interface operations {
             };
         };
     };
+    entity_attribute_claims: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributeClaimOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    entity_graph: {
+        parameters: {
+            query?: {
+                hops?: number;
+                as_of?: string | null;
+                known_at?: string | null;
+                /** @description comma list: historical, proposed, disputed, rejected */
+                include?: string | null;
+                /** @description comma list of entity types to keep (the centre always stays) */
+                types?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    entity_mentions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MentionOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     entity_relationships: {
         parameters: {
             query?: {
@@ -3176,6 +4162,8 @@ export interface operations {
                 as_of?: string | null;
                 known_at?: string | null;
                 include_history?: boolean;
+                /** @description comma list: history, proposed, disputed, rejected */
+                include?: string | null;
             };
             header?: never;
             path: {
@@ -3192,6 +4180,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FactOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    entity_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedSummaryOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    graph_search: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GraphSearchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphSearchOut"];
                 };
             };
             /** @description Unauthenticated */
@@ -6056,6 +7216,463 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    relationship_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceOut"][];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_reviews: {
+        parameters: {
+            query?: {
+                type?: ("policy_violation" | "identity_match" | "contradiction" | "graphiti_invalidation") | null;
+                status?: ("open" | "decided") | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ReviewOut_"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewDetail"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    decide_review: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "If-Match"?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description already_decided / requires_correction / not_available / cannot_reapply / idempotency_mismatch */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description If-Match does not match the item's current revision */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description If-Match is required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    read_review_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: string;
+                interaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
             };
             /** @description Internal error */
             500: {

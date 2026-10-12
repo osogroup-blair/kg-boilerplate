@@ -20,7 +20,6 @@ ontology_publish_total = Counter("ontology_publish_total", "Ontology publish att
 commands_total = Counter("commands_total", "Deterministic commands", ["command_type", "outcome"], registry=REGISTRY)
 rule_violations_total = Counter("rule_violations_total", "Rule violations by kind and action", ["rule_kind", "action"], registry=REGISTRY)
 projection_total = Counter("projection_total", "Graph projection attempts", ["kind", "outcome"], registry=REGISTRY)
-projection_pending = Gauge("projection_pending", "Rows waiting for graph projection (set by the sweeper)", registry=REGISTRY)
 projection_lag_seconds = Histogram(
     "projection_lag_seconds",
     "Seconds from a row being recorded to its projection",
@@ -49,6 +48,37 @@ outbox_stale_completions_total = Counter(
     "outbox_stale_completions_total", "Completions rejected because the lease was lost (fencing)", ["stage"], registry=REGISTRY
 )
 outbox_dead_letters = Gauge("outbox_dead_letters", "Dead-lettered jobs by stage (all workspaces)", ["stage"], registry=REGISTRY)
+# ---- extraction, identity and review (P4). Closed label values only (an outcome, a status, a kind, a type): never an id, a name or a fact. ----------
+graph_ingest_total = Counter("graph_ingest_total", "graph_ingest stage attempts by outcome", ["outcome"], registry=REGISTRY)
+graph_ingest_duration_seconds = Histogram(
+    "graph_ingest_duration_seconds",
+    "Wall time of one graph_ingest attempt (model calls included)",
+    buckets=(0.05, 0.25, 1, 2.5, 5, 10, 30, 60, 120, 300),
+    registry=REGISTRY,
+)
+extraction_entities_total = Counter(
+    "extraction_entities_total", "Entities Graphiti returned, by how the platform resolved them", ["resolution"], registry=REGISTRY
+)
+extraction_facts_total = Counter(
+    "extraction_facts_total", "Extracted facts by the status the platform decided", ["status"], registry=REGISTRY
+)
+extraction_reverts_total = Counter(
+    "extraction_reverts_total", "Graphiti changes to authoritative graph state that the platform undid", ["kind"], registry=REGISTRY
+)
+reviews_created_total = Counter("reviews_created_total", "Review items opened", ["item_type"], registry=REGISTRY)
+review_decisions_total = Counter("review_decisions_total", "Review decisions", ["item_type", "decision"], registry=REGISTRY)
+review_items_open = Gauge("review_items_open", "Open review items by type (all workspaces)", ["type"], registry=REGISTRY)
+review_age_seconds = Gauge("review_age_seconds", "Age of the oldest open review item by type", ["type"], registry=REGISTRY)
+graph_lock_wait_seconds = Histogram(
+    "graph_lock_wait_seconds",
+    "Time spent waiting for a workspace's graph writer lock",
+    buckets=(0.005, 0.025, 0.1, 0.5, 1, 2.5, 5, 15, 60),
+    registry=REGISTRY,
+)
+graph_search_total = Counter("graph_search_total", "Diagnostic graph searches by outcome", ["outcome"], registry=REGISTRY)
+graph_search_unreconciled_hits_total = Counter(
+    "graph_search_unreconciled_hits_total", "Graph hits dropped because Postgres has no matching fact yet", registry=REGISTRY
+)
 dependency_up = Gauge("dependency_up", "1 if the dependency answered its last check", ["dependency"], registry=REGISTRY)
 
 

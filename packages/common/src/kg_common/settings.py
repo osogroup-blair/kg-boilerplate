@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # Outbox dispatcher (P3). Leases and backoff are judged by the database clock; these are durations only.
     worker_concurrency: int = Field(default=4, ge=1, le=64)
-    worker_stage_limits: str = "graph_projection=2"  # "stage=n,stage=n": per-stage slot caps inside worker_concurrency
+    worker_stage_limits: str = "graph_projection=2,graph_ingest=2"  # "stage=n,stage=n": per-stage slot caps inside worker_concurrency
     worker_lease_seconds: int = Field(default=30, ge=1, le=900)
     worker_poll_busy_seconds: float = 0.2
     worker_poll_idle_seconds: float = 2.0
@@ -83,13 +83,25 @@ class Settings(BaseSettings):
     # HKDF master for the per-workspace content HMAC. NOT the payload key: rotating payload keys must not change request hashes (idempotency).
     content_hmac_secret: SecretStr = SecretStr(DEV_CONTENT_HMAC_SECRET)
 
+    # Extraction and identity (P4). Thresholds are placeholders until the live evaluation sets them (ADR-013: E5 similarities cluster high).
+    identity_trgm_min: float = Field(default=0.45, ge=0.0, le=1.0)  # pg_trgm similarity of names for an identity candidate
+    identity_cos_min: float = Field(default=0.92, ge=0.0, le=1.0)  # cosine of the E5 name embeddings for an identity candidate
+    graph_store_episode_content: bool = (
+        True  # Graphiti keeps the episode text in Neo4j (inside the trusted boundary; EX-06). False blanks it after extraction.
+    )
+    graph_previous_episodes: int = Field(
+        default=0, ge=0, le=10
+    )  # earlier episodes sent as extraction context (0: each interaction stands alone)
+    graph_ingest_lock_wait_seconds: float = 120.0
+    graph_ingest_timeout_seconds: float = (
+        600.0  # one extraction attempt, model calls included; longer is a retryable failure (the lock must not be held forever)
+    )
+
     # Test-only failure injection (P3 §5.7). Refused when ENV=production.
     kg_faults: str = ""  # "stage:point:count,..." e.g. "normalize:after_claim:3"
     kg_faults_dir: str = ""  # holds the persistent fire counters and an optional `spec` file the dev worker re-reads
 
-    # Graph projection (P2). The P2 sweeper is superseded by the outbox in P3 (M16) and is OFF by default; P4 deletes it.
-    projection_sweeper_enabled: bool = False
-    projection_sweep_interval_seconds: float = 10.0
+    # Graph projection (P2). The command fast path waits this long for its projection; the outbox finishes anything slower.
     projection_request_budget_seconds: float = 5.0  # how long a command request waits for its projection before answering 202
 
     @property

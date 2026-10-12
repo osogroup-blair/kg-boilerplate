@@ -16,6 +16,7 @@ COPY packages/ontology/pyproject.toml packages/ontology/pyproject.toml
 COPY packages/knowledge/pyproject.toml packages/knowledge/pyproject.toml
 COPY packages/jobs/pyproject.toml packages/jobs/pyproject.toml
 COPY packages/ingestion/pyproject.toml packages/ingestion/pyproject.toml
+COPY packages/extraction/pyproject.toml packages/extraction/pyproject.toml
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
 COPY apps/cli/pyproject.toml apps/cli/pyproject.toml

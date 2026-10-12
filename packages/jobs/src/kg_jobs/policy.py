@@ -32,6 +32,7 @@ class RetryPolicy:
 POLICIES: dict[str, RetryPolicy] = {
     "normalize": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0),
     "graph_projection": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=600.0),
+    "graph_ingest": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=300.0),
 }
 DEFAULT_POLICY = RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0)
 

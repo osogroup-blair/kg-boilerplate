@@ -184,6 +184,14 @@ Phases that can run in parallel: **P2 ∥ P3** (both need only P1), **P4 ∥ P5*
 
 ## Phase 4 — Graphiti Processing, Identity and Temporal Facts (Slice 3)
 
+**Detailed plan:** [docs/plans/phase-4-graph-identity-time.md](docs/plans/phase-4-graph-identity-time.md). It covers 11 work packages and applies 14 lessons from P0–P3 (Q1–Q14):
+- a `graph_ingest` stage and reconcile-then-restore (model output never overrides higher-authority truth);
+- identity review and merge;
+- the Graph Explorer and Review Queue v1;
+- an extraction evaluation harness.
+
+It has two exits: offline (mock scenario fixtures) and **live** (`make verify-router` + `make eval-extraction-live`, a user action required before P6).
+
 - **Graphiti stage:** a worker stage that adds the episode with the authorized `group_id` mapping and the pinned ontology version, then links episode references back to the ledger.
 - **Fact policy in Postgres:** a `proposed → active → superseded/disputed/expired/deleted` state machine and a valid-time vs record-time mapping layer.
 - **Identity resolution:** candidate generation and a review queue for ambiguous matches. Merges keep aliases and lineage.
@@ -198,6 +206,20 @@ Phases that can run in parallel: **P2 ∥ P3** (both need only P1), **P4 ∥ P5*
   - the `evt_003` episode yields CONSIDERING as a tentative fact;
   - two different Sarahs are not merged.
 - **Gate:** KGR-01 to KGR-06; AT-02 to AT-05; ING-02 (Neo4j outage leads to retry or a partial status).
+
+**Status (2026-10-11): offline exit reached; live exit pending (user action).**
+- `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4` passes from a clean start (8/8, 13/13, 10/10, 13/13) and again without a reset. `make check` is green: ruff, import-linter (16 contracts), mypy `--strict` (149 files), 1038 unit/offline tests, 231 integration, 52 security, 57 contract, 103 Vitest. `make test-resilience` 10/10 (FI-01..10) and `make test-e2e` 13/13 (ADM-02 added). `make eval-extraction` scores 100% on the 7 scenario gold sets (strict mock router).
+- Built: the `graph_ingest` stage (`kg_extraction`), reconcile-then-restore, the pure conflict/authority policy (`kg_ontology.conflicts`), identity resolution with forked candidates, reviews and merge as ledger commands, evidence/neighbourhood/search/summary APIs, `kg reviews|extraction|graph` CLI, the Graph Explorer (Cytoscape.js 3.33.1, pinned) and Review Queue v1, migration `0004`, the strict scenario mock router and the extraction evaluation harness. The P2 sweeper is deleted.
+- Details: [docs/architecture/p4-graph-identity.md](docs/architecture/p4-graph-identity.md) (handler sequence, conflict table, lock model, deviations), ADR-026 (Graphiti behaviour EX-01..07), ADR-027 (reconcile-then-restore), ADR-028 (identity), runbooks [extraction-quarantine](docs/runbooks/extraction-quarantine.md) and [identity-correction](docs/runbooks/identity-correction.md).
+- **Live exit (required before P6, user action):** `make verify-router`, then `OSO_ROUTER_API_KEY=... make eval-extraction-live`. It writes `eval/reports/extraction-live-<date>.*`; use it to confirm the proposed thresholds and set `IDENTITY_COS_MIN` (ADR-013).
+- Surprises worth knowing in P5+:
+  - **Graphiti dedupes nodes by exact name**, so unvouched mentions are forked to candidate entities and reviewed; and it can invalidate a fact on a node the interaction does not mention, so the reverted rows are recorded in the stage result and added to the restore scope.
+  - **Graphiti's own retry waits minutes on bad JSON**: the platform client makes 2 attempts and the stage has a hard timeout.
+  - **A Neo4j outage must be raised inside the error-mapping block** or it shows as `unexpected_error`; job payloads accept scalars only (no id lists).
+  - **`CommandSummary`'s command-type literal must list every ledger command type** (review decisions and merges are commands); a test now lists them.
+  - Entity type ids are positional (compile sorts types alphabetically); scenario fixtures key on the new fact text; Neo4j can be OOM-killed on a small Docker Desktop.
+  - The Playwright specs share one workspace and the worker's fault file, so they run with one worker; `make test-e2e` runs demo-p2 and demo-p4 first.
+  - `kg db downgrade` past `0004` needs `--force-drop-extracted` (or `kg extraction purge`).
 
 ## Phase 5 — First-Class Curated Memory (Slice 4) — can start after P3
 

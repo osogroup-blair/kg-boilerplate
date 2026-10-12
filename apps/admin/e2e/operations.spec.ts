@@ -52,7 +52,7 @@ test("ADM-06: an operator finds the dead letter, retries it with a reason and se
   await expect(page.getByTestId("kpi-dead-letters")).not.toHaveText("0");
 
   // the dead letter for our event, then its attempts
-  const row = page.getByRole("row").filter({ hasText: `event ${eventId.slice(0, 8)}` });
+  const row = page.getByRole("row").filter({ hasText: "normalize" }).filter({ hasText: `event ${eventId.slice(0, 8)}` }); // P4: the same event may also list a graph_ingest job
   await expect(row).toBeVisible();
   await row.getByRole("link", { name: /normalize/ }).click();
   await expect(page.getByText("config_terminal: fault_injected")).toBeVisible();
@@ -71,7 +71,8 @@ test("ADM-06: an operator finds the dead letter, retries it with a reason and se
   await expect(page.getByTestId("stage-normalize")).toContainText("generation 1", { timeout: 30_000 });
   await expect(page.getByTestId("stage-normalize")).toContainText("succeeded", { timeout: 30_000 });
   await expect(page.getByText("indexed", { exact: true }).first()).toBeVisible();
-  await expect(page.getByTestId("stage-graph_ingest")).toContainText("enabled in P4");
+  await expect(page.getByTestId("stage-graph_ingest")).not.toContainText("enabled in P4"); // the stage is live since P4: it runs (or is skipped by policy) after normalize
+  await expect(page.getByTestId("stage-graph_ingest")).toContainText(/succeeded|skipped|running|pending|queued/, { timeout: 60_000 });
 });
 
 test("ADM-06: a reviewer sees the interactions list but no Reveal and no Replay", async ({ page }) => {

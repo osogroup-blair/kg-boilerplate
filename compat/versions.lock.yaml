@@ -137,3 +137,21 @@ p3_additions:
     algorithm: "AES-256-GCM"
     associated_data: "workspace_id|interaction_id|form"
     keyring: "PAYLOAD_KEYS / PAYLOAD_ACTIVE_KID (production refuses the development key)"
+
+# Phase 4 additions (2026-10-11). The only new third-party package is the admin console's graph renderer (exact, no range); Python gained one workspace
+# package and no new dependency (Graphiti, neo4j and the OpenAI SDK are pinned above and stay behind kg_graph).
+p4_additions:
+  workspace_packages:
+    kg-extraction: "0.1.0"  # the graph_ingest stage, the reconciler and identity helpers; import-linter keeps it from importing apps and keeps graphiti/openai behind kg_graph
+  python_packages: {}
+  admin_packages:
+    cytoscape: "3.33.1"     # Graph Explorer canvas (MIT); exact version, with an accessible table view of the same neighbourhood
+  migrations:
+    head: "0004_extraction_identity_review"
+  postgres_functions:
+    ops: "claim_jobs, heartbeat_jobs, complete_job, release_jobs, cancel_job, backlog_stats, review_stats (P4); workspaces_with_pending_projection DROPPED (the P2 sweeper is deleted)"
+  pipeline:
+    version: "p4.v1"        # stages: normalize, graph_ingest (enabled), memory_propose (P5, disabled)
+  extraction:
+    graphiti: "0.30.2 (add_episode with a pre-created episode uuid; communities off); see docs/adr/ADR-026-graphiti-extraction-behaviour.md"
+    thresholds: "IDENTITY_TRGM_MIN 0.45, IDENTITY_COS_MIN 0.92 (to be finalised by make eval-extraction-live)"

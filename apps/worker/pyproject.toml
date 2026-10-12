@@ -15,6 +15,7 @@ dependencies = [
   "kg-knowledge",
   "kg-jobs",
   "kg-ingestion",
+  "kg-extraction",
 ]
 
 [build-system]
@@ -36,3 +37,4 @@ kg-ontology = { workspace = true }
 kg-knowledge = { workspace = true }
 kg-jobs = { workspace = true }
 kg-ingestion = { workspace = true }
+kg-extraction = { workspace = true }

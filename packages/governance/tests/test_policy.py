@@ -17,8 +17,8 @@ from kg_governance.authz.policy import (
 
 pytestmark = pytest.mark.unit
 
-# The documented matrix (phase-1 plan §6.3 + phase-2 plan §6.3 + phase-3 plan §6.3). If this table has to change, the plan and the review have to change with it.
-# No P1 cell changed in P2 and no P1/P2 cell changed in P3: actions were only added.
+# The documented matrix (phase-1 plan §6.3 + phase-2 plan §6.3 + phase-3 plan §6.3 + phase-4 plan §6.3). If this table has to change, the plan and the review
+# have to change with it. No P1 cell changed in P2, no P1/P2 cell in P3 and no P1-P3 cell in P4: actions were only added.
 P1 = {
     Role.WORKSPACE_ADMIN: {"workspace.read", "principal.read", "audit.read", "operations.read", "diagnostics.run"},
     Role.OPERATOR: {"workspace.read", "operations.read", "diagnostics.run"},
@@ -51,7 +51,15 @@ P3 = {
     Role.AGENT: {"interaction.write", "interaction.read"},  # an agent reads only its OWN submissions (ownership predicate in the query)
     Role.READER: set(),
 }
-EXPECTED = {role: P1[role] | P2[role] | P3[role] for role in Role}
+P4 = {
+    Role.WORKSPACE_ADMIN: {"review.read", "review.decide", "review.read_evidence", "graph.search"},
+    Role.OPERATOR: {"graph.search"},
+    Role.REVIEWER: {"review.read", "review.decide", "review.read_evidence", "graph.search"},
+    Role.APP_WRITER: set(),
+    Role.AGENT: set(),  # agents get graph-backed context through P6, never raw graph search
+    Role.READER: set(),
+}
+EXPECTED = {role: P1[role] | P2[role] | P3[role] | P4[role] for role in Role}
 
 
 def _p(*roles: Role) -> Principal:
@@ -76,10 +84,17 @@ def test_each_role_times_action(role: Role, action: Action):
 
 def test_earlier_phase_cells_did_not_widen():
     for role, p1 in P1.items():
-        assert p1 <= {a.value for a in ROLE_ACTIONS[role]}
-        assert {a.value for a in ROLE_ACTIONS[role]} - p1 == P2[role] | P3[role]
-        assert P1[role] | P2[role] <= {a.value for a in ROLE_ACTIONS[role]}
-        assert {a.value for a in ROLE_ACTIONS[role]} - (P1[role] | P2[role]) == P3[role]
+        have = {a.value for a in ROLE_ACTIONS[role]}
+        assert p1 <= have and (P1[role] | P2[role]) <= have and (P1[role] | P2[role] | P3[role]) <= have
+        assert have - p1 == P2[role] | P3[role] | P4[role]
+        assert have - (P1[role] | P2[role]) == P3[role] | P4[role]
+        assert have - (P1[role] | P2[role] | P3[role]) == P4[role]
+
+
+def test_only_admins_and_reviewers_decide_reviews_and_read_their_evidence():
+    for action in (Action.REVIEW_READ, Action.REVIEW_DECIDE, Action.REVIEW_READ_EVIDENCE):
+        assert {r for r, acts in ROLE_ACTIONS.items() if action in acts} == {Role.WORKSPACE_ADMIN, Role.REVIEWER}
+    assert {r for r, acts in ROLE_ACTIONS.items() if Action.GRAPH_SEARCH in acts} == {Role.WORKSPACE_ADMIN, Role.OPERATOR, Role.REVIEWER}
 
 
 def test_only_admins_read_decrypted_content_and_only_admins_and_operators_repair():

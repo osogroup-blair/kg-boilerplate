@@ -14,6 +14,38 @@ import { StageTimeline } from "./StageTimeline";
 type Content = components["schemas"]["ContentOut"];
 const REPLAYABLE = new Set(["dead", "failed", "invalid"]);
 
+type StageRow = components["schemas"]["InteractionDetail"]["stages"][number];
+/** Stages a replay can pick. An event accepted before graph_ingest existed (skipped_disabled) or while no ontology was active can be replayed with a re-pin. */
+export function replayableStages(stages: StageRow[]): Array<{ stage: string; repin: boolean }> {
+  return stages.flatMap((s): Array<{ stage: string; repin: boolean }> => {
+    if (REPLAYABLE.has(s.status)) return [{ stage: s.stage, repin: false }];
+    if (s.stage === "graph_ingest" && (s.status === "skipped_disabled" || (s.status === "skipped_by_policy" && s.last_error_code === "no_active_ontology"))) return [{ stage: s.stage, repin: true }];
+    return [];
+  });
+}
+
+/** What the graph_ingest stage produced (EVD-03): the episode, the entities and facts, the review items it opened, what it cost. Ids and counts only. */
+export function GraphIngestSummary({ stage }: { stage: StageRow }) {
+  const r = (stage.result ?? {}) as Record<string, unknown>;
+  if (stage.stage !== "graph_ingest" || !r.episode_uuid) return null;
+  const list = (k: string) => ((r[k] as string[] | undefined) ?? []);
+  const facts = (r.facts ?? {}) as Record<string, number>;
+  return (
+    <section aria-labelledby="gi-h" className="space-y-2" data-testid="graph-ingest-summary">
+      <h2 id="gi-h" className="font-medium">Extraction</h2>
+      <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm">
+        <dt className="text-slate-500">Episode</dt><dd className="font-mono text-xs">{String(r.episode_uuid)}{r.reused ? " · reused: the model was not called again" : ""}</dd>
+        <dt className="text-slate-500">Entities</dt><dd>{String(r.entities_linked ?? 0)} linked to named subjects · {String(r.entities_new ?? 0)} new · {String(r.entities_forked ?? 0)} kept apart for review · {String(r.name_variants ?? 0)} name variants</dd>
+        <dt className="text-slate-500">Facts</dt><dd>{Object.keys(facts).length === 0 ? "none" : Object.entries(facts).map(([k, v]) => `${v} ${k}`).join(" · ")}{Number(r.evidence_added ?? 0) > 0 ? ` · ${String(r.evidence_added)} corroborations` : ""}</dd>
+        <dt className="text-slate-500">Reverted</dt><dd>{Number(r.reverts ?? 0) === 0 ? "nothing: the model changed no recorded fact" : `${String(r.reverts)} change${Number(r.reverts) === 1 ? "" : "s"} the model made to recorded facts were undone`}</dd>
+        <dt className="text-slate-500">Model calls</dt><dd>{String(r.chat_calls ?? 0)} chat · {String(r.embedding_calls ?? 0)} embeddings · {String(r.prompt_tokens ?? 0)} + {String(r.completion_tokens ?? 0)} tokens</dd>
+      </dl>
+      {list("entity_ids").length > 0 ? <p className="text-sm">New entities: {list("entity_ids").map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/graph?entity=${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
+      {list("review_ids").length > 0 ? <p className="text-sm">Review items: {list("review_ids").map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/reviews/${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
+    </section>
+  );
+}
+
 /** The decrypted original, rendered as TEXT and nothing else: content is data, so it is never interpreted as markup. */
 export function ContentView({ content }: { content: Content }) {
   const text = typeof content.content === "string" ? content.content : JSON.stringify(content.content, null, 2);
@@ -68,7 +100,7 @@ function RevealContent({ eventId }: { eventId: string }) {
   );
 }
 
-function ReplayButton({ eventId, stages }: { eventId: string; stages: string[] }) {
+function ReplayButton({ eventId, stages }: { eventId: string; stages: Array<{ stage: string; repin: boolean }> }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState("");
@@ -80,7 +112,7 @@ function ReplayButton({ eventId, stages }: { eventId: string; stages: string[] }
       {open ? (
         <ReasonDialog title="Replay" confirmLabel="Replay" onClose={() => setOpen(false)}
           onConfirm={async (reason) => {
-            const res = await api.POST("/v1/interactions/{event_id}/replay", { params: { path: { event_id: eventId }, header: { "Idempotency-Key": newKey() } }, body: { reason_code: reason, stage: stage || null } });
+            const res = await api.POST("/v1/interactions/{event_id}/replay", { params: { path: { event_id: eventId }, header: { "Idempotency-Key": newKey() } }, body: { reason_code: reason, stage: stage || null, repin: stages.find((x) => x.stage === stage)?.repin ?? false } });
             if (res.response.status !== 202) return (res.error as { error?: { code?: string } } | undefined)?.error?.code ?? "replay_failed";
             setDone("Replay queued: a new generation of the stage will run.");
             await qc.invalidateQueries({ queryKey: ["interaction", eventId] });
@@ -91,7 +123,7 @@ function ReplayButton({ eventId, stages }: { eventId: string; stages: string[] }
           <Field label="Stage" hint="Leave on “all dead or failed stages” unless one stage needs a rerun.">
             <select aria-label="Stage" className={`${inputCls} w-full`} value={stage} onChange={(e) => setStage(e.target.value)}>
               <option value="">All dead or failed stages</option>
-              {stages.map((s) => <option key={s} value={s}>{s}</option>)}
+              {stages.map((s) => <option key={s.stage} value={s.stage}>{s.stage}{s.repin ? " (move to the current ontology)" : ""}</option>)}
             </select>
           </Field>
         </ReasonDialog>
@@ -114,7 +146,7 @@ export function InteractionDetailPage() {
   const blocked = stateForStatus(res.response.status, "This interaction", () => void q.refetch());
   if (blocked || !res.data) return <div className="space-y-4"><Link to="/interactions" className={btn.link}>← Interactions</Link>{blocked}</div>;
   const i = res.data;
-  const replayable = i.stages.filter((s) => REPLAYABLE.has(s.status)).map((s) => s.stage);
+  const replayable = replayableStages(i.stages);
   return (
     <div className="space-y-6">
       <Link to="/interactions" className={btn.link}>← Interactions</Link>
@@ -149,6 +181,7 @@ export function InteractionDetailPage() {
           {can.repair && replayable.length > 0 ? <ReplayButton eventId={i.id} stages={replayable} /> : null}
         </div>
         <StageTimeline stages={i.stages} />
+        {i.stages.map((s) => <GraphIngestSummary key={s.stage} stage={s} />)}
         {i.processing_status === "failed" ? <Banner tone="red" role="status">Normalisation failed, so nothing was derived from this event. Fix the cause and replay it.</Banner> : null}
         {i.processing_status === "partial" ? <Banner tone="amber" role="status">Some derivative stages did not complete. The source is safe; replay the dead stages when ready.</Banner> : null}
       </section>

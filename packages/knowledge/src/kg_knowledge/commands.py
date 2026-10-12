@@ -32,6 +32,7 @@ from kg_governance.audit import AuditMetadata, AuditWriter, CommandType
 from kg_jobs.outbox import enqueue
 from kg_obs import metrics
 from kg_ontology import OntologySpec
+from kg_ontology.conflicts import evidence_status
 from kg_ontology.rules.context import EntityRef, FactSnap, RuleCommand, RuleContext, Violation
 from kg_ontology.rules.engine import Evaluation, evaluate
 from kg_ontology.spec import AUTHORITY_RANK
@@ -69,6 +70,7 @@ class CommandContext:
     ctx: WorkspaceContext
     principal: Principal
     audit: AuditWriter
+    override_queue: bool = False  # a reviewer approved a queued command: the rule that queued it is overridden once (P4 review decision)
 
 
 @dataclass
@@ -199,6 +201,13 @@ class CommandPipeline:
         apply: Callable[[], Awaitable[None]],
     ) -> PipelineResult:
         """Stages 8-9: decide, then persist the command, the rows it produced and the audit entry in the caller's transaction."""
+        if (
+            cc.override_queue
+        ):  # the reviewer's approval overrides the queuing rule (and only that): the violation stays in the trace as a warning
+            ev.violations = [
+                Violation(v.rule_kind, v.code, v.path, "warn", v.stage, v.rule_id, v.queue_class) if v.action == "queue_review" else v
+                for v in ev.violations
+            ]
         outcome = ev.outcome
         for v in ev.violations:
             metrics.rule_violations_total.labels(rule_kind=v.rule_kind, action=v.action).inc()
@@ -207,6 +216,9 @@ class CommandPipeline:
         )
         trace = sorted([*ev.trace, *extra_trace, {"stage": "decision", "outcome": outcome}], key=lambda s: STAGE_ORDER.index(s["stage"]))
         stored_result = result if status == "applied" else {}
+        if status == "needs_review" and command_type in (CommandType.ENTITY_UPDATE, CommandType.RELATIONSHIP_END):
+            # a reviewer's approval re-applies the command (P4): an update or an end needs to know which row it was aimed at
+            stored_result = {"queued_target": {k: result[k] for k in ("entity_id", "fact_id") if k in result}}
         projection = "pending" if status == "applied" and not result.get("matched_existing") else "not_applicable"
         ws = cc.ctx.workspace_id
         await cc.conn.execute(
@@ -261,6 +273,7 @@ class CommandPipeline:
                     payload={"command_id": str(command_id), "generation": 0},
                     pipeline_version=PIPELINE_VERSION,
                     ontology_version_id=version_id,
+                    concurrency_key=f"graph:{ws}",  # graph writers of one workspace are serialised (P4 Q4)
                 )
         first = next((v for v in ev.violations if v.action != "warn"), None)
         audit_action = {"applied": "command.applied", "rejected": "command.rejected", "needs_review": "command.queued"}[status]
@@ -633,8 +646,8 @@ class CommandPipeline:
             await cc.conn.execute(
                 text(
                     "INSERT INTO facts (id, workspace_id, rel_type, source_entity_id, target_entity_id, attributes, valid_from, valid_from_unknown, valid_to, source_recorded_at, "
-                    "authority_class, classification, source_type, source_command_id, last_command_id, source_system, source_ref, ontology_version_id) "
-                    "VALUES (:id, :ws, :rel, :s, :t, CAST(:attrs AS jsonb), :vf, :vfu, :vt, :sra, :auth, :cls, 'command', :c, :c, :ss, :sr, :ver)"
+                    "authority_class, classification, source_type, source_command_id, last_command_id, source_system, source_ref, ontology_version_id, evidence_status) "
+                    "VALUES (:id, :ws, :rel, :s, :t, CAST(:attrs AS jsonb), :vf, :vfu, :vt, :sra, :auth, :cls, 'command', :c, :c, :ss, :sr, :ver, :evs)"
                 ),
                 {
                     "id": fact_id,
@@ -653,7 +666,12 @@ class CommandPipeline:
                     "ss": body.source_system,
                     "sr": body.source_ref,
                     "ver": version_id,
+                    "evs": evidence_status(authority),
                 },
+            )
+            await cc.conn.execute(
+                text("INSERT INTO fact_evidence (id, fact_id, workspace_id, source_kind, command_id) VALUES (:id, :f, :ws, 'command', :c)"),
+                {"id": uuid7(), "f": fact_id, "ws": ws, "c": command_id},
             )
             for effect in ev.effects:
                 await cc.conn.execute(

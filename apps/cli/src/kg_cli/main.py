@@ -11,11 +11,12 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from kg_common.errors import PlatformError
 from kg_common.settings import REPO_ROOT, get_settings
 from kg_db import migrate
 from kg_db.engine import create_app_engine
 from kg_db.session import system_session, tenant_session
-from kg_domain.enums import PrincipalKind
+from kg_domain.enums import PrincipalKind, Role
 from kg_domain.principal import Principal, WorkspaceContext
 from kg_governance.audit import AuditWriter
 from kg_governance.repositories import admin
@@ -32,8 +33,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from kg_cli.seed import publish_ontology, seed_demo, workspace_id_for, write_credentials
 
 app = typer.Typer(no_args_is_help=True, help="Knowledge & Memory Platform operator CLI")
-db_app, keys_app, seed_app, openapi_app, graph_app, commands_app, interactions_app, jobs_app, payloads_app = (
-    typer.Typer() for _ in range(9)
+db_app, keys_app, seed_app, openapi_app, graph_app, commands_app, interactions_app, jobs_app, payloads_app, reviews_app, extraction_app = (
+    typer.Typer() for _ in range(11)
 )
 app.add_typer(db_app, name="db", help="Database migrations (runs as kg_owner)")
 app.add_typer(keys_app, name="keys", help="API keys")
@@ -44,6 +45,8 @@ app.add_typer(commands_app, name="commands", help="Command ledger operations")
 app.add_typer(interactions_app, name="interactions", help="Interaction ledger: replay a stage, reconcile stuck events")
 app.add_typer(jobs_app, name="jobs", help="Outbox jobs: list, show, retry, cancel")
 app.add_typer(payloads_app, name="payloads", help="Payload encryption keys")
+app.add_typer(reviews_app, name="reviews", help="Review queue: list, show, decide (identity matches, contradictions, invalidations)")
+app.add_typer(extraction_app, name="extraction", help="Extraction cost evidence and the guarded purge")
 CREDENTIALS = REPO_ROOT / ".local" / "dev-credentials.json"
 
 
@@ -54,10 +57,18 @@ def db_upgrade(revision: str = "head") -> None:
 
 
 @db_app.command("downgrade")
-def db_downgrade(revision: str = "base") -> None:
+def db_downgrade(
+    revision: str = "base",
+    force_drop_extracted: Annotated[
+        bool, typer.Option("--force-drop-extracted", help="delete extracted entities, facts and episodes so 0004 can be undone")
+    ] = False,
+) -> None:
     if get_settings().is_production:
         raise typer.Exit(_fail("refusing to downgrade in production"))
-    migrate.downgrade(get_settings().database_url_owner.get_secret_value(), revision)
+    try:
+        migrate.downgrade(get_settings().database_url_owner.get_secret_value(), revision, force_drop_extracted=force_drop_extracted)
+    except RuntimeError as exc:
+        raise typer.Exit(_fail(str(exc))) from exc
     typer.echo(f"database at {revision}")
 
 
@@ -206,6 +217,38 @@ async def knowledge_runtime(engine: AsyncEngine) -> AsyncIterator[tuple[Knowledg
         await router.aclose()
 
 
+async def _episode_findings(engine: AsyncEngine, ctx: WorkspaceContext, knowledge: KnowledgeServices, *, repair: bool) -> dict[str, object]:
+    """P4: every `graph_episodes` row has its episode node in the graph, and the graph's MENTIONS agree with `entity_mentions`."""
+    graph = knowledge.projector._graph.scoped(ctx)
+    findings: list[dict[str, str]] = []
+    async with tenant_session(engine, ctx) as conn:
+        episodes = (
+            await conn.execute(
+                text("SELECT interaction_id, episode_uuid FROM graph_episodes WHERE workspace_id = :ws"), {"ws": ctx.workspace_id}
+            )
+        ).all()
+    present = {r["u"] for r in await graph.run_cypher("MATCH (e:Episodic {group_id: $group_id}) RETURN e.uuid AS u")}
+    for e in episodes:
+        if e.episode_uuid not in present:
+            findings.append({"kind": "episode_missing", "interaction_id": str(e.interaction_id)})
+    mentioned = {
+        (r["e"], r["n"])
+        for r in await graph.run_cypher("MATCH (e:Episodic {group_id: $group_id})-[:MENTIONS]->(n:Entity) RETURN e.uuid AS e, n.uuid AS n")
+    }
+    async with tenant_session(engine, ctx) as conn:
+        rows = (
+            await conn.execute(
+                text("SELECT episode_uuid, entity_id FROM entity_mentions WHERE workspace_id = :ws"), {"ws": ctx.workspace_id}
+            )
+        ).all()
+    wanted = {(r.episode_uuid, str(r.entity_id)) for r in rows}
+    for _episode, entity in sorted(wanted - mentioned):
+        findings.append({"kind": "mention_missing_in_graph", "interaction_id": "", "entity_id": entity})
+    # repairs belong to the interaction's restore job: `kg interactions replay --stage graph_projection` or `kg extraction purge`
+    _ = repair
+    return {"checked": len(episodes), "findings": findings}
+
+
 @graph_app.command("reconcile")
 def graph_reconcile(
     workspace: Annotated[str, typer.Option(help="workspace slug")],
@@ -220,11 +263,13 @@ def graph_reconcile(
         try:
             async with knowledge_runtime(engine) as (knowledge, _):
                 report = await knowledge.projector.reconcile(ctx, repair=repair)
+                episodes = await _episode_findings(engine, ctx, knowledge, repair=repair)
         finally:
             await engine.dispose()
         typer.echo(
             json.dumps(
                 {
+                    "episodes": episodes,
                     "entities": report.checked_entities,
                     "facts": report.checked_facts,
                     "pending": report.pending,
@@ -234,7 +279,7 @@ def graph_reconcile(
                 }
             )
         )
-        return 0 if (not report.drift or repair) else 1
+        return 0 if ((not report.drift and not episodes["findings"]) or repair) else 1
 
     raise typer.Exit(asyncio.run(run()))
 
@@ -277,7 +322,12 @@ def interactions_replay(
     workspace: Workspace,
     actor: Actor,
     reason: Reason,
-    stage: Annotated[str | None, typer.Option(help="stage to replay; default: every dead or failed stage")] = None,
+    stage: Annotated[
+        str | None, typer.Option(help="stage to replay; default: every dead or failed stage (graph_ingest with --repin)")
+    ] = None,
+    repin: Annotated[
+        bool, typer.Option("--repin", help="move the stage to the current pipeline version and the CURRENT active ontology (audited)")
+    ] = False,
 ) -> None:
     """Bumps the generation of a dead / failed stage and enqueues it again, with an audit entry (ING-05)."""
     settings = get_settings()
@@ -289,7 +339,9 @@ def interactions_replay(
             ingestion = build_ingestion(settings)
             async with tenant_session(engine, ctx) as conn:
                 audit = await _acting_as(conn, ctx, actor)
-                out = await ingestion.operations.replay_interaction(conn, ctx, audit, uuid.UUID(event_id), stage=stage, reason_code=reason)
+                out = await ingestion.operations.replay_interaction(
+                    conn, ctx, audit, uuid.UUID(event_id), stage=stage, reason_code=reason, repin=repin
+                )
             return out.model_dump_json()
         finally:
             await engine.dispose()
@@ -445,6 +497,282 @@ def payloads_reencrypt(
             await engine.dispose()
 
     typer.echo(f"re-encrypted {asyncio.run(run())} contents under '{to}'")
+
+
+# ---- review queue, extraction (P4) -----------------------------------------------------------------------------------------------------------------
+
+
+async def _acting_principal(conn, ctx: WorkspaceContext, handle: str) -> Principal:  # type: ignore[no-untyped-def]
+    """The named principal with its REAL roles: a decision from the CLI is authorised exactly like one from the API."""
+    row = (
+        await conn.execute(
+            text(
+                "SELECT p.id, p.kind, COALESCE(array_agg(r.role) FILTER (WHERE r.role IS NOT NULL), ARRAY[]::text[]) AS roles FROM principals p "
+                "LEFT JOIN role_assignments r ON r.workspace_id = p.workspace_id AND r.principal_id = p.id WHERE p.workspace_id = :ws AND p.handle = :h GROUP BY p.id"
+            ),
+            {"ws": ctx.workspace_id, "h": handle},
+        )
+    ).first()
+    if row is None:
+        raise typer.Exit(_fail(f"no principal '{handle}' in this workspace"))
+    return Principal(
+        principal_id=row.id,
+        workspace_id=ctx.workspace_id,
+        kind=PrincipalKind(row.kind),
+        handle=handle,
+        roles=frozenset(Role(x) for x in row.roles),
+    )
+
+
+@reviews_app.command("list")
+def reviews_list(
+    workspace: Workspace,
+    item_type: Annotated[
+        str | None, typer.Option("--type", help="identity_match | contradiction | graphiti_invalidation | policy_violation")
+    ] = None,
+    status: Annotated[str | None, typer.Option(help="open | decided")] = "open",
+) -> None:
+    settings = get_settings()
+
+    async def run() -> list[str]:
+        engine = create_app_engine(settings, pool_size=2, max_overflow=0)
+        ctx = WorkspaceContext.for_system_task(workspace_id_for(workspace), reason="cli reviews list")
+        try:
+            knowledge = build_knowledge_offline(engine)
+            async with tenant_session(engine, ctx) as conn:
+                page = await knowledge.reviews.list_items(conn, ctx, item_type=item_type, status=status, limit=100, cursor=None)
+            return [i.model_dump_json() for i in page.items]
+        finally:
+            await engine.dispose()
+
+    for line in asyncio.run(run()):
+        typer.echo(line)
+
+
+@reviews_app.command("show")
+def reviews_show(review_id: str, workspace: Workspace) -> None:
+    settings = get_settings()
+
+    async def run() -> str:
+        engine = create_app_engine(settings, pool_size=2, max_overflow=0)
+        ctx = WorkspaceContext.for_system_task(workspace_id_for(workspace), reason="cli reviews show")
+        try:
+            knowledge = build_knowledge_offline(engine)
+            async with tenant_session(engine, ctx) as conn:
+                return (await knowledge.reviews.get(conn, ctx, uuid.UUID(review_id), can_see_sensitive=False)).model_dump_json()
+        finally:
+            await engine.dispose()
+
+    typer.echo(asyncio.run(run()))
+
+
+@reviews_app.command("decide")
+def reviews_decide(
+    review_id: str,
+    workspace: Workspace,
+    actor: Actor,
+    decision: Annotated[
+        str, typer.Option(help="e.g. same_entity, different_entity, keep_existing, mark_disputed, acknowledge, approve, reject")
+    ],
+    rationale_code: Annotated[str, typer.Option(help="closed code, e.g. same_real_world_entity, verified_with_source, other")] = "other",
+    rationale_text: Annotated[str | None, typer.Option(help="optional, stored on the item only")] = None,
+) -> None:
+    """Decides a review item as `--actor` (a reviewer or admin of the workspace); then restores the graph for the rows the decision changed."""
+    from kg_knowledge.commands import CommandContext
+    from kg_knowledge.models import DecisionIn
+
+    settings = get_settings()
+
+    async def run() -> str:
+        engine = create_app_engine(settings, pool_size=3, max_overflow=0)
+        ctx = WorkspaceContext.for_system_task(workspace_id_for(workspace), reason="cli reviews decide")
+        try:
+            async with knowledge_runtime(engine) as (knowledge, _):
+                async with tenant_session(engine, ctx) as conn:
+                    principal = await _acting_principal(conn, ctx, actor)
+                    if not (principal.roles & {Role.WORKSPACE_ADMIN, Role.REVIEWER}):
+                        raise typer.Exit(_fail(f"'{actor}' may not decide reviews (needs reviewer or workspace_admin)"))
+                    current = await knowledge.reviews.get(conn, ctx, uuid.UUID(review_id), can_see_sensitive=False)
+                    audit = AuditWriter(conn, principal, request_id=None, correlation_id=f"cli-{uuid.uuid4().hex[:12]}")
+                    out, _ = await knowledge.reviews.decide(
+                        CommandContext(conn, ctx, principal, audit),
+                        uuid.UUID(review_id),
+                        DecisionIn.model_validate(
+                            {"decision": decision, "rationale_code": rationale_code, "rationale_text": rationale_text}
+                        ),
+                        key=f"cli-{review_id}-{decision}",
+                        if_match=current.revision,
+                    )
+                if out.command_id is not None:
+                    async with knowledge.lock.hold(ctx.workspace_id, wait_seconds=30.0):
+                        out.projection_status = await knowledge.projector.project_command(ctx, out.command_id)  # type: ignore[assignment]
+                return out.model_dump_json()
+        finally:
+            await engine.dispose()
+
+    try:
+        typer.echo(asyncio.run(run()))
+    except PlatformError as exc:
+        raise typer.Exit(_fail(f"{exc.code}: {exc.message}")) from exc
+
+
+@extraction_app.command("stats")
+def extraction_stats(workspace: Workspace) -> None:
+    """Cost evidence per episode (GR-11): model calls, tokens and the estimated cost of the extractions in this workspace."""
+    settings = get_settings()
+
+    async def run() -> dict[str, object]:
+        engine = create_app_engine(settings, pool_size=2, max_overflow=0)
+        ctx = WorkspaceContext.for_system_task(workspace_id_for(workspace), reason="cli extraction stats")
+        try:
+            async with tenant_session(engine, ctx) as conn:
+                agg = (
+                    await conn.execute(
+                        text(
+                            "SELECT count(*) AS episodes, COALESCE(sum(chat_calls), 0) AS chat, COALESCE(sum(embedding_calls), 0) AS embeddings, "
+                            "COALESCE(sum(prompt_tokens), 0) AS prompt, COALESCE(sum(completion_tokens), 0) AS completion FROM graph_episodes WHERE workspace_id = :ws"
+                        ),
+                        {"ws": ctx.workspace_id},
+                    )
+                ).one()
+                cost = (
+                    await conn.execute(
+                        text(
+                            "SELECT COALESCE(sum(est_cost_usd), 0) AS usd FROM model_calls WHERE workspace_id = :ws AND purpose = 'graph_extraction'"
+                        ),
+                        {"ws": ctx.workspace_id},
+                    )
+                ).scalar_one()
+            n = max(int(agg.episodes), 1)
+            return {
+                "episodes": int(agg.episodes),
+                "chat_calls": int(agg.chat),
+                "embedding_calls": int(agg.embeddings),
+                "prompt_tokens": int(agg.prompt),
+                "completion_tokens": int(agg.completion),
+                "est_cost_usd": float(cost),
+                "per_episode": {"chat_calls": round(int(agg.chat) / n, 2), "est_cost_usd": round(float(cost) / n, 6)},
+            }
+        finally:
+            await engine.dispose()
+
+    typer.echo(json.dumps(asyncio.run(run())))
+
+
+@extraction_app.command("purge")
+def extraction_purge(
+    workspace: Workspace,
+    yes: Annotated[bool, typer.Option("--yes", help="really delete (without it the command only reports what it would delete)")] = False,
+) -> None:
+    """Deletes EVERYTHING extraction produced in this workspace (entities, facts, mentions, claims, episodes, extraction reviews), clears its graph and re-projects
+    the command-sourced rows from Postgres. Needed before `kg db downgrade 0003`; interactions stay (replay graph_ingest with --repin to extract again)."""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    settings = get_settings()
+    if settings.is_production:
+        raise typer.Exit(_fail("refusing to purge extracted data when ENV=production"))
+
+    async def run() -> dict[str, int]:
+        ws = workspace_id_for(workspace)
+        owner = create_async_engine(settings.database_url_owner.get_secret_value())
+        counts: dict[str, int] = {}
+        try:
+            async with owner.begin() as conn:
+                p = {"ws": ws}
+                for label, sql in (
+                    ("extracted_facts", "SELECT count(*) FROM facts WHERE workspace_id = :ws AND source_type = 'extracted'"),
+                    ("extracted_entities", "SELECT count(*) FROM entities WHERE workspace_id = :ws AND origin = 'extracted'"),
+                    ("episodes", "SELECT count(*) FROM graph_episodes WHERE workspace_id = :ws"),
+                ):
+                    counts[label] = int((await conn.execute(text(sql), p)).scalar_one())
+                if not yes:
+                    return counts
+                await conn.execute(text("DELETE FROM review_items WHERE workspace_id = :ws AND item_type <> 'policy_violation'"), p)
+                await conn.execute(
+                    text(
+                        "DELETE FROM review_items WHERE workspace_id = :ws AND fact_id IN (SELECT id FROM facts WHERE workspace_id = :ws AND source_type = 'extracted')"
+                    ),
+                    p,
+                )
+                for table in ("graph_episodes", "attribute_claims", "entity_mentions", "identity_non_matches"):
+                    await conn.execute(text(f"DELETE FROM {table} WHERE workspace_id = :ws"), p)  # noqa: S608 (constant names)
+                await conn.execute(
+                    text(
+                        "UPDATE facts SET succeeded_by_fact_id = NULL WHERE workspace_id = :ws AND succeeded_by_fact_id IN (SELECT id FROM facts WHERE workspace_id = :ws AND source_type = 'extracted')"
+                    ),
+                    p,
+                )
+                await conn.execute(
+                    text(
+                        "DELETE FROM fact_evidence WHERE workspace_id = :ws AND (source_kind = 'episode' OR fact_id IN (SELECT id FROM facts WHERE workspace_id = :ws AND source_type = 'extracted'))"
+                    ),
+                    p,
+                )
+                await conn.execute(
+                    text(
+                        "DELETE FROM facts WHERE workspace_id = :ws AND (source_type = 'extracted' OR source_entity_id IN (SELECT id FROM entities WHERE workspace_id = :ws AND origin = 'extracted') "
+                        "OR target_entity_id IN (SELECT id FROM entities WHERE workspace_id = :ws AND origin = 'extracted'))"
+                    ),
+                    p,
+                )
+                await conn.execute(
+                    text(
+                        "DELETE FROM entity_external_ids WHERE workspace_id = :ws AND entity_id IN (SELECT id FROM entities WHERE workspace_id = :ws AND origin = 'extracted')"
+                    ),
+                    p,
+                )
+                await conn.execute(
+                    text(
+                        "UPDATE entities SET merged_into_id = NULL, status = 'active', merged_at = NULL WHERE workspace_id = :ws AND origin = 'command' AND status = 'merged'"
+                    ),
+                    p,
+                )
+                await conn.execute(text("DELETE FROM entities WHERE workspace_id = :ws AND origin = 'extracted'"), p)
+                await conn.execute(
+                    text(
+                        "UPDATE facts SET status = 'active', decision_code = NULL, decided_at = NULL WHERE workspace_id = :ws AND status IN ('disputed') AND source_type = 'command'"
+                    ),
+                    p,
+                )
+                await conn.execute(
+                    text("UPDATE entities SET projection_status = 'pending', projected_revision = NULL WHERE workspace_id = :ws"), p
+                )
+                await conn.execute(
+                    text("UPDATE facts SET projection_status = 'pending', projected_revision = NULL WHERE workspace_id = :ws"), p
+                )
+        finally:
+            await owner.dispose()
+        engine = create_app_engine(settings, pool_size=3, max_overflow=0)
+        ctx = WorkspaceContext.for_system_task(ws, reason="cli extraction purge")
+        try:
+            async with knowledge_runtime(engine) as (knowledge, graph):
+                await graph.scoped(ctx).run_cypher("MATCH (n {group_id: $group_id}) DETACH DELETE n")
+                report = await knowledge.projector.reconcile(ctx, repair=True)
+                counts["reprojected"] = report.repaired
+        finally:
+            await engine.dispose()
+        return counts
+
+    typer.echo(json.dumps(asyncio.run(run())))
+
+
+def build_knowledge_offline(engine: AsyncEngine) -> KnowledgeServices:
+    """Knowledge services for read-only CLI commands: no router, no graph, nothing that could call a model."""
+    from kg_graph.compile import GraphCompiler
+    from kg_knowledge.commands import CommandPipeline
+    from kg_knowledge.extracted import ExtractedKnowledge
+    from kg_knowledge.reads import Reads
+    from kg_knowledge.reviews import ReviewService
+    from kg_knowledge.specs import SpecCache
+
+    specs = SpecCache()
+    reads = Reads(specs)
+    extracted = ExtractedKnowledge()
+    services = KnowledgeServices.__new__(KnowledgeServices)
+    services.reviews = ReviewService(specs, extracted, CommandPipeline(specs), reads)
+    services.reads, services.specs, services.extracted = reads, specs, extracted
+    _ = GraphCompiler
+    return services
 
 
 @openapi_app.command("export")

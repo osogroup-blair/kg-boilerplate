@@ -353,38 +353,21 @@ async def test_pooled_connection_reuse_never_leaks_into_the_new_tables(test_sett
         await engine.dispose()
 
 
-async def test_the_ops_function_returns_workspace_ids_only(app_engine):
-    a = await seed(app_engine)  # fresh entities are pending and due
+async def test_every_ops_function_is_hardened_and_the_sweeper_function_is_gone(app_engine):
     async with system_session(app_engine) as c:
-        res = await c.execute(text("SELECT * FROM ops.workspaces_with_pending_projection(1000)"))
-        assert list(res.keys()) == ["workspaces_with_pending_projection"]
-        ids = {r[0] for r in res.all()}
-        assert a.ws in ids and all(isinstance(i, uuid.UUID) for i in ids)
         fn = (
             await c.execute(
                 text("""SELECT p.proname, p.prosecdef, pg_get_userbyid(p.proowner) AS owner, p.proconfig, COALESCE(p.proacl::text, '') AS acl FROM pg_proc p
                         JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'ops'""")
             )
         ).all()
-        # every ops.* function (P2's, and P3's outbox functions) is SECURITY DEFINER, owned by kg_owner, with a pinned search_path and no PUBLIC execute
-        assert "workspaces_with_pending_projection" in {f.proname for f in fn}
+        # every ops.* function (P3's outbox functions; P2's sweeper discovery function was dropped by 0004) is SECURITY DEFINER, owned by kg_owner,
+        # with a pinned search_path and no PUBLIC execute
+        assert "workspaces_with_pending_projection" not in {f.proname for f in fn}
+        assert {"claim_jobs", "complete_job"} <= {f.proname for f in fn}
         for f in fn:
             assert f.prosecdef and f.owner == "kg_owner" and any("search_path=pg_catalog, public" in s for s in f.proconfig), f.proname
             assert not re.search(r"(^|[{,])=X/", f.acl) and "kg_app=X/kg_owner" in f.acl, f.proname
-    async with tenant_session(app_engine, ctx(a.ws)) as c:
-        await c.execute(text("UPDATE entities SET projection_status = 'projected' WHERE workspace_id = :w"), {"w": a.ws})
-        await c.execute(text("UPDATE facts SET projection_status = 'projected' WHERE workspace_id = :w"), {"w": a.ws})
-    async with system_session(app_engine) as c:
-        assert a.ws not in {r[0] for r in (await c.execute(text("SELECT * FROM ops.workspaces_with_pending_projection(1000)"))).all()}
-    async with tenant_session(app_engine, ctx(a.ws)) as c:  # backoff: a pending row that is not due yet is not reported
-        await c.execute(
-            text(
-                "UPDATE entities SET projection_status = 'pending', projection_next_at = now() + interval '1 hour' WHERE workspace_id = :w"
-            ),
-            {"w": a.ws},
-        )
-    async with system_session(app_engine) as c:
-        assert a.ws not in {r[0] for r in (await c.execute(text("SELECT * FROM ops.workspaces_with_pending_projection(1000)"))).all()}
 
 
 async def test_trigram_search_index_exists_and_pg_trgm_works(app_engine):

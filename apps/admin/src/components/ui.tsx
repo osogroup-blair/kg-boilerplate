@@ -69,3 +69,13 @@ export function Violations({ items }: { items: Violation[] }) {
     </ul>
   );
 }
+
+const FACT_TONE: Record<string, string> = { active: "green", proposed: "amber", disputed: "red", rejected: "slate", superseded: "slate", deleted: "slate" };
+/** A fact that is not "current knowledge" is always labelled by what it is (P4): proposed and disputed are warnings, rejected is kept for audit. */
+export const FactStatusBadge = ({ status }: { status: string }) => <Badge tone={FACT_TONE[status] ?? "slate"} title="Fact status">{status}</Badge>;
+/** `unverified` = evidence of a statement, not of truth (an extraction from a conversation); `verified` = a trusted source asserted it. */
+export const EvidenceBadge = ({ status }: { status: string }) => (
+  <Badge tone={status === "verified" ? "green" : "blue"} title={status === "verified" ? "Asserted by a trusted source" : "Extracted from a conversation: evidence of what was said, not proof"}>{status}</Badge>
+);
+const REVIEW_TONE: Record<string, string> = { identity_match: "blue", contradiction: "amber", graphiti_invalidation: "red", policy_violation: "slate" };
+export const ReviewTypeBadge = ({ type }: { type: string }) => <Badge tone={REVIEW_TONE[type] ?? "slate"}>{type.replace(/_/g, " ")}</Badge>;

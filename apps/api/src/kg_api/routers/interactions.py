@@ -135,7 +135,9 @@ async def replay_interaction(
     key = require_key(idempotency_key)
 
     async def produce() -> tuple[int, ReplayOut, dict[str, str]]:
-        out = await state.ingestion.operations.replay_interaction(db, ws, audit, event_id, stage=body.stage, reason_code=body.reason_code)
+        out = await state.ingestion.operations.replay_interaction(
+            db, ws, audit, event_id, stage=body.stage, reason_code=body.reason_code, repin=body.repin
+        )
         return 202, out, {}
 
     return await run_idempotent(db, ws.workspace_id, key, f"POST /v1/interactions/{event_id}/replay", body.model_dump(mode="json"), produce)

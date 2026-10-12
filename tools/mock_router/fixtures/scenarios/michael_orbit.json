@@ -1,0 +1,283 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "I've joined Orbit now"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Michael",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Orbit",
+     "entity_type_id": 1,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "I've joined Orbit now"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Michael",
+     "target_entity_name": "Orbit",
+     "relation_type": "WORKS_AT",
+     "fact": "Michael works at Orbit",
+     "valid_at": "2026-10-10T00:00:00Z",
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 0, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    0
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 1, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    1
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 2, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    2
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 3, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    3
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 4, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    4
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 5, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    5
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 6, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    6
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 7, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    7
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 8, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    8
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 9, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    9
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 10, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    10
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit",
+    "'idx': 11, 'fact': 'Michael works at Zenith'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    11
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael works at Orbit"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Michael works at Orbit"
+   ]
+  },
+  "response": {
+   "valid_at": "2026-10-10T00:00:00Z",
+   "invalid_at": null
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "WORKS_AT",
+   "contains": [
+    "Michael works at Orbit"
+   ]
+  },
+  "response": {
+   "role": null
+  }
+ }
+]

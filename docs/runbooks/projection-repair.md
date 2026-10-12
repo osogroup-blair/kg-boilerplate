@@ -2,7 +2,7 @@
 
 Postgres is authoritative for entities and facts. The graph is a projection, so a projection problem never loses data and never blocks reads; it only delays graph-based retrieval (P4+).
 
-> **Since Phase 3 the outbox drives projection.** Every applied command enqueues a `graph_projection` job in its own transaction and the worker's dispatcher runs it (the P2 sweeper is off by default). Retries, backoff, dead letters and operator retry/cancel are described in [stuck-job-replay.md](stuck-job-replay.md); the status codes and `kg graph reconcile` below are unchanged.
+> **Since Phase 3 the outbox drives projection.** Every applied command enqueues a `graph_projection` job in its own transaction and the worker's dispatcher runs it (the P2 sweeper was deleted in Phase 4). Retries, backoff, dead letters and operator retry/cancel are described in [stuck-job-replay.md](stuck-job-replay.md); the status codes and `kg graph reconcile` below are unchanged.
 
 ## What you can see
 | Where | What |
@@ -37,7 +37,7 @@ uv run kg graph reconcile --workspace demo --repair
 # 3. a command whose projection is `failed`: make its rows due again and project now
 uv run kg commands retry-projection <command_id> --workspace demo
 ```
-If the worker is not running, nothing finishes pending rows (the jobs wait in the outbox and no work is lost). Check `make ps` and the worker log (`job_done`, `projection_attempt_failed` carry codes, never content). Rolling back to the P2 driver is `kg db downgrade 0002` and `PROJECTION_SWEEPER_ENABLED=true`.
+If the worker is not running, nothing finishes pending rows (the jobs wait in the outbox and no work is lost). Check `make ps` and the worker log (`job_done`, `projection_attempt_failed` carry codes, never content). Since Phase 4 the same lock (`graph:{workspace}`) also serialises extraction, merges and review decisions, so a projection job may report `graph_busy` and retry while an episode is being processed; that is normal.
 
 ## Duplicate nodes
 The graph has uniqueness constraints on `Entity.uuid` and `RELATES_TO.uuid` (created by the worker at start-up). If the worker log shows `graph_uniqueness_constraint_failed`, the graph already holds duplicates from before the constraints existed (Graphiti's `MERGE` is not atomic without them). Rebuild the affected workspace as below, then restart the worker. `graph_conflict` on a projection job is a lost race between two writers of the same row and is retried automatically.

@@ -45,7 +45,7 @@ export function DirectoryPage() {
             <tbody>
               {rows.map((e) => (
                 <tr key={e.id} className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900">
-                  <td className="py-2 pr-4"><Link to={`/entities/${e.id}`} className="font-medium underline-offset-2 hover:underline">{e.name}</Link></td>
+                  <td className="py-2 pr-4"><Link to={`/entities/${e.id}`} className="font-medium underline-offset-2 hover:underline">{e.name}</Link>{e.status !== "active" ? <> <Badge tone="amber">{e.status}</Badge></> : null}{e.origin === "extracted" ? <> <Badge tone="blue">extracted</Badge></> : null}</td>
                   <td className="pr-4 font-mono text-xs">{e.type}</td>
                   <td className="pr-4 font-mono text-xs">{e.external_ids.map((x) => `${x.system}:${x.value}`).join(", ") || "—"}</td>
                   <td className="pr-4"><Badge tone={e.classification === "internal" ? "slate" : "amber"}>{e.classification}</Badge></td>

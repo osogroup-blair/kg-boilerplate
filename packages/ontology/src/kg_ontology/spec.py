@@ -33,8 +33,19 @@ PLATFORM_RESERVED_ATTRIBUTES = frozenset(
 AttrType = Literal["string", "integer", "number", "boolean", "date", "datetime"]
 Classification = Literal["public", "internal", "confidential", "restricted", "local_only"]
 CLASSIFICATIONS: tuple[str, ...] = ("public", "internal", "confidential", "restricted", "local_only")
-Authority = Literal["authoritative_system", "admin_asserted", "user_asserted"]
-AUTHORITY_RANK: dict[str, int] = {"user_asserted": 1, "admin_asserted": 2, "authoritative_system": 3}
+Authority = Literal["authoritative_system", "admin_asserted", "user_asserted"]  # what a COMMAND may carry (derived from the caller's role)
+# Everything a fact can carry. A model's output is never above `conversation_report` (a person's account of something said), and an agent's own
+# generation is below it (ADR-027). Rank order is the conflict policy's authority ordering: authoritative_system > admin_asserted > user_asserted >
+# conversation_report > agent_generated.
+AnyAuthority = Literal["authoritative_system", "admin_asserted", "user_asserted", "conversation_report", "agent_generated"]
+AUTHORITY_RANK: dict[str, int] = {
+    "agent_generated": 1,
+    "conversation_report": 2,
+    "user_asserted": 3,
+    "admin_asserted": 4,
+    "authoritative_system": 5,
+}
+EXTRACTION_MAX_AUTHORITY = "conversation_report"  # a model output never changes a row whose authority is above this
 Cardinality = Literal["one_to_one", "one_to_many", "many_to_one", "many_to_many"]
 CARDINALITY_STRICTNESS: dict[str, int] = {"many_to_many": 0, "one_to_many": 1, "many_to_one": 1, "one_to_one": 2}
 

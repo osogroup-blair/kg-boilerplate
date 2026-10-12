@@ -1,0 +1,96 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "S. Johnson confirmed the meeting"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "S. Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "S. Johnson confirmed the meeting"
+   ]
+  },
+  "response": {
+   "edges": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "NodeResolutions",
+   "contains": [
+    "S. Johnson confirmed the meeting"
+   ]
+  },
+  "response": {
+   "entity_resolutions": [
+    {
+     "id": 0,
+     "name": "S. Johnson",
+     "duplicate_candidate_id": -1
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "SummarizedEntities",
+   "contains": [
+    "S. Johnson confirmed the meeting"
+   ]
+  },
+  "response": {
+   "summaries": [
+    {
+     "name": "S. Johnson",
+     "summary": "S. Johnson confirmed a meeting."
+    }
+   ]
+  }
+ },
+ {
+  "gold": {
+   "id": "s_johnson",
+   "content": {
+    "kind": "message",
+    "content": "S. Johnson confirmed the meeting for Thursday."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [],
+    "facts": [],
+    "identity": [],
+    "reviews": {},
+    "reverts": 0,
+    "aliases": {
+     "Sarah Johnson": [
+      "S. Johnson"
+     ]
+    },
+    "name_variants": 1
+   }
+  }
+ }
+]

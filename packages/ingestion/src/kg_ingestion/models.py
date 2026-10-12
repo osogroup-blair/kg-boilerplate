@@ -93,6 +93,8 @@ class ReplayIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     stage: str | None = Field(default=None, pattern=r"^[a-z][a-z_]{0,31}$")
     reason_code: str = ReasonCode
+    # Move the replayed stage to the current pipeline version and the current active ontology (audited). The default stage is graph_ingest.
+    repin: bool = False
 
 
 class ReplayedStage(BaseModel):

@@ -1,0 +1,321 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "work at NewCo now"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "NewCo",
+     "entity_type_id": 1,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "work at NewCo now"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Sarah Johnson",
+     "target_entity_name": "NewCo",
+     "relation_type": "WORKS_AT",
+     "fact": "Sarah Johnson works at NewCo",
+     "valid_at": "2026-10-10T00:00:00Z",
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 0, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    0
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 1, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    1
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 2, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    2
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 3, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    3
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 4, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    4
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 5, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    5
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 6, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    6
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 7, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    7
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 8, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    8
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 9, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    9
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 10, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    10
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo",
+    "'idx': 11, 'fact': 'Sarah Johnson works at Acme as Engineering Manager'"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": [
+    11
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson works at NewCo"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Sarah Johnson works at NewCo"
+   ]
+  },
+  "response": {
+   "valid_at": "2026-10-10T00:00:00Z",
+   "invalid_at": null
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "WORKS_AT",
+   "contains": [
+    "Sarah Johnson works at NewCo"
+   ]
+  },
+  "response": {
+   "role": null
+  }
+ },
+ {
+  "gold": {
+   "id": "newco",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: I work at NewCo now."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [
+     {
+      "name": "NewCo",
+      "type": "Organization",
+      "status": "active"
+     }
+    ],
+    "facts": [
+     {
+      "source": "Sarah Johnson",
+      "rel_type": "WORKS_AT",
+      "target": "NewCo",
+      "status": "proposed",
+      "evidence_status": "unverified",
+      "valid_from": "2026-10-10"
+     }
+    ],
+    "identity": [],
+    "reviews": {
+     "contradiction": 1
+    },
+    "reverts": 1
+   }
+  }
+ }
+]

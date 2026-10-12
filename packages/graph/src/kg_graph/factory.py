@@ -8,19 +8,46 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 import httpx
 from graphiti_core import Graphiti
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
-from graphiti_core.llm_client.config import LLMConfig
+from graphiti_core.llm_client.client import is_server_or_retry_error
+from graphiti_core.llm_client.config import DEFAULT_MAX_TOKENS, LLMConfig, ModelSize
 from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
+from graphiti_core.prompts.models import Message
 from kg_common.settings import Settings
 from kg_modelgw.config import ModelConfig
 from kg_modelgw.transport import RouterTransport
 from openai import AsyncOpenAI
+from pydantic import BaseModel
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_random_exponential
 
 from kg_graph.adapters import E5Embedder, NoCrossEncoder
+
+
+class PlatformLLMClient(OpenAIGenericClient):
+    """Graphiti's own retry waits 5-120 s between four tries of an unparseable answer, with the workspace's graph lock held the whole time. The platform
+    bounds that: a few quick tries here, then the OUTBOX decides (one retry, then quarantine, P4 ING-03)."""
+
+    attempts = 2
+
+    async def _generate_response_with_retry(  # type: ignore[override]
+        self,
+        messages: list[Message],
+        response_model: type[BaseModel] | None = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+        model_size: ModelSize = ModelSize.medium,
+    ) -> dict[str, Any]:
+        wrapped = retry(
+            stop=stop_after_attempt(self.attempts),
+            wait=wait_random_exponential(multiplier=1, min=1, max=8),
+            retry=retry_if_exception(is_server_or_retry_error),
+            reraise=True,
+        )(self._generate_response)
+        return await wrapped(messages, response_model, max_tokens, model_size)
 
 
 class QuietNeo4jDriver(Neo4jDriver):
@@ -42,7 +69,7 @@ def build_graphiti(settings: Settings, transport: RouterTransport, config: Model
     oai = AsyncOpenAI(api_key="platform-managed", base_url=base_url, http_client=http, max_retries=0)  # type: ignore[arg-type]
     extraction = config.purposes["graph_extraction"].alias
     small = config.purposes["graph_extraction_small"].alias
-    llm = OpenAIGenericClient(LLMConfig(api_key="platform-managed", base_url=base_url, model=extraction, small_model=small), client=oai)
+    llm = PlatformLLMClient(LLMConfig(api_key="platform-managed", base_url=base_url, model=extraction, small_model=small), client=oai)
     emb = config.embedding
     embedder = E5Embedder(
         OpenAIEmbedder(
@@ -51,7 +78,13 @@ def build_graphiti(settings: Settings, transport: RouterTransport, config: Model
         )
     )
     driver = QuietNeo4jDriver(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password.get_secret_value())
-    return Graphiti(graph_driver=driver, llm_client=llm, embedder=embedder, cross_encoder=NoCrossEncoder())
+    return Graphiti(
+        graph_driver=driver,
+        llm_client=llm,
+        embedder=embedder,
+        cross_encoder=NoCrossEncoder(),
+        store_raw_episode_content=settings.graph_store_episode_content,
+    )
 
 
 async def wait_cancelled(task: asyncio.Task[object] | None) -> None:

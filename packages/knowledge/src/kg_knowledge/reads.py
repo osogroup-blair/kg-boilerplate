@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from kg_common.errors import NotFound
@@ -25,6 +26,7 @@ from kg_knowledge.models import (
     CommandSummary,
     EntityDetailOut,
     EntityOut,
+    EvidenceOut,
     ExternalId,
     FactEndpoint,
     FactOut,
@@ -35,12 +37,32 @@ _EXTERNAL_IDS = (
     "(SELECT COALESCE(jsonb_agg(jsonb_build_object('system', x.system, 'value', x.value) ORDER BY x.system, x.value), '[]'::jsonb) "
     "FROM entity_external_ids x WHERE x.workspace_id = e.workspace_id AND x.entity_id = e.id) AS external_ids"
 )
-_FACT_SELECT = """
+FACT_SELECT = """
     SELECT f.*, s.type_key AS s_type, s.display_name AS s_name, t.type_key AS t_type, t.display_name AS t_name,
            CASE WHEN f.valid_from > now() THEN 'future' WHEN f.valid_to IS NOT NULL AND f.valid_to <= now() THEN 'historical' ELSE 'current' END AS phase
     FROM facts f JOIN entities s ON s.workspace_id = f.workspace_id AND s.id = f.source_entity_id
                  JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id
 """
+
+
+def visibility_sql(*, include_history: bool, known_at_given: bool) -> str:
+    """Which facts a read shows (ADR-017). Binds :as_of, :known_at (both may be NULL = now) and :extras (statuses asked for with include=).
+
+    current   status = active, valid at as_of (an unknown start counts as always), known at known_at
+    history   every fact that was ever true or disputed (not proposed or rejected), optionally as known at known_at
+    extras    proposed / disputed / rejected facts are added on request, always labelled by their status"""
+    known = (
+        "f.recorded_at <= COALESCE(CAST(:known_at AS timestamptz), now()) "
+        "AND (f.superseded_at IS NULL OR f.superseded_at > COALESCE(CAST(:known_at AS timestamptz), now()))"
+    )
+    if include_history:
+        history = "f.status NOT IN ('deleted','proposed','rejected')" + (f" AND {known}" if known_at_given else "")
+        return f"(({history}) OR f.status = ANY(CAST(:extras AS text[])))"
+    current = (
+        "f.status = 'active' AND (f.valid_from IS NULL OR f.valid_from <= COALESCE(CAST(:as_of AS timestamptz), now())) "
+        f"AND (f.valid_to IS NULL OR f.valid_to > COALESCE(CAST(:as_of AS timestamptz), now())) AND {known}"
+    )
+    return f"(({current}) OR f.status = ANY(CAST(:extras AS text[])))"
 
 
 def _redact(attrs: dict[str, Any], sensitive: set[str], allowed: bool) -> dict[str, Any]:
@@ -80,6 +102,8 @@ class Reads:
             attributes=_redact(row.attributes or {}, sensitive, can_see_sensitive),
             classification=row.classification,
             status=row.status,
+            origin=row.origin,
+            merged_into_id=row.merged_into_id,
             revision=row.revision,
             external_ids=[ExternalId.model_validate(x) for x in row.external_ids],
             ontology_version_id=row.ontology_version_id,
@@ -110,6 +134,8 @@ class Reads:
         if status:
             where.append("e.status = :status")
             params["status"] = status
+        else:
+            where.append("e.status <> 'merged'")  # a merged entity is reachable by id (it redirects), but it is not a directory entry
         if q:
             where.append("lower(e.display_name) LIKE '%' || :q || '%' ESCAPE '\\'")
             params["q"] = q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -132,6 +158,7 @@ class Reads:
         include_history: bool,
         as_of: dt.datetime | None,
         known_at: dt.datetime | None,
+        include: Sequence[str] = (),
     ) -> EntityDetailOut:
         row = (
             await conn.execute(
@@ -152,19 +179,59 @@ class Reads:
             known_at=known_at,
             include_history=include_history,
             can_see_sensitive=can_see_sensitive,
+            include=include,
         )
         return EntityDetailOut(**base.model_dump(), relationships=facts)
 
     # ---- facts ----------------------------------------------------------------------------------------------------------------------------
 
-    async def _fact_out(self, conn: AsyncConnection, ws: uuid.UUID, r: Row[Any], can_see_sensitive: bool) -> FactOut:
+    async def _evidence(self, conn: AsyncConnection, ws: uuid.UUID, fact_ids: list[uuid.UUID]) -> dict[uuid.UUID, list[EvidenceOut]]:
+        """Why each fact is held (KGR-05): the commands and interaction episodes behind it. Metadata only; the content stays in the ledger."""
+        if not fact_ids:
+            return {}
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT e.fact_id, e.source_kind, e.command_id, e.interaction_id, e.episode_uuid, e.added_at, "
+                    "COALESCE(i.source_system, c.source_system) AS source_system, COALESCE(i.source_ref, c.source_ref) AS source_ref, "
+                    "COALESCE(i.occurred_at, c.occurred_at) AS occurred_at, COALESCE(i.recorded_at, c.created_at) AS recorded_at "
+                    "FROM fact_evidence e LEFT JOIN interactions i ON i.workspace_id = e.workspace_id AND i.id = e.interaction_id "
+                    "LEFT JOIN commands c ON c.workspace_id = e.workspace_id AND c.id = e.command_id "
+                    "WHERE e.workspace_id = :ws AND e.fact_id = ANY(:ids) ORDER BY e.added_at, e.id"
+                ),
+                {"ws": ws, "ids": fact_ids},
+            )
+        ).all()
+        out: dict[uuid.UUID, list[EvidenceOut]] = {}
+        for r in rows:
+            out.setdefault(r.fact_id, []).append(
+                EvidenceOut(
+                    kind=r.source_kind,
+                    command_id=r.command_id,
+                    interaction_id=r.interaction_id,
+                    episode_uuid=r.episode_uuid,
+                    source_system=r.source_system,
+                    source_ref=r.source_ref,
+                    occurred_at=r.occurred_at,
+                    recorded_at=r.recorded_at,
+                    added_at=r.added_at,
+                )
+            )
+        return out
+
+    async def _fact_out(
+        self, conn: AsyncConnection, ws: uuid.UUID, r: Row[Any], can_see_sensitive: bool, evidence: list[EvidenceOut] | None = None
+    ) -> FactOut:
         sensitive = await self._sensitive(conn, ws, r.ontology_version_id, r.rel_type, relationship=True)
+        if evidence is None:
+            evidence = (await self._evidence(conn, ws, [r.id])).get(r.id, [])
         return FactOut(
             id=r.id,
             rel_type=r.rel_type,
             source=FactEndpoint(id=r.source_entity_id, type=r.s_type, name=r.s_name),
             target=FactEndpoint(id=r.target_entity_id, type=r.t_type, name=r.t_name),
             attributes=_redact(r.attributes or {}, sensitive, can_see_sensitive),
+            fact_text=r.fact_text,
             valid_from=r.valid_from,
             valid_from_unknown=r.valid_from_unknown,
             valid_to=r.valid_to,
@@ -177,7 +244,12 @@ class Reads:
             authority_class=r.authority_class,
             classification=r.classification,
             source_type=r.source_type,
+            evidence_status=r.evidence_status,
+            evidence=evidence,
+            decision_code=r.decision_code,
+            decided_at=r.decided_at,
             source_command_id=r.source_command_id,
+            source_interaction_id=r.source_interaction_id,
             source_system=r.source_system,
             source_ref=r.source_ref,
             ontology_version_id=r.ontology_version_id,
@@ -197,9 +269,12 @@ class Reads:
         known_at: dt.datetime | None,
         include_history: bool,
         can_see_sensitive: bool,
+        include: Sequence[str] = (),
     ) -> list[FactOut]:
+        """`include` adds fact statuses that are not "current": proposed, disputed, rejected. They are always labelled by their `status`."""
         where = ["f.workspace_id = :ws"]
-        params: dict[str, Any] = {"ws": ctx.workspace_id, "e": entity_id, "as_of": as_of, "known_at": known_at}
+        extras = sorted({x for x in include if x in ("proposed", "disputed", "rejected")})
+        params: dict[str, Any] = {"ws": ctx.workspace_id, "e": entity_id, "as_of": as_of, "known_at": known_at, "extras": extras}
         where.append(
             {
                 "out": "f.source_entity_id = :e",
@@ -210,21 +285,11 @@ class Reads:
         if rel_type:
             where.append("f.rel_type = :rel")
             params["rel"] = rel_type
-        known = "f.recorded_at <= COALESCE(CAST(:known_at AS timestamptz), now()) AND (f.superseded_at IS NULL OR f.superseded_at > COALESCE(CAST(:known_at AS timestamptz), now()))"
-        if include_history:
-            where.append("f.status <> 'deleted'")
-            if known_at is not None:
-                where.append(known)
-        else:
-            where += [
-                "f.status = 'active'",
-                "(f.valid_from IS NULL OR f.valid_from <= COALESCE(CAST(:as_of AS timestamptz), now()))",
-                "(f.valid_to IS NULL OR f.valid_to > COALESCE(CAST(:as_of AS timestamptz), now()))",
-                known,
-            ]
-        sql = f"{_FACT_SELECT} WHERE {' AND '.join(where)} ORDER BY f.valid_from NULLS FIRST, f.recorded_at, f.id"  # noqa: S608 (constant fragments)
+        where.append(visibility_sql(include_history=include_history, known_at_given=known_at is not None))
+        sql = f"{FACT_SELECT} WHERE {' AND '.join(where)} ORDER BY f.valid_from NULLS FIRST, f.recorded_at, f.id"  # noqa: S608 (constant fragments)
         rows = (await conn.execute(text(sql), params)).all()
-        return [await self._fact_out(conn, ctx.workspace_id, r, can_see_sensitive) for r in rows]
+        evidence = await self._evidence(conn, ctx.workspace_id, [r.id for r in rows])
+        return [await self._fact_out(conn, ctx.workspace_id, r, can_see_sensitive, evidence.get(r.id, [])) for r in rows]
 
     async def entity_exists(self, conn: AsyncConnection, ctx: WorkspaceContext, entity_id: uuid.UUID) -> None:
         if (
@@ -236,7 +301,7 @@ class Reads:
 
     async def get_fact(self, conn: AsyncConnection, ctx: WorkspaceContext, fact_id: uuid.UUID, *, can_see_sensitive: bool) -> FactOut:
         row = (
-            await conn.execute(text(f"{_FACT_SELECT} WHERE f.workspace_id = :ws AND f.id = :id"), {"ws": ctx.workspace_id, "id": fact_id})
+            await conn.execute(text(f"{FACT_SELECT} WHERE f.workspace_id = :ws AND f.id = :id"), {"ws": ctx.workspace_id, "id": fact_id})
         ).first()  # noqa: S608
         if row is None:
             raise NotFound()

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 
-from kg_common.errors import Conflict, NotFound, ValidationFailed
+from kg_common.errors import Conflict, NoActiveOntology, NotFound, ValidationFailed
 from kg_domain.principal import WorkspaceContext
 from kg_governance.audit import AuditMetadata, AuditWriter, PipelineStage
 from kg_jobs import reads as job_reads
@@ -61,7 +61,10 @@ class OperationsService:
         *,
         stage: str | None,
         reason_code: str,
+        repin: bool = False,
     ) -> ReplayOut:
+        """`repin` (audited) moves the replayed stage to the CURRENT pipeline version and the CURRENT active ontology: how an event accepted before a stage
+        existed, or while the workspace had no ontology, gets processed (P4). Without it a replay re-runs under the versions the stage was planned with."""
         ws = ctx.workspace_id
         head = (
             await conn.execute(
@@ -81,13 +84,22 @@ class OperationsService:
                 )
             ).all()
         }
+        active_version: uuid.UUID | None = None
+        if repin:
+            stage = stage or "graph_ingest"
+            active = (
+                await conn.execute(text("SELECT active_version_id FROM workspace_ontology WHERE workspace_id = :ws"), {"ws": ws})
+            ).first()
+            if active is None or active.active_version_id is None:
+                raise NoActiveOntology()
+            active_version = active.active_version_id
         if stage is not None:
             if stage not in stages:
                 raise ValidationFailed("unknown stage", details={"fields": ["stage"]})
             st = stages[stage]
             if st.status in (PENDING, RUNNING):
                 raise StageRunning()
-            if st.status == SKIPPED_DISABLED:
+            if st.status == SKIPPED_DISABLED and not (repin and self._pipeline.stage(stage).enabled):
                 raise ValidationFailed("the stage is disabled in this pipeline version", details={"fields": ["stage"]})
             targets = [st]
         else:
@@ -104,6 +116,25 @@ class OperationsService:
                 ),
                 {"g": generation, "ws": ws, "i": interaction_id, "s": st.stage},
             )
+            if repin and active_version is not None:
+                await conn.execute(
+                    text(
+                        "UPDATE interaction_stages SET pipeline_version = :pv, ontology_version_id = :ov WHERE workspace_id = :ws AND interaction_id = :i AND stage = :s"
+                    ),
+                    {"pv": self._pipeline.version, "ov": active_version, "ws": ws, "i": interaction_id, "s": st.stage},
+                )
+                await audit.record(
+                    "interaction.repinned",
+                    resource_type="interaction",
+                    resource_id=interaction_id,
+                    metadata=AuditMetadata(
+                        stage=_stage_enum(st.stage),
+                        generation=generation,
+                        reason_code=reason_code,
+                        version_id=active_version,
+                        interaction_id=interaction_id,
+                    ),
+                )
             replayed.append((st.stage, generation))
             await audit.record(
                 "interaction.replayed",
@@ -136,7 +167,25 @@ class OperationsService:
         if job.status != "dead":
             raise JobNotDead()
         generation = job_reads.generation_of(job.payload) + 1
-        if job.subject_type == "interaction":
+        if (
+            job.subject_type == "interaction" and job.stage == "graph_projection"
+        ):  # an interaction's restore job has no stage row: a new generation is a new job
+            new_job_id = await enqueue(
+                conn,
+                workspace_id=ws,
+                stage=job.stage,
+                subject_type="interaction",
+                subject_id=job.subject_id,
+                dedupe_key=f"interaction:{job.subject_id}:graph_projection:g{generation}",
+                payload={"interaction_id": str(job.subject_id), "generation": generation},
+                pipeline_version=job.pipeline_version,
+                ontology_version_id=job.ontology_version_id,
+                concurrency_key=f"graph:{ws}",
+                correlation_id=job.correlation_id,
+            )
+            if new_job_id is None:
+                raise AlreadyReplayed()
+        elif job.subject_type == "interaction":
             st = await lock_stage(conn, ws, job.subject_id, job.stage)
             if st is not None and st.generation >= generation:
                 raise AlreadyReplayed()

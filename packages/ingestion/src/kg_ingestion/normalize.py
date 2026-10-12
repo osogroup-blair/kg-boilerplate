@@ -116,7 +116,7 @@ async def lock_stage(conn: AsyncConnection, ws: uuid.UUID, interaction_id: uuid.
     return (
         await conn.execute(
             text(
-                "SELECT stage, status, generation, attempts, last_error_code FROM interaction_stages "
+                "SELECT stage, status, generation, attempts, last_error_code, ontology_version_id, pipeline_version FROM interaction_stages "
                 "WHERE workspace_id = :ws AND interaction_id = :i AND stage = :s FOR UPDATE"
             ),
             {"ws": ws, "i": interaction_id, "s": stage},

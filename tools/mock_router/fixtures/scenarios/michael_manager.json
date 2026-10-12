@@ -1,0 +1,110 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "Michael is Sarah's manager"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Michael",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "Michael is Sarah's manager"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Michael",
+     "target_entity_name": "Sarah Johnson",
+     "relation_type": "MANAGES",
+     "fact": "Michael manages Sarah Johnson",
+     "valid_at": null,
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Michael manages Sarah Johnson"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Michael manages Sarah Johnson"
+   ]
+  },
+  "response": {
+   "valid_at": null,
+   "invalid_at": null
+  }
+ },
+ {
+  "gold": {
+   "id": "manager",
+   "content": {
+    "kind": "message",
+    "content": "Michael is Sarah's manager."
+   },
+   "subjects": [
+    "Sarah Johnson",
+    "Michael"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [],
+    "facts": [
+     {
+      "source": "Michael",
+      "rel_type": "MANAGES",
+      "target": "Sarah Johnson",
+      "status": "rejected",
+      "evidence_status": "unverified",
+      "valid_from": null
+     }
+    ],
+    "identity": [],
+    "reviews": {},
+    "reverts": 0
+   }
+  }
+ }
+]

@@ -1,0 +1,163 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "considering entrepreneurship"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Michael",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Entrepreneurship",
+     "entity_type_id": 3,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "considering entrepreneurship"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Sarah Johnson",
+     "target_entity_name": "Entrepreneurship",
+     "relation_type": "CONSIDERING",
+     "fact": "Sarah Johnson is considering entrepreneurship",
+     "valid_at": null,
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "source_entity_name": "Sarah Johnson",
+     "target_entity_name": "Michael",
+     "relation_type": "KNOWS",
+     "fact": "Sarah Johnson knows Michael",
+     "valid_at": null,
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson is considering entrepreneurship"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson knows Michael"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Sarah Johnson is considering entrepreneurship"
+   ]
+  },
+  "response": {
+   "valid_at": null,
+   "invalid_at": null
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Sarah Johnson knows Michael"
+   ]
+  },
+  "response": {
+   "valid_at": null,
+   "invalid_at": null
+  }
+ },
+ {
+  "gold": {
+   "id": "evt003",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: I'm considering entrepreneurship, and Michael, who I've known for years, keeps encouraging me."
+   },
+   "subjects": [
+    "Sarah Johnson",
+    "Michael",
+    "Entrepreneurship"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [],
+    "facts": [
+     {
+      "source": "Sarah Johnson",
+      "rel_type": "CONSIDERING",
+      "target": "Entrepreneurship",
+      "status": "active",
+      "evidence_status": "unverified",
+      "valid_from": null
+     },
+     {
+      "source": "Sarah Johnson",
+      "rel_type": "KNOWS",
+      "target": "Michael",
+      "status": "active",
+      "evidence_status": "unverified",
+      "valid_from": null
+     }
+    ],
+    "identity": [],
+    "reviews": {},
+    "reverts": 0
+   }
+  }
+ }
+]

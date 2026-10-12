@@ -9,7 +9,7 @@ KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(E
 RUN := $(UV) run
 PYSRC := packages apps tests scripts
 
-.PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 logs ps admin-dev admin-install \
+.PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 eval-extraction eval-extraction-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check
 
 sync:                ## install the Python workspace (exact versions from uv.lock)
@@ -43,6 +43,17 @@ demo-p3:             ## P3 demo: idempotent ledger, encryption at rest, SIGKILL 
 	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
 	$(RUN) python scripts/demo_p3.py
 
+demo-p4:             ## P4 demo: Graphiti extraction as a proposal, identity + review, time-aware facts, outage/unparseable/consent drills (needs `make up seed`; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4` for the first run)
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
+	$(RUN) python scripts/demo_p4.py
+	$(RUN) python -m eval.extraction.run_eval --mode mock
+
+eval-extraction:     ## extraction evaluation against the scenario gold set through the strict mock router (offline, deterministic)
+	$(RUN) python -m eval.extraction.run_eval --mode mock
+
+eval-extraction-live: ## extraction evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.extraction.run_eval --mode live
+
 logs:
 	$(KG_COMPOSE) logs -f --tail=100
 
@@ -62,7 +73,7 @@ test-security:       ## tenant-isolation, revocation and policy-registry tests
 test-contract:       ## endpoint, gateway and boundary contracts + OpenAPI drift
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/contract tests/integration/test_api_contract.py packages/modelgw -q
 
-test-resilience:     ## failure injection (FI-01..08): crashes, SIGKILL, lease expiry, postgres restart, neo4j outage. Needs `make stack-up`; restarts compose services
+test-resilience:     ## failure injection (FI-01..10): crashes, SIGKILL, lease expiry, postgres restart, neo4j outage. Needs `make stack-up`; restarts compose services
 	KG_REQUIRE_STACK=1 KG_RESILIENCE=1 $(RUN) pytest tests/resilience -q -p no:cacheprovider
 
 test-all: test test-int test-security test-contract
@@ -91,8 +102,9 @@ admin-dev:           ## Vite dev server on :5273 (proxies /v1 and /health to :80
 test-admin:          ## Vitest component tests
 	cd apps/admin && npm test
 
-test-e2e:            ## Playwright: P1 smoke + P2 ADM-01 (needs `make up seed`; runs demo-p2 first so the demo workspace has Sarah's story)
+test-e2e:            ## Playwright: P1 smoke, P2 ADM-01, P3 ADM-06, P4 ADM-02 (needs `make up seed`; runs demo-p2 and demo-p4 first so the demo workspace has Sarah's story)
 	$(MAKE) -s demo-p2 > /dev/null
+	$(MAKE) -s demo-p4 > /dev/null
 	cd apps/admin && npm run e2e
 
 check: lint typecheck test-all test-admin   ## everything except the Playwright smoke (run `make test-e2e` with the stack up)

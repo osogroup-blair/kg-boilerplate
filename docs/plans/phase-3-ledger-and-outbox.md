@@ -528,7 +528,7 @@ WP7 needs everything else.
 - `kg db downgrade 0002`, then re-enable `PROJECTION_SWEEPER_ENABLED=true`. P2 behaviour is restored, because the command fast path never depended on the outbox.
 - The new packages are additive. The admin pages are additive nav items.
 
-## 13. Decisions Taken in This Plan (flag if you disagree)
+## 13. Decisions (resolved 2026-10-11: the user accepted the recommendations, and all six are implemented; see `docs/architecture/p3-ledger-outbox.md`)
 
 1. **The outbox lives in its own package (`kg_jobs`)**, not in `kg_ingestion`, so commands can enqueue without a reverse dependency (ADR-025).
 2. **Only accepted interactions consume an idempotency key** (unlike commands); validation failures leave the key free (ADR-024).

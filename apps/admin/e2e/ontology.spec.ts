@@ -100,7 +100,7 @@ test("entities: provenance, history and redaction for a read-only agent; foreign
   await signIn(page, "demo/agent_planning");
   await page.getByRole("link", { name: "Entities" }).click();
   await page.getByLabel("Search by name").fill("sarah");
-  await page.getByRole("link", { name: "Sarah Johnson" }).click();
+  await page.getByRole("row").filter({ hasText: "hr:E-1001" }).getByRole("link", { name: "Sarah Johnson" }).click(); // P4 adds a second, unrelated Sarah Johnson
   await expect(page.getByTestId("entity-name")).toHaveText("Sarah Johnson");
   await expect(page.getByText("hr:E-1001")).toBeVisible();
   await expect(page.getByText("redacted")).toBeVisible(); // birth_date is sensitive: agents never see the value
@@ -122,7 +122,7 @@ test("entities: provenance, history and redaction for a read-only agent; foreign
   await page.getByRole("button", { name: "Sign out" }).click();
   await signIn(page, "demo/admin@demo");
   await page.goto("/entities");
-  await page.getByRole("link", { name: "Sarah Johnson" }).click();
+  await page.getByRole("row").filter({ hasText: "hr:E-1001" }).getByRole("link", { name: "Sarah Johnson" }).click(); // P4 adds a second, unrelated Sarah Johnson
   await expect(page.getByText("1985-03-02")).toBeVisible(); // a workspace admin sees the sensitive value
   const path = new URL(page.url()).pathname;
   await page.getByRole("link", { name: "Commands", exact: true }).first().click();

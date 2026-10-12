@@ -239,11 +239,25 @@ def test_finalisation_table_for_every_combination_of_stage_outcomes(norm, a, b):
     assert PIPELINE_V1.finalize({"normalize": norm, "graph_ingest": a, "memory_propose": b}) == expected(norm, a, b)
 
 
-def test_a_source_only_event_is_valid_evd04():
+def test_the_p4_plan_enables_graph_ingest_and_still_lists_the_disabled_stage():
     plan = PIPELINE_V1.initial_statuses(consent_external=True)
-    assert plan == {"normalize": PENDING, "graph_ingest": SKIPPED_DISABLED, "memory_propose": SKIPPED_DISABLED}
+    assert plan == {"normalize": PENDING, "graph_ingest": PENDING, "memory_propose": SKIPPED_DISABLED}
+    assert (
+        PIPELINE_V1.version == "p4.v1"
+        and PIPELINE_V1.stage("graph_ingest").model_stage
+        and PIPELINE_V1.stage("graph_ingest").enabled_in is None
+    )
+    done = {**plan, "normalize": SUCCEEDED}
+    assert PIPELINE_V1.ready(done) == ["graph_ingest"] and PIPELINE_V1.finalize(done) == "processing"  # the model stage is still to run
+
+
+def test_a_source_only_event_is_valid_evd04():
+    """EVD-04: an event whose derivative stages are all disabled or skipped is complete (a P3-style plan, or consent denied)."""
+    plan = {"normalize": PENDING, "graph_ingest": SKIPPED_DISABLED, "memory_propose": SKIPPED_DISABLED}
     done = {**plan, "normalize": SUCCEEDED}
     assert PIPELINE_V1.finalize(done) == "indexed" and PIPELINE_V1.ready(done) == []
+    denied = PIPELINE_V1.initial_statuses(consent_external=False)
+    assert denied["graph_ingest"] == SKIPPED_POLICY and PIPELINE_V1.finalize({**denied, "normalize": SUCCEEDED}) == "indexed"
 
 
 def test_ready_waits_for_dependencies():

@@ -88,3 +88,23 @@ def test_compile_spec_refuses_a_colliding_spec() -> None:
     with pytest.raises(ValueError):
         compile_spec(spec)
     assert "summary" in ENTITY_RESERVED
+
+
+def test_sensitive_attributes_are_never_compiled_so_graphiti_is_never_asked_for_them() -> None:
+    """P4 Q6: a birth date lives in Postgres only; neither the prompt nor the answer may carry it."""
+    spec, _, report = validate_text(EXAMPLE.read_text(), compiler=GraphCompiler())
+    assert spec is not None and report.ok
+    compiled = compile_spec(spec)
+    assert "birth_date" not in compiled.entity_types["Person"].model_fields
+    assert compiled.excluded_sensitive == {"Person": ["birth_date"]}
+    for kind, models in (("entity", compiled.entity_types), ("edge", compiled.edge_types)):
+        declared = spec.entity_types if kind == "entity" else spec.relationship_types
+        for type_key, model in models.items():
+            sensitive = {a for a, x in declared[type_key].attributes.items() if x.sensitive}
+            assert not (sensitive & set(model.model_fields)), (type_key, sensitive)
+    doc = base_with()
+    doc["relationship_types"]["WORKS_AT"]["attributes"]["salary"] = {"type": "integer", "sensitive": True}
+    spec2, _ = parse_document(doc)
+    assert spec2 is not None
+    again = compile_spec(spec2)
+    assert "salary" not in again.edge_types["WORKS_AT"].model_fields and again.excluded_sensitive["WORKS_AT"] == ["salary"]

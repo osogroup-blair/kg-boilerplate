@@ -1,0 +1,121 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "from the cycling club rode 40 km"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Tom",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "from the cycling club rode 40 km"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Sarah Johnson",
+     "target_entity_name": "Tom",
+     "relation_type": "KNOWS",
+     "fact": "Sarah Johnson rode with Tom",
+     "valid_at": null,
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson rode with Tom"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Sarah Johnson rode with Tom"
+   ]
+  },
+  "response": {
+   "valid_at": null,
+   "invalid_at": null
+  }
+ },
+ {
+  "gold": {
+   "id": "cyclist",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson from the cycling club rode 40 km with Tom on Saturday."
+   },
+   "subjects": [],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [
+     {
+      "name": "Tom",
+      "type": "Person",
+      "status": "active"
+     }
+    ],
+    "facts": [
+     {
+      "source": "Sarah Johnson",
+      "rel_type": "KNOWS",
+      "target": "Tom",
+      "status": "proposed",
+      "evidence_status": "unverified",
+      "valid_from": null
+     }
+    ],
+    "identity": [
+     {
+      "candidate": "Sarah Johnson",
+      "against": "Sarah Johnson"
+     }
+    ],
+    "reviews": {
+     "identity_match": 1
+    },
+    "reverts": 0,
+    "no_auto_merge": true
+   }
+  }
+ }
+]

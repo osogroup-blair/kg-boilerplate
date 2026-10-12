@@ -1,7 +1,7 @@
 """Runs one deterministic command: decide and persist in ONE tenant transaction, then (after the commit) project to the graph within a time budget.
 
 Postgres is authoritative, so the response is correct either way: 201 when the graph already reflects the command, 202 with a status URL when the
-projection is still pending (the sweeper finishes it). A rejected command is stored too (the ledger records refusals), then answered with 422."""
+projection is still pending (the outbox job finishes it). A rejected command is stored too (the ledger records refusals), then answered with 422."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from kg_db.session import tenant_session
 from kg_domain.principal import Principal, WorkspaceContext
 from kg_governance.audit import AuditWriter
 from kg_knowledge.commands import CommandContext, PipelineResult
+from kg_knowledge.graphlock import GraphBusy
 from kg_obs import context
 from kg_obs.logging import get_logger
 
@@ -22,6 +23,7 @@ from kg_api.state import AppState
 
 log = get_logger("kg.http.commands")
 SETTLED = ("projected", "skipped_by_policy", "not_applicable")
+FAST_PATH_LOCK_WAIT_SECONDS = 0.25
 
 
 def _status_code(result: PipelineResult) -> int:
@@ -52,10 +54,18 @@ async def run_command(
         )
     if result.status == "applied" and result.out.projection_status == "pending":
         try:
-            async with asyncio.timeout(state.settings.projection_request_budget_seconds):
+            # the fast path is a graph writer too: it takes the workspace's graph lock, but never waits long for it (an extraction may hold it for a while).
+            async with (
+                state.knowledge.lock.hold(ws.workspace_id, wait_seconds=FAST_PATH_LOCK_WAIT_SECONDS),
+                asyncio.timeout(state.settings.projection_request_budget_seconds),
+            ):
                 result.out.projection_status = await state.knowledge.projector.project_command(ws, result.command_id)  # type: ignore[assignment]
+        except GraphBusy:
+            log.info(
+                "projection_deferred", reason="graph_busy"
+            )  # the outbox job projects it once the other writer is done: 202 with a status URL
         except TimeoutError:
-            log.info("projection_deferred", reason="budget")  # the sweeper finishes it; the answer below is 202 with a status URL
+            log.info("projection_deferred", reason="budget")  # the outbox job finishes it; the answer below is 202 with a status URL
         except Exception as exc:
             log.warning("projection_attempt_errored", error_type=type(exc).__name__)
     return JSONResponse(result.out.model_dump(mode="json"), status_code=_status_code(result), headers=headers)

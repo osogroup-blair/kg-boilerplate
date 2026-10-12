@@ -143,6 +143,9 @@ class InteractionReads:
             if s.stage == "normalize" and s.status == "succeeded"
             else []
         )
+        episode = (s.result or {}).get("episode_uuid") if s.stage == "graph_ingest" else None
+        if episode:  # the episode the extraction created: the provenance path from an event to what it produced (EVD-03)
+            derivatives = [DerivativeOut(kind="graph_episode", id=uuid.UUID(str(episode)))]
         return StageOut(
             stage=s.stage,
             status=s.status,

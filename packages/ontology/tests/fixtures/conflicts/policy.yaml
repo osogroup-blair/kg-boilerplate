@@ -1,0 +1,153 @@
+# Cases for the authority-aware conflict policy (kg_ontology.conflicts). Every branch of `resolve` has at least one case (test_every_branch_has_a_fixture).
+# Dates are valid times; authorities rank: authoritative_system > admin_asserted > user_asserted > conversation_report > agent_generated.
+cases:
+  - name: a structural violation rejects the fact and keeps it for audit
+    branch: hard_reject
+    new: {authority: conversation_report}
+    inputs: {hard_reject: out_of_ontology}
+    expect: {status: rejected, code: out_of_ontology}
+
+  - name: nothing else is true about the source, so the fact is active
+    branch: no_conflict
+    new: {authority: conversation_report}
+    existing: []
+    expect: {status: active, code: no_conflict}
+
+  - name: an unrelated, non-conflicting fact does not matter
+    branch: no_conflict
+    new: {authority: conversation_report, valid_from: 2026-09-01}
+    existing:
+      - {id: other, authority: authoritative_system, valid_from: 2020-01-01}
+    expect: {status: active, code: no_conflict}
+
+  - name: a catalog conflict with a higher authority fact proposes the new one and keeps the existing one
+    branch: higher_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: acme, authority: authoritative_system, valid_from: 2024-06-01}
+    inputs: {rule_conflict: true}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [acme]}
+
+  - name: Graphiti invalidating a verified fact is a contradiction, never an edit (AT-05)
+    branch: higher_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: acme, authority: admin_asserted, valid_from: 2024-06-01}
+    inputs: {invalidated: [{fact: acme, invalid_at: 2026-10-01}]}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [acme]}
+
+  - name: an agent-generated fact loses to an existing conversation report
+    branch: higher_authority
+    new: {authority: agent_generated}
+    existing:
+      - {id: said, authority: conversation_report}
+    inputs: {rule_conflict: true}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [said]}
+
+  - name: an invalidated fact that ended before the new one began is no contradiction
+    branch: no_conflict
+    new: {authority: conversation_report, valid_from: 2026-01-01}
+    existing:
+      - {id: old, authority: authoritative_system, valid_from: 2020-01-01, valid_to: 2023-01-01}
+    inputs: {invalidated: [{fact: old}]}
+    expect: {status: active, code: no_conflict}
+
+  - name: a fact that is not active takes no part in a conflict
+    branch: no_conflict
+    new: {authority: conversation_report}
+    existing:
+      - {id: gone, authority: authoritative_system, status: superseded}
+    inputs: {rule_conflict: true, invalidated: [{fact: gone}]}
+    expect: {status: active, code: no_conflict}
+
+  - name: equal authority overlapping with no dates flags BOTH facts (KGR-06)
+    branch: equal_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: x, authority: conversation_report, valid_from: 2024-01-01}
+    inputs: {rule_conflict: true}
+    expect: {status: disputed, code: equal_authority_conflict, review: contradiction, competing: [x], disputed: [x]}
+
+  - name: equal authority, Graphiti invalidated the old one, but the new fact states no start date, so it is a dispute
+    branch: equal_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: x, authority: conversation_report, valid_from: 2024-01-01}
+    inputs: {invalidated: [{fact: x}]}
+    expect: {status: disputed, code: equal_authority_conflict, review: contradiction, competing: [x], disputed: [x]}
+
+  - name: equal authority, Graphiti invalidated the old one and the new one began strictly later, so the old fact ends (ADR-023)
+    branch: dated_succession
+    new: {authority: conversation_report, valid_from: 2026-03-01}
+    existing:
+      - {id: x, authority: conversation_report, valid_from: 2024-01-01}
+    inputs: {invalidated: [{fact: x, invalid_at: 2026-03-01}]}
+    expect: {status: active, code: no_conflict, end: [{fact: x, valid_to: 2026-03-01}]}
+
+  - name: both facts began on the same day, so a dated succession cannot be inferred
+    branch: equal_authority
+    new: {authority: conversation_report, valid_from: 2024-01-01}
+    existing:
+      - {id: x, authority: conversation_report, valid_from: 2024-01-01}
+    inputs: {invalidated: [{fact: x}]}
+    expect: {status: disputed, code: equal_authority_conflict, review: contradiction, competing: [x], disputed: [x]}
+
+  - name: a lower authority fact is displaced only by a dated succession; an undated overlap needs a correction
+    branch: lower_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: weak, authority: agent_generated, valid_from: 2024-01-01}
+    inputs: {rule_conflict: true}
+    expect: {status: proposed, code: requires_correction, review: contradiction, competing: [weak]}
+
+  - name: a lower authority fact that Graphiti invalidated and a dated successor ends cleanly
+    branch: dated_succession
+    new: {authority: conversation_report, valid_from: 2026-03-01}
+    existing:
+      - {id: weak, authority: agent_generated, valid_from: 2024-01-01}
+    inputs: {invalidated: [{fact: weak}]}
+    expect: {status: active, code: no_conflict, end: [{fact: weak, valid_to: 2026-03-01}]}
+
+  - name: the catalog's succession ends a same-target predecessor when the new fact has at least its authority
+    branch: succession_effect
+    new: {authority: user_asserted, valid_from: 2026-06-01}
+    existing:
+      - {id: prev, authority: user_asserted, valid_from: 2022-01-10}
+    inputs: {effects: [{fact: prev, valid_to: 2026-06-01}]}
+    expect: {status: active, code: no_conflict, end: [{fact: prev, valid_to: 2026-06-01}]}
+
+  - name: the catalog's succession cannot end a predecessor of higher authority, so the new fact is proposed
+    branch: succession_effect
+    new: {authority: conversation_report, valid_from: 2026-06-01}
+    existing:
+      - {id: prev, authority: authoritative_system, valid_from: 2022-01-10}
+    inputs: {effects: [{fact: prev, valid_to: 2026-06-01}]}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [prev]}
+
+  - name: a rule that asks for a human proposes the fact with a policy review
+    branch: policy_review
+    new: {authority: conversation_report}
+    inputs: {review: [inferred_requires_review]}
+    expect: {status: proposed, code: inferred_requires_review, review: policy_violation}
+
+  - name: a conflict outranks a policy review (the contradiction is what the reviewer must see)
+    branch: higher_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: acme, authority: admin_asserted}
+    inputs: {rule_conflict: true, review: [insufficient_authority]}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [acme]}
+
+  - name: an unresolved endpoint holds the fact as proposed with no review of its own
+    branch: identity_hold
+    new: {authority: conversation_report}
+    inputs: {hold: identity_pending}
+    expect: {status: proposed, code: identity_pending}
+
+  - name: a conflict outranks an identity hold (the contradiction is what the reviewer must see)
+    branch: higher_authority
+    new: {authority: conversation_report}
+    existing:
+      - {id: acme, authority: admin_asserted}
+    inputs: {rule_conflict: true, hold: identity_pending}
+    expect: {status: proposed, code: authority_conflict, review: contradiction, competing: [acme]}

@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Gauge, ListChecks, LogOut, MessagesSquare, Network, Users } from "lucide-react";
+import { Activity, BookOpen, Gauge, GitFork, ListChecks, LogOut, MessagesSquare, Network, ShieldQuestion, Users } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -7,6 +7,8 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: Activity, end: true },
   { to: "/ontology", label: "Ontology", icon: BookOpen, end: false },
   { to: "/entities", label: "Entities", icon: Network, end: false },
+  { to: "/graph", label: "Graph Explorer", icon: GitFork, end: false },
+  { to: "/reviews", label: "Review Queue", icon: ShieldQuestion, end: false },
   { to: "/commands", label: "Commands", icon: ListChecks, end: false },
   { to: "/interactions", label: "Interactions & Episodes", icon: MessagesSquare, end: false },
   { to: "/operations", label: "Operations", icon: Gauge, end: false },

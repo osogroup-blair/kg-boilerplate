@@ -19,6 +19,9 @@ import { VersionLayout } from "./pages/ontology/VersionLayout";
 import { VersionsPage } from "./pages/ontology/VersionsPage";
 import { YamlTab } from "./pages/ontology/YamlTab";
 import { Login } from "./pages/Login";
+import { GraphExplorerPage } from "./pages/graph/GraphExplorerPage";
+import { ReviewDetailPage } from "./pages/reviews/ReviewDetailPage";
+import { ReviewQueuePage } from "./pages/reviews/ReviewQueuePage";
 
 export function App() {
   const { status } = useAuth();
@@ -43,6 +46,9 @@ export function App() {
         </Route>
         <Route path="entities" element={<DirectoryPage />} />
         <Route path="entities/:entityId" element={<EntityDetailPage />} />
+        <Route path="graph" element={<GraphExplorerPage />} />
+        <Route path="reviews" element={<ReviewQueuePage />} />
+        <Route path="reviews/:reviewId" element={<ReviewDetailPage />} />
         <Route path="commands" element={<CommandsPage />} />
         <Route path="commands/:commandId" element={<CommandsPage />} />
         <Route path="interactions" element={<InteractionsPage />} />

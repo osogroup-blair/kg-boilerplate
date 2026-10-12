@@ -13,5 +13,11 @@ export function useCan() {
     readContent: has("workspace_admin"), // decrypted originals: admin only, every read audited
     repair: has("workspace_admin", "operator"), // replay a stage, retry or cancel a job
     readOperations: has("workspace_admin", "operator"),
+    // P4
+    readReviews: has("workspace_admin", "reviewer"),
+    decideReviews: has("workspace_admin", "reviewer"),
+    readReviewEvidence: has("workspace_admin", "reviewer"), // the content of an interaction a review item rests on (audited per read)
+    searchGraph: has("workspace_admin", "operator", "reviewer"),
+    exploreGraph: has("workspace_admin", "operator", "reviewer", "app_writer", "reader"), // an agent gets graph-backed context through the API (P6), not through this console
   };
 }

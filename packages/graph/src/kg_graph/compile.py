@@ -5,6 +5,8 @@
 * every compiled field is Optional with default None (M2): extraction is best-effort and `required` is enforced by the platform validator, never by
   the Graphiti model (a required field would make a whole extraction fail validation).
 * the compiled types are cached by content hash; P4 extraction jobs pin an ontology version and reuse them.
+* sensitive attributes are NEVER compiled (P4 Q6, P2 decision 3): they live in Postgres only, so Graphiti is never asked to extract a birth date
+  (its prompt and its answer would both cross the router).
 """
 
 from __future__ import annotations
@@ -34,12 +36,15 @@ class Compiled:
     edge_types: dict[str, type[BaseModel]]
     edge_type_map: dict[tuple[str, str], list[str]]
     dropped_fields: dict[str, list[str]] = field(default_factory=dict)  # entity type -> fields not emitted (aliased to the node name)
+    excluded_sensitive: dict[str, list[str]] = field(
+        default_factory=dict
+    )  # entity/edge type -> sensitive attributes kept out of the Graphiti types
 
 
 def _model(name: str, attrs: dict[str, AttributeSpec]) -> type[BaseModel]:
     fields: dict[str, Any] = {}
     for attr, spec in attrs.items():
-        if attr == ALIASED_TO_NODE_NAME:
+        if attr == ALIASED_TO_NODE_NAME or spec.sensitive:
             continue
         py = PY_TYPES[spec.type]
         fields[attr] = (py | None, Field(default=None, description=spec.description or f"{attr} of the {name}"))
@@ -77,12 +82,17 @@ def compile_spec(spec: OntologySpec) -> Compiled:
     if bad:
         raise ValueError(f"ontology does not compile: {[i.path for i in bad]}")
     out = Compiled({}, {}, {})
-    for name, et in spec.entity_types.items():
+    # sorted: Graphiti hands the model positional type ids, and a spec read back from JSONB has no stable key order
+    for name, et in sorted(spec.entity_types.items()):
         out.entity_types[name] = _model(name, et.attributes)
         if ALIASED_TO_NODE_NAME in et.attributes:
             out.dropped_fields[name] = [ALIASED_TO_NODE_NAME]
-    for name, rt in spec.relationship_types.items():
+        if hidden := [a for a, x in et.attributes.items() if x.sensitive]:
+            out.excluded_sensitive[name] = hidden
+    for name, rt in sorted(spec.relationship_types.items()):
         out.edge_types[name] = _model(name, rt.attributes)
+        if hidden := [a for a, x in rt.attributes.items() if x.sensitive]:
+            out.excluded_sensitive[name] = hidden
         out.edge_type_map.setdefault((rt.source, rt.target), []).append(name)
     validate_entity_types(out.entity_types)  # Graphiti's own check
     return out

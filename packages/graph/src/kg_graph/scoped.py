@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, cast
 
@@ -12,11 +13,14 @@ from graphiti_core import Graphiti
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from graphiti_core.edges import EntityEdge
 from graphiti_core.errors import NodeNotFoundError
-from graphiti_core.nodes import EntityNode
+from graphiti_core.nodes import EntityNode, EpisodeType, EpisodicNode
 from graphiti_core.search.search_config import SearchConfig, SearchResults
+from graphiti_core.search.search_config_recipes import EDGE_HYBRID_SEARCH_NODE_DISTANCE, EDGE_HYBRID_SEARCH_RRF
+from graphiti_core.search.search_filters import ComparisonOperator, DateFilter, SearchFilters
 from kg_common.errors import NotFound, ValidationFailed
 from kg_domain.principal import WorkspaceContext
 
+from kg_graph.compile import Compiled
 from kg_graph.errors import EndpointNotProjected
 from kg_graph.group import GroupId
 
@@ -49,6 +53,7 @@ class NodeReadBack:
     labels: frozenset[str]
     created_at: dt.datetime | None
     attributes: dict[str, Any] = field(default_factory=dict)
+    summary: str = ""  # Graphiti's derived text: the platform preserves it and never uses it as a fact source
 
 
 @dataclass(frozen=True)
@@ -63,6 +68,58 @@ class EdgeReadBack:
     created_at: dt.datetime | None
     expired_at: dt.datetime | None
     attributes: dict[str, Any] = field(default_factory=dict)  # M7: source_uuid/target_uuid (stored as properties by Graphiti) are stripped
+    episodes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class GNode:
+    """A node as Graphiti returned it for an episode: a plain value, so nothing outside kg_graph touches a Graphiti model."""
+
+    uuid: str
+    name: str
+    labels: frozenset[str]  # without the generic 'Entity'
+    summary: str
+    attributes: dict[str, Any]
+    name_embedding: tuple[float, ...] | None = None
+
+
+@dataclass(frozen=True)
+class GEdge:
+    uuid: str
+    name: str
+    fact: str
+    source_uuid: str
+    target_uuid: str
+    valid_at: dt.datetime | None
+    invalid_at: dt.datetime | None
+    created_at: dt.datetime | None
+    expired_at: dt.datetime | None
+    episodes: tuple[str, ...]
+    attributes: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class EpisodeResult:
+    """What add_episode produced. `edges` is Graphiti's resolved + invalidated edges (an invalidated one does not list this episode)."""
+
+    episode_uuid: str
+    nodes: tuple[GNode, ...]
+    edges: tuple[GEdge, ...]
+    reused: bool = False  # True: the episode already existed with results, so no model was called
+
+
+@dataclass(frozen=True)
+class FactHit:
+    uuid: str
+    name: str
+    fact: str
+    source_uuid: str
+    target_uuid: str
+    valid_at: dt.datetime | None
+    invalid_at: dt.datetime | None
+    expired_at: dt.datetime | None
+    created_at: dt.datetime | None
+    episodes: tuple[str, ...]
 
 
 def _native(value: Any) -> Any:
@@ -131,11 +188,11 @@ class ScopedGraph:
     async def _owner_group(self, kind: str, uuid: str) -> str | None:
         """The group that owns a node/edge uuid anywhere in the database, or None. Graphiti MERGEs on uuid alone, so a write must first prove the uuid is
         free or ours; otherwise it would overwrite (and re-home) another workspace's data."""
-        match = (
-            "MATCH (n:Entity {uuid: $uuid}) RETURN n.group_id AS g"
-            if kind == "node"
-            else "MATCH ()-[e:RELATES_TO {uuid: $uuid}]->() RETURN e.group_id AS g"
-        )
+        match = {
+            "node": "MATCH (n:Entity {uuid: $uuid}) RETURN n.group_id AS g",
+            "episode": "MATCH (n:Episodic {uuid: $uuid}) RETURN n.group_id AS g",
+            "edge": "MATCH ()-[e:RELATES_TO {uuid: $uuid}]->() RETURN e.group_id AS g",
+        }[kind]
         records, _, _ = await self._neo4j.client.execute_query(match, parameters_={"uuid": uuid}, database_=self._db)
         return str(records[0]["g"]) if records else None
 
@@ -148,16 +205,40 @@ class ScopedGraph:
 
     async def upsert_entity_node(self, *, uuid: str, name: str, type_key: str, attributes: dict[str, Any], created_at: dt.datetime) -> None:
         """Idempotent: the node becomes exactly this state (PJ-04). Embeds the name through the platform transport, so the caller must hold an egress
-        context. A node cannot be saved without an embedding (PJ-02), so `local_only` data is never projected."""
+        context. A node cannot be saved without an embedding (PJ-02), so `local_only` data is never projected.
+
+        Graphiti owns `summary` (derived text), so an existing summary is kept; the platform owns name, labels and attributes, so anything else a
+        model wrote on the node is dropped (P4 reconcile-then-restore, ADR-027)."""
         if not _LABEL.fullmatch(type_key):
             raise ValidationFailed("invalid entity type key")
         _check_attributes(attributes, _NODE_OWNED)
-        await self._assert_writable("node", uuid)
+        existed = await self._assert_writable("node", uuid)
+        summary = ""
+        if existed:
+            current = await self.read_node(uuid)
+            summary = current.summary if current is not None else ""
         node = EntityNode(
-            uuid=uuid, name=name, group_id=self.group_id.value, labels=[type_key], created_at=created_at, summary="", attributes=attributes
+            uuid=uuid,
+            name=name,
+            group_id=self.group_id.value,
+            labels=[type_key],
+            created_at=created_at,
+            summary=summary,
+            attributes=attributes,
         )
         await node.generate_name_embedding(self._g.embedder)
         await node.save(self._g.driver)
+        if existed:
+            await self._drop_other_labels(uuid, keep={"Entity", type_key})
+
+    async def _drop_other_labels(self, uuid: str, *, keep: set[str]) -> None:
+        """EntityNode.save only ever ADDS labels; a model that typed a node a second way would leave both. Labels are interpolated, so each must pass the
+        identifier check (they come from the database, but the check is cheap and the same one Graphiti applies)."""
+        rows = await self.run_cypher("MATCH (n:Entity {group_id: $group_id, uuid: $uuid}) RETURN labels(n) AS l", uuid=uuid)
+        extra = [lbl for lbl in (rows[0]["l"] if rows else []) if lbl not in keep and _LABEL.fullmatch(lbl)]
+        if extra:
+            clause = ":".join(extra)
+            await self.run_cypher(f"MATCH (n:Entity {{group_id: $group_id, uuid: $uuid}}) REMOVE n:{clause}", uuid=uuid)  # noqa: S608
 
     async def upsert_fact_edge(
         self,
@@ -172,6 +253,7 @@ class ScopedGraph:
         created_at: dt.datetime,
         expired_at: dt.datetime | None,
         attributes: dict[str, Any],
+        episodes: Sequence[str] = (),
     ) -> None:
         if not _LABEL.fullmatch(name):
             raise ValidationFailed("invalid relationship type key")
@@ -184,7 +266,8 @@ class ScopedGraph:
         if await self._assert_writable("edge", uuid):
             existing = await self.read_edge(uuid)
             if existing is not None and (existing.source_uuid, existing.target_uuid) != (source_uuid, target_uuid):
-                raise ValidationFailed("a fact's endpoints never change")
+                # a merge (or an identity split) changed an endpoint: Neo4j cannot re-point a relationship, so it is recreated with the SAME uuid
+                await self.delete_edge(uuid)
         edge = EntityEdge(
             uuid=uuid,
             group_id=self.group_id.value,
@@ -193,7 +276,7 @@ class ScopedGraph:
             created_at=created_at,
             name=name,
             fact=fact,
-            episodes=[],
+            episodes=list(episodes),
             valid_at=valid_at,
             invalid_at=invalid_at,
             expired_at=expired_at,
@@ -212,7 +295,14 @@ class ScopedGraph:
             return None
         props: dict[str, Any] = {k: _native(v) for k, v in rows[0]["p"].items()}
         attrs = {k: v for k, v in props.items() if k not in _NODE_OWNED}
-        return NodeReadBack(uuid, str(props.get("name", "")), frozenset(rows[0]["l"]) - {"Entity"}, props.get("created_at"), attrs)
+        return NodeReadBack(
+            uuid,
+            str(props.get("name", "")),
+            frozenset(rows[0]["l"]) - {"Entity"},
+            props.get("created_at"),
+            attrs,
+            str(props.get("summary") or ""),
+        )
 
     async def read_edge(self, uuid: str) -> EdgeReadBack | None:
         rows = await self.run_cypher(
@@ -235,6 +325,7 @@ class ScopedGraph:
             props.get("created_at"),
             props.get("expired_at"),
             attrs,
+            tuple(props.get("episodes") or ()),
         )
 
     async def get_fact_edge(self, uuid: str) -> EdgeReadBack:
@@ -259,3 +350,276 @@ class ScopedGraph:
         await self.run_cypher(
             "MATCH (:Entity {group_id: $group_id})-[e:RELATES_TO {uuid: $uuid}]->(:Entity) WHERE e.group_id = $group_id DELETE e", uuid=uuid
         )
+
+    # ---- episodes (P4): Graphiti's extraction, reached ONLY through here so the group always comes from the authenticated workspace --------------
+
+    async def ensure_episode_node(
+        self,
+        *,
+        uuid: str,
+        name: str,
+        body: str,
+        source: str,
+        source_description: str,
+        valid_at: dt.datetime,
+        created_at: dt.datetime,
+    ) -> bool:
+        """Pre-creates the episode with a deterministic uuid (GR-09: `add_episode(uuid=)` only CONTINUES an episode that exists). True when it was new.
+        An existing episode is left alone: saving it again would reset the entity edges it already lists. `created_at` is the platform's record time
+        (Q2), so Graphiti's wall clock never reaches a read path."""
+        owner = await self._owner_group("episode", uuid)
+        if owner is not None and owner != self.group_id.value:
+            raise NotFound()
+        if owner is not None:
+            return False
+        node = EpisodicNode(
+            uuid=uuid,
+            name=name,
+            group_id=self.group_id.value,
+            labels=[],
+            source=EpisodeType(source),
+            content=body,
+            source_description=source_description,
+            created_at=created_at,
+            valid_at=valid_at,
+        )
+        await node.save(self._g.driver)
+        return True
+
+    async def add_episode_scoped(
+        self,
+        *,
+        uuid: str,
+        name: str,
+        body: str,
+        source_description: str,
+        reference_time: dt.datetime,
+        source: str,
+        compiled: Compiled,
+        previous_episode_uuids: list[str] | None = None,
+        **forbidden: Any,
+    ) -> EpisodeResult:
+        """Runs Graphiti's extraction on an episode that `ensure_episode_node` created. The caller holds the egress context (purpose graph_extraction).
+        Communities are never updated (P9), the group is never a parameter, and the compiled types are passed as they are (sensitive attributes are not
+        in them)."""
+        if forbidden:
+            raise ValidationFailed("add_episode_scoped does not accept caller-supplied groups or options")
+        if (await self._owner_group("episode", uuid)) != self.group_id.value:
+            raise NotFound()
+        results = await self._g.add_episode(
+            name=name,
+            episode_body=body,
+            source_description=source_description,
+            reference_time=reference_time,
+            source=EpisodeType(source),
+            group_id=self.group_id.value,
+            uuid=uuid,
+            update_communities=False,
+            entity_types=compiled.entity_types or None,
+            edge_types=compiled.edge_types or None,
+            edge_type_map=compiled.edge_type_map or None,
+            previous_episode_uuids=previous_episode_uuids,
+        )
+        return EpisodeResult(
+            episode_uuid=str(results.episode.uuid),
+            nodes=tuple(_gnode(n) for n in results.nodes),
+            edges=tuple(_gedge(e) for e in results.edges),
+        )
+
+    async def episode_has_results(self, uuid: str) -> bool:
+        """True when Graphiti already saved this episode's entities or edges: a re-run after a crash (between Graphiti's save and our commit) must not
+        call the model again (Q1/EX-04)."""
+        rows = await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id, uuid: $uuid}) "
+            "RETURN size(coalesce(e.entity_edges, [])) AS edges, EXISTS { (e)-[:MENTIONS]->(:Entity) } AS mentions",
+            uuid=uuid,
+        )
+        return bool(rows) and (int(rows[0]["edges"]) > 0 or bool(rows[0]["mentions"]))
+
+    async def read_episode_results(self, uuid: str) -> EpisodeResult:
+        """The nodes the episode mentions and the edges it lists, read back from the graph (the skip-the-model path)."""
+        node_rows = await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id, uuid: $uuid})-[:MENTIONS]->(n:Entity {group_id: $group_id}) "
+            "RETURN properties(n) AS p, labels(n) AS l ORDER BY n.uuid",
+            uuid=uuid,
+        )
+        edge_rows = await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id, uuid: $uuid}) UNWIND coalesce(e.entity_edges, []) AS eu "
+            "MATCH (a:Entity {group_id: $group_id})-[r:RELATES_TO {uuid: eu}]->(b:Entity {group_id: $group_id}) WHERE r.group_id = $group_id "
+            "RETURN properties(r) AS p, a.uuid AS s, b.uuid AS t ORDER BY r.uuid",
+            uuid=uuid,
+        )
+        nodes = []
+        for r in node_rows:
+            props = {k: _native(v) for k, v in r["p"].items() if k != "name_embedding"}
+            nodes.append(
+                GNode(
+                    str(props["uuid"]),
+                    str(props.get("name", "")),
+                    frozenset(r["l"]) - {"Entity"},
+                    str(props.get("summary") or ""),
+                    {k: v for k, v in props.items() if k not in _NODE_OWNED},
+                )
+            )
+        edges = []
+        for r in edge_rows:
+            props = {k: _native(v) for k, v in r["p"].items() if k != "fact_embedding"}
+            edges.append(
+                GEdge(
+                    str(props["uuid"]),
+                    str(props.get("name", "")),
+                    str(props.get("fact", "")),
+                    r["s"],
+                    r["t"],
+                    props.get("valid_at"),
+                    props.get("invalid_at"),
+                    props.get("created_at"),
+                    props.get("expired_at"),
+                    tuple(props.get("episodes") or ()),
+                    {k: v for k, v in props.items() if k not in _EDGE_OWNED},
+                )
+            )
+        return EpisodeResult(uuid, tuple(nodes), tuple(edges), reused=True)
+
+    async def read_name_embeddings(self, uuids: Sequence[str]) -> dict[str, tuple[float, ...]]:
+        rows = await self.run_cypher(
+            "MATCH (n:Entity {group_id: $group_id}) WHERE n.uuid IN $uuids AND n.name_embedding IS NOT NULL RETURN n.uuid AS u, n.name_embedding AS v",
+            uuids=list(uuids),
+        )
+        return {r["u"]: tuple(float(x) for x in r["v"]) for r in rows}
+
+    async def similar_nodes(
+        self, label: str, embedding: Sequence[float], *, exclude: Sequence[str], min_score: float, limit: int = 5
+    ) -> list[tuple[str, float]]:
+        """Same-type nodes of THIS group by cosine similarity of the stored name embedding (no model call: the vectors already exist)."""
+        if not _LABEL.fullmatch(label):
+            raise ValidationFailed("invalid entity type key")
+        rows = await self.run_cypher(
+            f"MATCH (n:Entity:{label} {{group_id: $group_id}}) WHERE NOT n.uuid IN $exclude AND n.name_embedding IS NOT NULL "  # noqa: S608
+            "WITH n, vector.similarity.cosine(n.name_embedding, $emb) AS s WHERE s >= $min RETURN n.uuid AS u, s ORDER BY s DESC LIMIT $limit",
+            exclude=list(exclude),
+            emb=list(embedding),
+            min=min_score,
+            limit=limit,
+        )
+        return [(r["u"], float(r["s"])) for r in rows]
+
+    async def episode_entity_edge_uuids(self, uuid: str) -> list[str]:
+        rows = await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id, uuid: $uuid}) RETURN coalesce(e.entity_edges, []) AS u", uuid=uuid
+        )
+        return list(rows[0]["u"]) if rows else []
+
+    async def recent_episode_uuids(self, *, before: dt.datetime, exclude: str, limit: int) -> list[str]:
+        """The latest earlier episodes of THIS group, newest first (the optional extraction context; 0 by default)."""
+        rows = await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id}) WHERE e.valid_at <= $before AND e.uuid <> $exclude "
+            "RETURN e.uuid AS u ORDER BY e.valid_at DESC, e.uuid LIMIT $limit",
+            before=before,
+            exclude=exclude,
+            limit=max(0, limit),
+        )
+        return [r["u"] for r in rows]
+
+    async def restamp_episode(self, uuid: str, *, created_at: dt.datetime) -> None:
+        """Graphiti stamps its own wall clock on the episodic edges it creates (GR-06); the platform's record time replaces it (Q2)."""
+        await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id, uuid: $uuid}) SET e.created_at = $at "
+            "WITH e MATCH (e)-[m:MENTIONS]->(:Entity {group_id: $group_id}) SET m.created_at = $at",
+            uuid=uuid,
+            at=created_at,
+        )
+
+    async def move_mentions(self, node_uuid: str, to_uuid: str, *, episode_uuid: str | None = None) -> None:
+        """Re-points the MENTIONS edges of `node_uuid` (all episodes, or one) at `to_uuid`, keeping each edge's uuid. Both nodes must be this group's."""
+        for u in (node_uuid, to_uuid):
+            if (await self._owner_group("node", u)) != self.group_id.value:
+                raise NotFound()
+        await self.run_cypher(
+            "MATCH (e:Episodic {group_id: $group_id})-[m:MENTIONS]->(a:Entity {group_id: $group_id, uuid: $from}) "
+            "WHERE $ep IS NULL OR e.uuid = $ep "
+            "MATCH (b:Entity {group_id: $group_id, uuid: $into}) "
+            "MERGE (e)-[m2:MENTIONS]->(b) ON CREATE SET m2.uuid = m.uuid, m2.group_id = m.group_id, m2.created_at = m.created_at "
+            "DELETE m",
+            **{"from": node_uuid, "into": to_uuid, "ep": episode_uuid},
+        )
+
+    async def merge_nodes(self, from_uuid: str, into_uuid: str) -> None:
+        """Identity merge (ADR-028): the episodes that mentioned `from` now mention `into`, then `from` is deleted. RELATES_TO edges of `from` go with it;
+        the projector re-creates them (same uuids, new endpoint) from the re-pointed Postgres facts."""
+        if from_uuid == into_uuid:
+            raise ValidationFailed("a node cannot be merged into itself")
+        await self.move_mentions(from_uuid, into_uuid)
+        await self.delete_node(from_uuid)
+
+    # ---- search (P4 building block for P6): the platform recipe, never Graphiti's defaults (ADR-019) ---------------------------------------------
+
+    async def search_facts(
+        self,
+        query: str,
+        *,
+        as_of: dt.datetime | None = None,
+        known_at: dt.datetime | None = None,
+        center_entity_id: str | None = None,
+        limit: int = 10,
+    ) -> list[FactHit]:
+        """Edge-only hybrid search (BM25 + vectors, RRF; node distance when centred), always scoped to this group and always filtered:
+        `expired_at IS NULL` (ADR-018: Postgres status is authoritative, and non-active facts are expired on the edge) unless a known_at is asked,
+        then valid time (`as_of`, an unknown start counts as always) and record time (`known_at`). No cross-encoder (the router drops logprobs)."""
+        if center_entity_id is not None and (await self._owner_group("node", center_entity_id)) != self.group_id.value:
+            raise NotFound()
+        recipe = (EDGE_HYBRID_SEARCH_NODE_DISTANCE if center_entity_id else EDGE_HYBRID_SEARCH_RRF).model_copy(deep=True)
+        recipe.limit = max(1, min(limit, 100))
+        null, op = DateFilter(comparison_operator=ComparisonOperator.is_null), ComparisonOperator
+        filters = SearchFilters()
+        if known_at is None:
+            filters.expired_at = [[null]]
+        else:
+            filters.created_at = [[DateFilter(date=known_at, comparison_operator=op.less_than_equal)]]
+            filters.expired_at = [[null], [DateFilter(date=known_at, comparison_operator=op.greater_than)]]
+        # "current" means true NOW unless a date is asked for: an ended fact (a past job) is not an answer to "where does she work"
+        when = as_of or dt.datetime.now(dt.UTC)
+        filters.valid_at = [[DateFilter(date=when, comparison_operator=op.less_than_equal)], [null]]
+        filters.invalid_at = [[DateFilter(date=when, comparison_operator=op.greater_than)], [null]]
+        found = await self._g.search_(
+            query, config=recipe, group_ids=[self.group_id.value], center_node_uuid=center_entity_id, search_filter=filters
+        )
+        return [
+            FactHit(
+                str(e.uuid),
+                e.name,
+                e.fact,
+                e.source_node_uuid,
+                e.target_node_uuid,
+                e.valid_at,
+                e.invalid_at,
+                e.expired_at,
+                e.created_at,
+                tuple(e.episodes or ()),
+            )
+            for e in found.edges
+            if e.group_id == self.group_id.value  # belt and braces: the query is scoped, and a hit from another group is still dropped
+        ]
+
+
+def _gnode(n: EntityNode) -> GNode:
+    attrs = {k: v for k, v in (n.attributes or {}).items() if isinstance(v, str | int | float | bool)}
+    emb = tuple(float(x) for x in n.name_embedding) if n.name_embedding else None
+    return GNode(str(n.uuid), n.name, frozenset(n.labels or []) - {"Entity"}, n.summary or "", attrs, emb)
+
+
+def _gedge(e: EntityEdge) -> GEdge:
+    attrs = {k: v for k, v in (e.attributes or {}).items() if isinstance(v, str | int | float | bool)}
+    return GEdge(
+        str(e.uuid),
+        e.name,
+        e.fact,
+        e.source_node_uuid,
+        e.target_node_uuid,
+        e.valid_at,
+        e.invalid_at,
+        e.created_at,
+        e.expired_at,
+        tuple(e.episodes or ()),
+        attrs,
+    )

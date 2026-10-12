@@ -9,6 +9,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
+from kg_extraction.handler import GraphIngestJob
 from kg_ingestion.normalize import NormalizeHandler
 from kg_jobs.client import OpsClient
 from kg_jobs.dispatcher import Dispatcher
@@ -17,12 +18,24 @@ from kg_knowledge.jobs import GraphProjectionHandler
 
 @asynccontextmanager
 async def running_worker(
-    api: Any, *, stages: tuple[str, ...] = ("normalize", "graph_projection"), lease_seconds: int = 10, concurrency: int = 4
+    api: Any, *, stages: tuple[str, ...] = ("normalize", "graph_ingest", "graph_projection"), lease_seconds: int = 10, concurrency: int = 4
 ) -> AsyncIterator[Dispatcher]:
     st = api.app.state.kg
     handlers: dict[str, Any] = {
         "normalize": NormalizeHandler(st.engine, st.ingestion.cipher, st.ingestion.hasher),
-        "graph_projection": GraphProjectionHandler(st.knowledge.projector),
+        "graph_projection": GraphProjectionHandler(st.knowledge.projector, st.knowledge.lock),
+        "graph_ingest": GraphIngestJob(
+            st.engine,
+            st.ingestion.cipher,
+            st.graph,
+            st.knowledge.projector,
+            st.knowledge.lock,
+            st.knowledge.specs,
+            st.knowledge.extracted,
+            st.router.config,
+            st.settings,
+            flush_calls=st.call_sink.flush,
+        ),
     }
     dispatcher = Dispatcher(
         OpsClient(st.engine),

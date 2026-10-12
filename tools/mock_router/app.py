@@ -40,6 +40,7 @@ ERROR_STATUS = {
     "privacy_policy_violation": 422, "data_policy_violation": 422, "classification_not_permitted": 403,
     "cost_limit_exceeded": 422, "context_too_large": 400, "rate_limited": 429, "budget_exceeded": 429,
     "provider_unavailable": 503, "routing_failed": 503, "timeout": 504, "unknown_provider_error": 502, "forbidden": 403,
+    "fixture_missing": 500,  # mock only (strict scenario mode): an unmatched structured request fails loudly instead of returning invented data
 }  # mirrors router src/errors/codes.ts HTTP_STATUS_BY_CODE
 
 
@@ -178,6 +179,9 @@ class MockConfig(BaseModel):
     e5_overlong: Literal["truncate", "accept"] = "truncate"   # behaviour for 512 < tokens <= 8192 [unverified: LV-05]
     embedding_dim: int = 384
     fixtures_dir: Path = HERE / "fixtures"
+    # Strict scenario mode (P4 Q12): a structured (json_schema) request that no fixture matches answers 500 `fixture_missing` instead of the schema faker's
+    # junk, so a gap in a scenario fails loudly. Off by default; tests switch it with POST /__mock/strict.
+    strict_fixtures: bool = False
 
     @classmethod
     def from_env(cls) -> "MockConfig":
@@ -186,6 +190,7 @@ class MockConfig(BaseModel):
             max_classification=os.environ.get("MOCK_ROUTER_MAX_CLASSIFICATION", "restricted"),
             retry_after_seconds=int(os.environ.get("MOCK_ROUTER_RETRY_AFTER", "1")),
             e5_overlong=os.environ.get("MOCK_ROUTER_E5_OVERLONG", "truncate"),  # type: ignore[arg-type]
+            strict_fixtures=os.environ.get("MOCK_ROUTER_STRICT_FIXTURES", "").lower() in ("1", "true", "yes"),
         )
 
 
@@ -346,12 +351,17 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
         last_user = next((m for m in reversed(req.messages) if isinstance(m, UserMsg)), None)
         norm = [{"role": m.role, "content": _text_of(m)} for m in req.messages]
         schema_name = req.response_format.json_schema.name if req.response_format and req.response_format.json_schema else None
+        request_log[-1]["schema_name"] = schema_name  # lets a test count how often each structured question was asked
         key = fixture_key(req.model, norm, schema_name)
         hit = store.lookup(key, req.model, norm, schema_name)
         mode = "fixture"
         if hit is not None:
             content = hit if isinstance(hit, str) else json.dumps(hit)
         elif req.response_format and req.response_format.type == "json_schema" and req.response_format.json_schema:
+            if cfg.strict_fixtures:
+                request_log[-1]["content_mode"] = "fixture_missing"
+                request_log[-1]["unmatched"] = {"schema_name": schema_name, "alias": req.model, "text_head": _norm_head(norm)}
+                raise GatewayError("fixture_missing", f"no fixture matches this structured request (schema {schema_name})", details={"schema_name": schema_name})
             mode = "schema_faker"
             content = json.dumps(fake_from_schema(req.response_format.json_schema.schema_))
         elif req.response_format and req.response_format.type == "json_object":
@@ -422,6 +432,34 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
         }, headers=headers)
 
     # ---- test-only control plane (not part of the real router) --------------------------------------------------------
+    @app.post("/__mock/strict")
+    async def set_strict(request: Request):
+        """Body: {"enabled": true|false}. Strict scenario mode (see MockConfig.strict_fixtures)."""
+        body = await request.json()
+        cfg.strict_fixtures = bool(body.get("enabled"))
+        return {"strict_fixtures": cfg.strict_fixtures}
+
+    @app.get("/__mock/strict")
+    async def get_strict():
+        return {"strict_fixtures": cfg.strict_fixtures}
+
+    @app.post("/__mock/fixtures")
+    async def add_fixtures(request: Request):
+        """Body: {"rules": [{"when": {...}, "response": ...}]}. Prepends run-time rules (they win over the files); DELETE clears them."""
+        body = await request.json()
+        store.dynamic[:0] = list(body.get("rules", []))
+        return {"dynamic": len(store.dynamic)}
+
+    @app.delete("/__mock/fixtures")
+    async def clear_fixtures():
+        store.dynamic.clear()
+        return {"dynamic": 0}
+
+    @app.post("/__mock/reload")
+    async def reload_fixtures():
+        store.reload()
+        return {"rules": len(store.rules), "keyed": len(store.keyed)}
+
     @app.post("/__mock/faults")
     async def set_faults(request: Request):
         """Body: {"faults":[{"code":"rate_limited","count":2,"endpoint":"chat"}]} replaces the queue."""
@@ -452,6 +490,11 @@ def _text_of(msg: Any) -> str:
     if c is None:
         return ""
     return " ".join(p.text for p in c if isinstance(p, TextPart))
+
+
+def _norm_head(messages: list[dict], n: int = 400) -> str:
+    """The start of the last message, for fixture authors (test tooling only; never used by the platform)."""
+    return " ".join(messages[-1]["content"].split())[:n] if messages else ""
 
 
 def _truncate_tokens(text: str, n: int) -> str:

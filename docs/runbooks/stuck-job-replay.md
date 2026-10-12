@@ -49,7 +49,7 @@ A replay of a stage that is still `pending` or `running` is `409 stage_running`:
 1. `make ps` / `docker compose ps`: is the worker running and healthy? The Operations page shows the last heartbeat.
 2. Worker log (`docker compose logs worker`): `outbox_claim_failed` means the database is unreachable (the dispatcher keeps retrying), `job_completion_failed` means a lost acknowledgement (the lease expires and the job re-runs), `job_unexpected_error` carries only an exception type.
 3. A job whose `attempts` equals `max_attempts` and whose workers keep dying is a poison event: it is dead-lettered without running again. Cancel it or fix the data, then replay.
-4. Rolling back: `uv run kg db downgrade 0002` and `PROJECTION_SWEEPER_ENABLED=true` restore the P2 behaviour (the command fast path never depended on the outbox).
+4. The P2 sweeper no longer exists (deleted in Phase 4); the outbox is the only driver of projection. For `graph_ingest` jobs see [extraction-quarantine](extraction-quarantine.md).
 
 ## Failure injection (development only)
 `KG_FAULTS` / `KG_FAULTS_DIR` are refused when `ENV=production`. In the dev stack the worker re-reads `.local/faults/spec` (one rule per line, `stage:point:count`, plus `stage:stall:count:seconds`); counters live in `.local/faults/counters.json`. Delete both files to disarm. `make demo-p3` and the Playwright ADM-06 spec use this.

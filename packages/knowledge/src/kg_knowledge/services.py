@@ -10,9 +10,14 @@ from kg_modelgw.config import ModelConfig
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from kg_knowledge.commands import CommandPipeline
+from kg_knowledge.extracted import ExtractedKnowledge
+from kg_knowledge.graph_reads import GraphReads
+from kg_knowledge.graphlock import GraphLock
 from kg_knowledge.ontology_service import OntologyService
 from kg_knowledge.projection import Projector
 from kg_knowledge.reads import Reads
+from kg_knowledge.reviews import ReviewService
+from kg_knowledge.search import GraphSearch
 from kg_knowledge.specs import SpecCache
 
 
@@ -23,15 +28,29 @@ class KnowledgeServices:
     pipeline: CommandPipeline
     reads: Reads
     projector: Projector
+    extracted: ExtractedKnowledge
+    reviews: ReviewService
+    graph_reads: GraphReads
+    search: GraphSearch
+    lock: GraphLock
 
 
 def build_knowledge(engine: AsyncEngine, graph: GraphService, config: ModelConfig, *, service: str) -> KnowledgeServices:
     """`service` is the process name written into the call log for projection embeddings (kg-api | kg-worker | kg-cli)."""
     specs = SpecCache()
+    reads = Reads(specs)
+    pipeline = CommandPipeline(specs)
+    extracted = ExtractedKnowledge()
+    graph_reads = GraphReads(reads)
     return KnowledgeServices(
         specs=specs,
         ontology=OntologyService(GraphCompiler(), specs),
-        pipeline=CommandPipeline(specs),
-        reads=Reads(specs),
+        pipeline=pipeline,
+        reads=reads,
         projector=Projector(engine, graph, specs, config, service=service),
+        extracted=extracted,
+        reviews=ReviewService(specs, extracted, pipeline, reads),
+        graph_reads=graph_reads,
+        search=GraphSearch(graph, graph_reads, service=service),
+        lock=GraphLock(engine),
     )

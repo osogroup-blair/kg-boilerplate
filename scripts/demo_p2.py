@@ -229,11 +229,18 @@ async def main() -> int:
             return ok, f"predecessor ended at {first['valid_to'][:10]}, still status={first['status']} (succession, not supersession)"
 
         async def s6() -> tuple[bool, str]:
-            now = (await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning")).json()["relationships"]
-            past = (await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning", as_of="2023-01-01")).json()[
-                "relationships"
-            ]
-            hist = (await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning", include="history")).json()["relationships"]
+            def roles(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                return [
+                    f for f in rows if f["rel_type"] == "WORKS_AT" and f["source_type"] == "command"
+                ]  # P4 adds extracted facts to the same story
+
+            now = roles((await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning")).json()["relationships"])
+            past = roles(
+                (await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning", as_of="2023-01-01")).json()["relationships"]
+            )
+            hist = roles(
+                (await d.send("GET", f"/v1/entities/{d.ids['sarah']}", "demo/agent_planning", include="history")).json()["relationships"]
+            )
             second = next(f for f in hist if f["id"] == d.ids["fact2"])
             ok = (
                 [f["attributes"]["role"] for f in now] == ["Engineering Manager"]
@@ -364,7 +371,7 @@ async def main() -> int:
                         chat = (
                             await conn.execute(
                                 text(
-                                    "SELECT count(*) FROM model_calls WHERE workspace_id = :w AND operation = 'chat' AND created_at >= (SELECT min(created_at) FROM commands WHERE workspace_id = :w)"
+                                    "SELECT count(*) FROM model_calls WHERE workspace_id = :w AND operation = 'chat' AND purpose = 'graph_projection' AND created_at >= (SELECT min(created_at) FROM commands WHERE workspace_id = :w)"
                                 ),
                                 {"w": DEMO_WS},
                             )
@@ -495,7 +502,7 @@ async def main() -> int:
 
 
 async def wait_for_projection(d: Demo, seconds: float = 30.0) -> None:
-    """The API answers 201 only when the projection finished inside its budget; otherwise the worker's sweeper finishes it. Wait for both."""
+    """The API answers 201 only when the projection finished inside its budget; otherwise the worker's outbox job finishes it. Wait for both."""
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         items = (await d.send("GET", "/v1/entities", "demo/admin@demo", limit=100)).json()["items"]

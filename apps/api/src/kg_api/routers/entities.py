@@ -9,13 +9,33 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from kg_domain.envelope import Page
 from kg_governance.authz.policy import Action, is_allowed, requires
-from kg_knowledge.models import CommandOut, EntityCreateIn, EntityDetailOut, EntityOut, EntityUpdateIn, FactOut, Instant
+from kg_knowledge.models import (
+    AttributeClaimOut,
+    CommandOut,
+    DerivedSummaryOut,
+    EntityCreateIn,
+    EntityDetailOut,
+    EntityOut,
+    EntityUpdateIn,
+    FactOut,
+    GraphOut,
+    Instant,
+    MentionOut,
+)
 
 from kg_api.commands_runner import run_command
 from kg_api.deps import DbDep, PrincipalDep, StateDep, WorkspaceDep
 from kg_api.http import IdempotencyKeyHeader, IfMatchHeader, etag, parse_if_match, require_key
 
 router = APIRouter(prefix="/v1/entities", tags=["entities"])
+
+
+def parse_include(value: str | None) -> tuple[bool, list[str]]:
+    """`include=history,proposed` -> (history?, extra statuses). `historical` is accepted as an alias of `history`."""
+    parts = {p.strip() for p in (value or "").split(",") if p.strip()}
+    return bool(parts & {"history", "historical"}), sorted(parts & {"proposed", "disputed", "rejected"})
+
+
 LimitQ = Annotated[int, Query(ge=1, le=100)]
 COMMAND_RESPONSES: dict[int | str, dict[str, Any]] = {
     200: {"model": CommandOut, "description": "matched_existing: an entity with that external identifier already exists"},
@@ -44,7 +64,7 @@ async def list_entities(
     db: DbDep,
     type: Annotated[str | None, Query(max_length=64)] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
-    status: Literal["active", "deleted"] | None = None,
+    status: Literal["active", "deleted", "candidate", "untyped", "merged"] | None = None,
     limit: LimitQ = 50,
     cursor: str | None = None,
 ) -> Page[EntityOut]:
@@ -68,18 +88,21 @@ async def get_entity(
     principal: PrincipalDep,
     ws: WorkspaceDep,
     db: DbDep,
-    include: Annotated[Literal["history"] | None, Query()] = None,
+    include: Annotated[str | None, Query(max_length=100, description="comma list: history, proposed, disputed, rejected")] = None,
     as_of: Annotated[Instant | None, Query()] = None,
     known_at: Annotated[Instant | None, Query()] = None,
 ) -> JSONResponse:
+    """A merged entity still answers (200) with `merged_into_id`: an id is never reused or lost (KGR-01)."""
+    history, extras = parse_include(include)
     out = await state.knowledge.reads.get_entity(
         db,
         ws,
         entity_id,
         can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE),
-        include_history=include == "history",
+        include_history=history,
         as_of=as_of,
         known_at=known_at,
+        include=extras,
     )
     return JSONResponse(out.model_dump(mode="json"), headers={"ETag": etag(out.revision)})
 
@@ -119,6 +142,7 @@ async def entity_relationships(
     as_of: Annotated[Instant | None, Query()] = None,
     known_at: Annotated[Instant | None, Query()] = None,
     include_history: bool = False,
+    include: Annotated[str | None, Query(max_length=100, description="comma list: history, proposed, disputed, rejected")] = None,
 ) -> list[FactOut]:
     await state.knowledge.reads.entity_exists(db, ws, entity_id)  # a foreign or unknown id is a 404, never an empty list
     return await state.knowledge.reads.list_facts(
@@ -129,6 +153,63 @@ async def entity_relationships(
         rel_type=type,
         as_of=as_of,
         known_at=known_at,
-        include_history=include_history,
+        include_history=include_history or parse_include(include)[0],
         can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE),
+        include=parse_include(include)[1],
     )
+
+
+@router.get("/{entity_id}/graph", response_model=GraphOut)
+@requires(Action.ENTITY_READ)
+async def entity_graph(
+    entity_id: uuid.UUID,
+    state: StateDep,
+    ws: WorkspaceDep,
+    db: DbDep,
+    hops: Annotated[int, Query(ge=1, le=2)] = 1,
+    as_of: Annotated[Instant | None, Query()] = None,
+    known_at: Annotated[Instant | None, Query()] = None,
+    include: Annotated[str | None, Query(max_length=100, description="comma list: historical, proposed, disputed, rejected")] = None,
+    types: Annotated[str | None, Query(max_length=300, description="comma list of entity types to keep (the centre always stays)")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> GraphOut:
+    """The neighbourhood of an entity, read from Postgres (the graph store serves retrieval, not this view). Hops, nodes and the status filters are capped here."""
+    history, extras = parse_include(include)
+    return await state.knowledge.graph_reads.neighborhood(
+        db,
+        ws,
+        entity_id,
+        hops=hops,
+        as_of=as_of,
+        known_at=known_at,
+        include=extras,
+        history=history,
+        types=[t.strip() for t in (types or "").split(",") if t.strip()],
+        limit=limit,
+    )
+
+
+@router.get("/{entity_id}/mentions", response_model=list[MentionOut])
+@requires(Action.ENTITY_READ)
+async def entity_mentions(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[MentionOut]:
+    """The interactions that mention the entity (metadata only), with how each mention was resolved."""
+    return await state.knowledge.graph_reads.mentions(db, ws, entity_id)
+
+
+@router.get("/{entity_id}/attribute-claims", response_model=list[AttributeClaimOut])
+@requires(Action.ENTITY_READ)
+async def entity_attribute_claims(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[AttributeClaimOut]:
+    """Attribute values a model proposed. They never change the entity: accepting one is a correction (a later phase)."""
+    return await state.knowledge.graph_reads.attribute_claims(db, ws, entity_id)
+
+
+@router.get("/{entity_id}/summary", response_model=DerivedSummaryOut)
+@requires(Action.ENTITY_READ)
+async def entity_summary(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> DerivedSummaryOut:
+    """Graphiti's summary of the entity: derived text, labelled `derived_unverified`, from the graph (best effort: a graph outage answers `graph_available: false`)."""
+    await state.knowledge.reads.entity_exists(db, ws, entity_id)  # 404 first: a foreign id never reaches the graph
+    try:
+        node = await state.graph.scoped(ws).read_node(str(entity_id))
+    except Exception:
+        return DerivedSummaryOut(entity_id=entity_id, summary=None, graph_available=False)
+    return DerivedSummaryOut(entity_id=entity_id, summary=(node.summary or None) if node else None)

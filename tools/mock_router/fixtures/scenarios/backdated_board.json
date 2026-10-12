@@ -1,0 +1,127 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "In March 2025 Sarah Johnson joined the board of Velo Club"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    },
+    {
+     "name": "Velo Club",
+     "entity_type_id": 1,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "In March 2025 Sarah Johnson joined the board of Velo Club"
+   ]
+  },
+  "response": {
+   "edges": [
+    {
+     "source_entity_name": "Sarah Johnson",
+     "target_entity_name": "Velo Club",
+     "relation_type": "WORKS_AT",
+     "fact": "Sarah Johnson serves on the board of Velo Club",
+     "valid_at": "2025-03-01T00:00:00Z",
+     "invalid_at": null,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeDuplicate",
+   "contains": [
+    "<new fact> Sarah Johnson serves on the board of Velo Club"
+   ]
+  },
+  "response": {
+   "duplicate_facts": [],
+   "contradicted_facts": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "EdgeTimestamps",
+   "contains": [
+    "<fact> Sarah Johnson serves on the board of Velo Club"
+   ]
+  },
+  "response": {
+   "valid_at": "2025-03-01T00:00:00Z",
+   "invalid_at": null
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "WORKS_AT",
+   "contains": [
+    "Sarah Johnson serves on the board of Velo Club"
+   ]
+  },
+  "response": {
+   "role": "Board member"
+  }
+ },
+ {
+  "gold": {
+   "id": "backdated",
+   "content": {
+    "kind": "message",
+    "content": "In March 2025 Sarah Johnson joined the board of Velo Club."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-09T10:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "entities": [
+     {
+      "name": "Velo Club",
+      "type": "Organization",
+      "status": "active"
+     }
+    ],
+    "facts": [
+     {
+      "source": "Sarah Johnson",
+      "rel_type": "WORKS_AT",
+      "target": "Velo Club",
+      "status": "active",
+      "evidence_status": "unverified",
+      "valid_from": "2025-03-01"
+     }
+    ],
+    "identity": [],
+    "reviews": {},
+    "reverts": 0
+   }
+  }
+ }
+]

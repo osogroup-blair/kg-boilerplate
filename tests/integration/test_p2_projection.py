@@ -13,6 +13,7 @@ from kg_graph.scoped import ScopedGraph
 from kg_obs import metrics
 from sqlalchemy import text
 
+from tests.support.projection import project_due
 from tests.support.spy import SpyTransport
 from tests.support.tenants import EXAMPLE_YAML, clear_graph, make_tenant
 
@@ -189,13 +190,13 @@ async def test_reprojection_is_idempotent(api, tenant):
                     ),  # noqa: S608
                     {"w": t.ws},
                 )
-        assert await projector.sweep_workspace(ctx_of(t)) == 6
+        assert await project_due(api, t.ws) == 6
     assert await graph.list_uuids() == before and (await projector.reconcile(ctx_of(t))).drift == []
     assert await projector.project_entity(ctx_of(t), uuid.UUID(sarah["entity_id"])) == "projected"  # nothing to do when already current
     assert await projector.project_fact(ctx_of(t), uuid.UUID(f1["fact_id"])) == "projected"
 
 
-async def test_a_graph_outage_answers_202_then_the_sweeper_catches_up(api, tenant, monkeypatch):
+async def test_a_graph_outage_answers_202_then_the_next_attempt_catches_up(api, tenant, monkeypatch):
     from neo4j.exceptions import ServiceUnavailable
 
     t = tenant
@@ -218,13 +219,13 @@ async def test_a_graph_outage_answers_202_then_the_sweeper_catches_up(api, tenan
     cmd = (await t.get(r.headers["location"], "reviewer")).json()
     assert cmd["projection_status"] == "pending" and cmd["last_error_code"] == "graph_unavailable"
     assert await api.app.state.kg.graph.scoped(ctx_of(t)).node_count() == 0
-    # backoff: the row is not due immediately, so a sweep right now does nothing
-    assert await api.app.state.kg.knowledge.projector.sweep_workspace(ctx_of(t)) == 0
+    # backoff: the row is not due immediately, so a retry right now does nothing
+    assert await project_due(api, t.ws) == 0
 
     monkeypatch.setattr(ScopedGraph, "upsert_entity_node", real)
     async with tenant_session(api.engine, ctx_of(t)) as c:  # let the backoff elapse
         await c.execute(text("UPDATE entities SET projection_next_at = now() WHERE workspace_id = :w"), {"w": t.ws})
-    assert await api.app.state.kg.knowledge.projector.sweep_workspace(ctx_of(t)) == 1
+    assert await project_due(api, t.ws) == 1
     after = (await t.get(f"/v1/commands/{r.json()['command_id']}", "reviewer")).json()
     assert after["projection_status"] == "projected" and after["last_error_code"] is None
     assert await api.app.state.kg.graph.scoped(ctx_of(t)).node_count() == 1
@@ -247,7 +248,7 @@ async def test_a_failure_that_will_not_heal_ends_as_failed_and_can_be_retried(ap
                 text("UPDATE entities SET projection_next_at = now() WHERE workspace_id = :w AND projection_status = 'pending'"),
                 {"w": t.ws},
             )
-        await projector.sweep_workspace(ctx_of(t))
+        await project_due(api, t.ws)
     cmd = (await t.get(f"/v1/commands/{r.json()['command_id']}", "reviewer")).json()
     assert cmd["projection_status"] == "failed" and cmd["last_error_code"] == "unexpected_error"
     monkeypatch.setattr(ScopedGraph, "upsert_entity_node", real)
@@ -271,7 +272,7 @@ async def test_an_endpoint_that_is_not_projected_yet_defers_the_fact(api, tenant
     monkeypatch.setattr(ScopedGraph, "upsert_fact_edge", real)
     async with tenant_session(api.engine, ctx_of(t)) as c:
         await c.execute(text("UPDATE facts SET projection_next_at = now() WHERE workspace_id = :w"), {"w": t.ws})
-    await api.app.state.kg.knowledge.projector.sweep_workspace(ctx_of(t))
+    await project_due(api, t.ws)
     assert (await t.get(f"/v1/commands/{r.json()['command_id']}", "reviewer")).json()["projection_status"] == "projected"
 
 
@@ -370,31 +371,6 @@ async def test_no_content_appears_in_logs_metrics_audit_or_model_calls(api, tena
     for where, blob in sources.items():
         for sentinel in (name, role, attr, "1985-03-02"):
             assert sentinel not in blob, (where, sentinel)
-
-
-async def test_the_sweeper_survives_a_workspace_it_cannot_read(api, tenant, monkeypatch):
-    """sweep_once is system-wide: a workspace with unreadable data (here: a version whose spec no longer parses) is skipped, not fatal."""
-    t = tenant
-    r = await t.entity("Person", "Sarah", source_system="hr", source_ref="E-1")
-    assert r.status_code == 201
-    async with tenant_session(api.engine, ctx_of(t)) as c:
-        await c.execute(
-            text(
-                "UPDATE entities SET projection_status = 'pending', projected_revision = NULL, projection_next_at = now() WHERE workspace_id = :w"
-            ),
-            {"w": t.ws},
-        )
-    projector = api.app.state.kg.knowledge.projector
-    real = projector.sweep_workspace
-
-    async def flaky(ctx, limit=25):  # type: ignore[no-untyped-def]
-        if ctx.workspace_id != t.ws:
-            raise RuntimeError("another workspace is broken")
-        return await real(ctx, limit)
-
-    monkeypatch.setattr(projector, "sweep_workspace", flaky)
-    assert await projector.sweep_once(workspaces=1000) >= 1  # the healthy tenant was still projected
-    assert (await t.get(f"/v1/commands/{r.json()['command_id']}", "reviewer")).json()["projection_status"] == "projected"
 
 
 async def test_an_unreadable_ontology_is_recorded_as_a_failure_not_an_exception(api, tenant):

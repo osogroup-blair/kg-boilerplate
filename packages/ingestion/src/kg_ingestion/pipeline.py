@@ -1,6 +1,6 @@
 """The pipeline definition (blueprint Flow A) and the orchestrator that advances an interaction through it.
 
-    normalize ──► graph_ingest (P4, disabled) ──┐
+    normalize ──► graph_ingest (P4) ──┐
               └─► memory_propose (P5, disabled) ─┴─► finalize (inline, never a job)
 
 `Orchestrator.advance` runs INSIDE the handler's tenant transaction, right after a stage result is written: it enqueues the stages that became ready
@@ -95,7 +95,7 @@ PIPELINE_V1 = Pipeline(
     PIPELINE_VERSION,
     (
         StageDef("normalize"),
-        StageDef("graph_ingest", deps=("normalize",), enabled=False, model_stage=True, enabled_in="P4"),
+        StageDef("graph_ingest", deps=("normalize",), enabled=True, model_stage=True),
         StageDef("memory_propose", deps=("normalize",), enabled=False, model_stage=True, enabled_in="P5"),
     ),
 )
@@ -128,12 +128,18 @@ class Orchestrator:
             return "unknown"
         rows = (
             await conn.execute(
-                text("SELECT stage, status, generation FROM interaction_stages WHERE workspace_id = :ws AND interaction_id = :id"),
+                text(
+                    "SELECT stage, status, generation, pipeline_version, ontology_version_id FROM interaction_stages "
+                    "WHERE workspace_id = :ws AND interaction_id = :id"
+                ),
                 {"ws": workspace_id, "id": interaction_id},
             )
         ).all()
         statuses = {r.stage: r.status for r in rows}
         generations = {r.stage: r.generation for r in rows}
+        pins = {
+            r.stage: (r.pipeline_version, r.ontology_version_id) for r in rows
+        }  # a stage keeps its own pin: a --repin replay moves one stage, not the event
         for stage in self.pipeline.ready(statuses):
             await enqueue(
                 conn,
@@ -143,8 +149,8 @@ class Orchestrator:
                 subject_id=interaction_id,
                 dedupe_key=dedupe_key(interaction_id, stage, generations[stage]),
                 payload=job_payload(interaction_id, generations[stage]),
-                pipeline_version=head.pipeline_version,
-                ontology_version_id=head.ontology_version_id,
+                pipeline_version=pins[stage][0] or head.pipeline_version,
+                ontology_version_id=pins[stage][1] or head.ontology_version_id,
             )
         new = self.pipeline.finalize(statuses)
         if new != head.processing_status:

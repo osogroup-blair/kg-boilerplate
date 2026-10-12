@@ -10,7 +10,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from kg_ontology import ValidationReport
-from kg_ontology.spec import Authority, Classification
+from kg_ontology.spec import AnyAuthority, Authority, Classification
 from kg_ontology.values import parse_instant
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
@@ -18,7 +18,7 @@ REDACTED_VALUE: dict[str, bool] = {"redacted": True}
 ProjectionStatus = Literal["pending", "projected", "failed", "skipped_by_policy", "not_applicable"]
 EmbeddingStatus = Literal["pending", "embedded", "skipped_by_policy"]
 CommandStatus = Literal["applied", "rejected", "needs_review"]
-CommandTypeName = Literal["entity.create", "entity.update", "relationship.assert", "relationship.end"]
+CommandTypeName = Literal["entity.create", "entity.update", "relationship.assert", "relationship.end", "review.decide", "entity.merge"]
 
 
 def _instant(value: Any) -> Any:
@@ -198,7 +198,9 @@ class EntityOut(BaseModel):
     aliases: list[str]
     attributes: dict[str, Any]
     classification: Classification
-    status: Literal["active", "deleted"]
+    status: Literal["active", "deleted", "candidate", "untyped", "merged"]
+    origin: Literal["command", "extracted"] = "command"
+    merged_into_id: uuid.UUID | None = None
     revision: int
     external_ids: list[ExternalId]
     ontology_version_id: uuid.UUID
@@ -215,12 +217,30 @@ class FactEndpoint(BaseModel):
     name: str
 
 
+FactStatus = Literal["active", "superseded", "disputed", "deleted", "proposed", "rejected"]
+
+
+class EvidenceOut(BaseModel):
+    """Why the system holds a fact (KGR-05): a command, or an episode of an interaction. Never content."""
+
+    kind: Literal["command", "episode"]
+    command_id: uuid.UUID | None = None
+    interaction_id: uuid.UUID | None = None
+    episode_uuid: str | None = None
+    source_system: str | None = None
+    source_ref: str | None = None
+    occurred_at: dt.datetime | None = None  # when the source says it happened (interaction) or the command was claimed to
+    recorded_at: dt.datetime | None = None  # when the platform received it
+    added_at: dt.datetime
+
+
 class FactOut(BaseModel):
     id: uuid.UUID
     rel_type: str
     source: FactEndpoint
     target: FactEndpoint
     attributes: dict[str, Any]
+    fact_text: str | None = None
     valid_from: dt.datetime | None
     valid_from_unknown: bool
     valid_to: dt.datetime | None
@@ -228,12 +248,17 @@ class FactOut(BaseModel):
     recorded_at: dt.datetime
     superseded_at: dt.datetime | None
     succeeded_by_fact_id: uuid.UUID | None
-    status: Literal["active", "superseded", "disputed", "deleted"]
+    status: FactStatus
     phase: Literal["current", "historical", "future"]
-    authority_class: Authority
+    authority_class: AnyAuthority
     classification: Classification
     source_type: Literal["command", "extracted", "inferred"]
-    source_command_id: uuid.UUID
+    evidence_status: Literal["verified", "unverified"] = "verified"
+    evidence: list[EvidenceOut] = []
+    decision_code: str | None = None
+    decided_at: dt.datetime | None = None
+    source_command_id: uuid.UUID | None
+    source_interaction_id: uuid.UUID | None = None
     source_system: str | None
     source_ref: str | None
     ontology_version_id: uuid.UUID
@@ -292,3 +317,201 @@ class CommandDetailOut(CommandSummary):
     decision: list[dict[str, Any]]
     result: dict[str, Any]
     status_url: str
+
+
+# ---- P4: reviews, evidence, graph ----------------------------------------------------------------------------------------------------------
+
+ReviewType = Literal["policy_violation", "identity_match", "contradiction", "graphiti_invalidation"]
+ReviewStatusFilter = Literal["open", "decided"]
+Decision = Literal[
+    "same_entity",
+    "different_entity",
+    "needs_more_evidence",
+    "keep_existing",
+    "mark_disputed",
+    "accept_claim",
+    "acknowledge",
+    "open_correction",
+    "approve",
+    "reject",
+]
+RationaleCode = Literal[
+    "verified_with_source",
+    "source_is_authoritative",
+    "reported_by_trusted_party",
+    "same_real_world_entity",
+    "different_real_world_entity",
+    "outdated_information",
+    "duplicate_report",
+    "incorrect_extraction",
+    "insufficient_evidence",
+    "policy_exception",
+    "no_action_needed",
+    "other",
+]
+ALLOWED_DECISIONS: dict[str, tuple[str, ...]] = {
+    "identity_match": ("same_entity", "different_entity", "needs_more_evidence"),
+    "contradiction": ("keep_existing", "mark_disputed", "accept_claim"),
+    "graphiti_invalidation": ("acknowledge", "open_correction"),
+    "policy_violation": ("approve", "reject"),
+}
+
+
+class DecisionIn(_In):
+    decision: Decision
+    rationale_code: RationaleCode
+    rationale_text: str | None = Field(
+        default=None, max_length=1000
+    )  # stored on the review row only: never copied to audit, logs or metrics
+
+
+class ReviewOut(BaseModel):
+    id: uuid.UUID
+    item_type: ReviewType
+    status: ReviewStatusFilter
+    rule_kind: str
+    reason_code: str
+    revision: int
+    created_at: dt.datetime
+    due_at: dt.datetime | None
+    command_id: uuid.UUID | None = None
+    subject_entity_id: uuid.UUID | None = None
+    candidate_entity_id: uuid.UUID | None = None
+    fact_id: uuid.UUID | None = None
+    competing_fact_id: uuid.UUID | None = None
+    interaction_id: uuid.UUID | None = None
+    decision: str | None = None
+    rationale_code: str | None = None
+    decided_by: uuid.UUID | None = None
+    decided_at: dt.datetime | None = None
+
+
+class ReviewEntityView(BaseModel):
+    """One side of an identity comparison. Sensitive attributes are redacted unless the caller may see them."""
+
+    id: uuid.UUID
+    type: str
+    name: str
+    aliases: list[str]
+    attributes: dict[str, Any]
+    external_ids: list[ExternalId]
+    status: str
+    origin: str
+    classification: Classification
+    mention_count: int
+    fact_count: int
+    merged_into_id: uuid.UUID | None = None
+
+
+class IdentityCandidate(BaseModel):
+    entity_id: uuid.UUID
+    trigram: float | None = None
+    cosine: float | None = None
+    reasons: list[str] = []
+
+
+class InteractionRef(BaseModel):
+    """An interaction behind a review item. The reviewer reads its content through the audited evidence endpoint, never from this list."""
+
+    interaction_id: uuid.UUID
+    episode_uuid: str | None = None
+    source_system: str
+    source_ref: str
+    occurred_at: dt.datetime | None
+    recorded_at: dt.datetime
+
+
+class ReviewDetail(ReviewOut):
+    allowed_decisions: list[str]
+    rationale_text: str | None = None
+    entities: list[ReviewEntityView] = []
+    facts: list[FactOut] = []
+    candidates: list[IdentityCandidate] = []
+    interactions: list[InteractionRef] = []
+    violations: list[dict[str, Any]] = []  # a queued command's rule trace: codes and paths, never values
+
+
+class DecisionOut(BaseModel):
+    review_id: uuid.UUID
+    decision: str
+    status: ReviewStatusFilter
+    command_id: uuid.UUID | None
+    revision: int
+    projection_status: ProjectionStatus
+    entity_ids: list[uuid.UUID] = []
+    fact_ids: list[uuid.UUID] = []
+    applied_command_id: uuid.UUID | None = None  # policy_violation approve: the command that was applied
+
+
+class MentionOut(BaseModel):
+    interaction_id: uuid.UUID
+    episode_uuid: str
+    resolution: str
+    status: str
+    created_at: dt.datetime
+    source_system: str
+    source_ref: str
+    occurred_at: dt.datetime | None
+    recorded_at: dt.datetime
+
+
+class AttributeClaimOut(BaseModel):
+    id: uuid.UUID
+    attribute_key: str
+    value: Any
+    status: str
+    interaction_id: uuid.UUID
+    episode_uuid: str
+    created_at: dt.datetime
+
+
+class GraphNodeOut(BaseModel):
+    id: uuid.UUID
+    type: str
+    name: str
+    status: str
+    origin: str
+    hop: int
+
+
+class GraphEdgeOut(BaseModel):
+    id: uuid.UUID
+    rel_type: str
+    source_id: uuid.UUID
+    target_id: uuid.UUID
+    status: FactStatus
+    evidence_status: Literal["verified", "unverified"]
+    authority_class: AnyAuthority
+    phase: Literal["current", "historical", "future"]
+    valid_from: dt.datetime | None
+    valid_to: dt.datetime | None
+    fact_text: str | None = None
+
+
+class GraphOut(BaseModel):
+    center_id: uuid.UUID
+    nodes: list[GraphNodeOut]
+    edges: list[GraphEdgeOut]
+    truncated: bool = False  # the node cap cut the neighbourhood: narrow it with hops, types or time
+
+
+class GraphSearchIn(_In):
+    query: str = Field(min_length=1, max_length=500)
+    as_of: Instant | None = None
+    known_at: Instant | None = None
+    center_entity_id: uuid.UUID | None = None
+    limit: int = Field(default=10, ge=1, le=25)
+
+
+class GraphSearchOut(BaseModel):
+    facts: list[FactOut]
+    unreconciled_hits: int = 0  # graph hits with no Postgres row yet (dropped)
+
+
+class DerivedSummaryOut(BaseModel):
+    """Graphiti's running summary of an entity. DERIVED text: it is never a fact source, never used to answer a question, and always labelled so."""
+
+    entity_id: uuid.UUID
+    summary: str | None
+    label: Literal["derived_unverified"] = "derived_unverified"
+    graph_available: bool = True

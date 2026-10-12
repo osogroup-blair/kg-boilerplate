@@ -54,9 +54,11 @@ services:
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-kg-neo4j-dev}
       NEO4J_PLUGINS: '["apoc"]'
-      NEO4J_server_memory_heap_initial__size: 512m
-      NEO4J_server_memory_heap_max__size: 768m
-      NEO4J_server_memory_pagecache_size: 256m
+      # Docker Desktop here has ~3.8 GiB shared with other projects; P4's extraction runs made the 768m heap get OOM-killed once, so the budget is tighter and bounded
+      NEO4J_server_memory_heap_initial__size: 384m
+      NEO4J_server_memory_heap_max__size: 640m
+      NEO4J_server_memory_pagecache_size: 192m
+      NEO4J_server_jvm_additional: "-XX:MaxDirectMemorySize=192m"
     ports: ["127.0.0.1:7475:7474", "127.0.0.1:7688:7687"]
     volumes: ["neo4jdata:/data"]
     healthcheck:

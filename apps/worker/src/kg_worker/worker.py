@@ -15,7 +15,6 @@ from kg_ingestion.crypto import ContentHasher, PayloadCipher
 from kg_jobs import faults
 from kg_jobs.client import OpsClient
 from kg_jobs.dispatcher import Dispatcher
-from kg_knowledge.jobs import run_sweeper
 from kg_knowledge.services import build_knowledge
 from kg_modelgw.calllog import DbCallSink
 from kg_modelgw.factory import build_router_stack
@@ -60,6 +59,20 @@ class Worker:
         if status == "running":
             metrics.worker_heartbeat_unixtime.set(time.time())
 
+    async def _review_gauges(self, engine) -> None:  # type: ignore[no-untyped-def]
+        """Open review items and the age of the oldest, per type, across all workspaces (aggregates only: ops.review_stats carries no ids)."""
+        async with system_session(engine) as conn:
+            rows = (await conn.execute(text("SELECT * FROM ops.review_stats()"))).all()
+        seen = set()
+        for r in rows:
+            seen.add(r.item_type)
+            metrics.review_items_open.labels(type=r.item_type).set(r.open_items)
+            metrics.review_age_seconds.labels(type=r.item_type).set(r.oldest_age_seconds or 0)
+        for kind in ("identity_match", "contradiction", "graphiti_invalidation", "policy_violation"):
+            if kind not in seen:  # a type that drained must read 0, not its last value
+                metrics.review_items_open.labels(type=kind).set(0)
+                metrics.review_age_seconds.labels(type=kind).set(0)
+
     async def _ensure_indices(self, graph: GraphService, *, attempts: int) -> None:
         for i in range(attempts):
             try:
@@ -76,7 +89,9 @@ class Worker:
         s = self.settings
         configure_logging(s.log_level, service="kg-worker", json_output=True)
         setup_tracing("kg-worker", s.otel_exporter_otlp_endpoint)
-        engine = create_app_engine(s, pool_size=3, max_overflow=2)
+        engine = create_app_engine(
+            s, pool_size=6, max_overflow=4
+        )  # a graph job holds one connection for its lock and needs another for its transactions
         try:
             await assert_role_is_safe(engine)  # L1
         except UnsafeDatabaseRole as exc:
@@ -89,7 +104,9 @@ class Worker:
         sink.start()
         knowledge = build_knowledge(engine, graph, router.config, service="kg-worker")
         faults.configure(s.kg_faults, s.kg_faults_dir)  # test-only failure injection; a no-op unless KG_FAULTS / KG_FAULTS_DIR is set
-        registry = build_registry(engine, knowledge.projector, PayloadCipher.from_settings(s), ContentHasher.from_settings(s))
+        registry = build_registry(
+            engine, knowledge, graph, PayloadCipher.from_settings(s), ContentHasher.from_settings(s), router.config, s, sink.flush
+        )
         dispatcher = Dispatcher(
             OpsClient(engine),
             registry.as_mapping(),
@@ -117,17 +134,12 @@ class Worker:
             concurrency=s.worker_concurrency,
             lease_seconds=s.worker_lease_seconds,
             indices_ready=self.indices_ready,
-            sweeper=s.projection_sweeper_enabled,
         )  # router health is logged, never fatal
-        sweeper: asyncio.Task[None] | None = None
-        if s.projection_sweeper_enabled:  # superseded by the outbox; kept only for rollback to P2
-            sweeper = asyncio.get_running_loop().create_task(
-                run_sweeper(knowledge.projector, stop, interval=s.projection_sweep_interval_seconds), name="projection-sweeper"
-            )
         try:
             while not stop.is_set():
                 try:
                     await self._beat(engine)
+                    await self._review_gauges(engine)
                     if not self.indices_ready:
                         await self._ensure_indices(graph, attempts=1)
                 except Exception as exc:
@@ -139,9 +151,6 @@ class Worker:
         finally:
             stop.set()
             await asyncio.gather(outbox, return_exceptions=True)  # graceful: waits for in-flight jobs, then hands their leases back
-            if sweeper is not None:
-                sweeper.cancel()
-                await asyncio.gather(sweeper, return_exceptions=True)
             try:
                 await self._beat(engine, status="stopped")
             except Exception:

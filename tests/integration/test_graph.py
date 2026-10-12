@@ -144,7 +144,9 @@ async def test_gr04_cypher_helper_requires_scope_and_rejects_group_override(rig)
 
 async def test_gr05_factory_wiring(rig):
     g = rig.service._graphiti
-    assert type(g.llm_client) is OpenAIGenericClient  # NOT the default client (it calls /v1/responses)
+    assert (
+        isinstance(g.llm_client, OpenAIGenericClient) and type(g.llm_client).__name__ == "PlatformLLMClient"
+    )  # NOT the default client (it calls /v1/responses)
     assert isinstance(g.cross_encoder, NoCrossEncoder) and isinstance(g.cross_encoder, CrossEncoderClient)
     assert isinstance(g.embedder, E5Embedder) and g.embedder.inner.config.embedding_dim == 384 and g.embedder.PREFIX == "query: "
     with pytest.raises(RuntimeError, match="disabled"):

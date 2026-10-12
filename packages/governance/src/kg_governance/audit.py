@@ -23,6 +23,8 @@ class CommandType(enum.StrEnum):
     ENTITY_UPDATE = "entity.update"
     RELATIONSHIP_ASSERT = "relationship.assert"
     RELATIONSHIP_END = "relationship.end"
+    REVIEW_DECIDE = "review.decide"
+    ENTITY_MERGE = "entity.merge"
 
 
 class EventKind(enum.StrEnum):
@@ -64,6 +66,17 @@ class AuditMetadata(BaseModel):
     form: Literal["raw", "normalized"] | None = None
     payload_kid: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]{1,32}$")
     classification: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
+    # P4 (extraction, identity, review). Closed fields: ids, counts and enums, never names, fact text or rationale text.
+    interaction_id: uuid.UUID | None = None
+    review_id: uuid.UUID | None = None
+    entity_id: uuid.UUID | None = None
+    fact_id: uuid.UUID | None = None
+    review_type: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
+    decision: str | None = Field(default=None, pattern=r"^[a-z_]{1,64}$")
+    rationale_code: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    count_entities: int | None = None
+    count_facts: int | None = None
+    count_reverts: int | None = None
 
 
 Outcome = Literal["allowed", "denied", "error"]
@@ -71,6 +84,40 @@ Outcome = Literal["allowed", "denied", "error"]
 _INSERT = text("""
     INSERT INTO audit_log (id, workspace_id, actor_principal_id, action, resource_type, resource_id, outcome, request_id, correlation_id, metadata)
     VALUES (:id, :ws, :actor, :action, :rtype, :rid, :outcome, :req, :corr, CAST(:meta AS jsonb))""")
+
+
+class SystemAudit:
+    """Audit entries written by the platform itself (the worker): no principal, so the actor is empty. Same closed metadata, same transaction rule."""
+
+    def __init__(self, conn: AsyncConnection, workspace_id: uuid.UUID, *, correlation_id: str | None = None):
+        self._conn, self._ws, self._correlation_id = conn, workspace_id, correlation_id
+
+    async def record(
+        self,
+        action: str,
+        *,
+        outcome: Outcome = "allowed",
+        resource_type: str | None = None,
+        resource_id: uuid.UUID | str | None = None,
+        metadata: AuditMetadata | None = None,
+    ) -> uuid.UUID:
+        audit_id = uuid7()
+        await self._conn.execute(
+            _INSERT,
+            {
+                "id": audit_id,
+                "ws": self._ws,
+                "actor": None,
+                "action": action,
+                "rtype": resource_type,
+                "rid": str(resource_id) if resource_id is not None else None,
+                "outcome": outcome,
+                "req": None,
+                "corr": self._correlation_id,
+                "meta": (metadata or AuditMetadata()).model_dump_json(exclude_none=True),
+            },
+        )
+        return audit_id
 
 
 class AuditWriter:

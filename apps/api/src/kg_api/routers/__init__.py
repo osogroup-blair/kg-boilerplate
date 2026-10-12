@@ -2,7 +2,19 @@
 
 from fastapi import APIRouter
 
-from kg_api.routers import commands, entities, health, identity, interactions, ontology, operations, operations_jobs, relationships
+from kg_api.routers import (
+    commands,
+    entities,
+    graph,
+    health,
+    identity,
+    interactions,
+    ontology,
+    operations,
+    operations_jobs,
+    relationships,
+    reviews,
+)
 
 ALL_ROUTERS: list[APIRouter] = [
     health.router,
@@ -14,4 +26,6 @@ ALL_ROUTERS: list[APIRouter] = [
     commands.router,
     interactions.router,
     operations_jobs.router,
+    reviews.router,
+    graph.router,
 ]

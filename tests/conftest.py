@@ -18,6 +18,8 @@ from kg_db.engine import create_app_engine
 from kg_domain.principal import WorkspaceContext
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from tests.support.p4 import strict_mock  # noqa: F401  (a fixture shared by the P4 suites)
+
 OWNER_URL = os.environ.get("TEST_DATABASE_URL_OWNER", "postgresql+psycopg://kg_owner:kg_owner_dev@127.0.0.1:5544/kg_test")
 APP_URL = os.environ.get("TEST_DATABASE_URL_APP", "postgresql+psycopg://kg_app:kg_app_dev@127.0.0.1:5544/kg_test")
 SCRATCH_URL = os.environ.get("TEST_SCRATCH_DATABASE_URL_OWNER", "postgresql+psycopg://kg_owner:kg_owner_dev@127.0.0.1:5544/kg_scratch")
@@ -82,7 +84,7 @@ def test_settings() -> Settings:
 async def migrated_db() -> AsyncIterator[str]:
     """kg_test at head, from scratch (also exercises downgrade)."""
     require(OWNER_URL, "postgres")
-    await asyncio.to_thread(migrate.downgrade, OWNER_URL, "base")
+    await asyncio.to_thread(lambda: migrate.downgrade(OWNER_URL, "base", force_drop_extracted=True))
     await asyncio.to_thread(migrate.upgrade, OWNER_URL, "head")
     yield OWNER_URL
 

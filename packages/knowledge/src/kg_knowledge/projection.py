@@ -13,15 +13,16 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
 from kg_common.errors import NotFound
 from kg_common.ids import uuid7_str
-from kg_db.session import system_session, tenant_session
+from kg_db.session import tenant_session
 from kg_domain.principal import WorkspaceContext
 from kg_graph.errors import EndpointNotProjected
-from kg_graph.scoped import ScopedGraph
+from kg_graph.scoped import EdgeReadBack, NodeReadBack, ScopedGraph
 from kg_graph.service import GraphService
 from kg_modelgw.config import ModelConfig
 from kg_modelgw.egress import egress
@@ -32,7 +33,7 @@ from kg_obs.logging import get_logger
 from kg_ontology import OntologySpec
 from kg_ontology.template import render_fact
 from sqlalchemy import Row, text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from kg_knowledge.specs import SpecCache
 
@@ -40,6 +41,7 @@ log = get_logger("kg.projection")
 MAX_ATTEMPTS = 8
 LEASE_SECONDS = 60
 PROJECTED = ("projected", "skipped_by_policy")
+LEDGER_COMMANDS = frozenset({"review.decide", "entity.merge"})  # commands whose graph work is a restore of the rows they changed
 _RETRYABLE_NAMES = frozenset(
     {
         "ServiceUnavailable",
@@ -129,6 +131,7 @@ class RenderedEdge:
     created_at: dt.datetime
     expired_at: dt.datetime | None
     attributes: dict[str, Any]
+    episodes: tuple[str, ...] = ()
 
 
 def version_label(spec: OntologySpec) -> str:
@@ -145,18 +148,34 @@ def render_node(row: Row[Any], spec: OntologySpec) -> RenderedNode:
     return RenderedNode(str(row.id), row.display_name, row.type_key, attrs, row.recorded_at)
 
 
-def render_edge(row: Row[Any], source_name: str, target_name: str, spec: OntologySpec) -> RenderedEdge:
+NOT_CURRENT = frozenset({"proposed", "rejected", "disputed", "deleted"})
+
+
+def render_edge(row: Row[Any], source_name: str, target_name: str, spec: OntologySpec, episodes: tuple[str, ...] = ()) -> RenderedEdge:
+    """A command fact's text comes from the ontology template (no model); an extracted fact keeps the text its source gave. A fact that is not
+    current (proposed, rejected, disputed) is EXPIRED on the edge, so the standard `expired_at IS NULL` search filter hides it (ADR-018)."""
     declared = spec.relationship_types.get(row.rel_type)
     sensitive = {k for k, a in declared.attributes.items() if a.sensitive} if declared else set()
     public = {k: v for k, v in (row.attributes or {}).items() if k not in sensitive and isinstance(v, str | int | float | bool)}
-    fact = render_fact(declared.fact_template if declared else None, row.rel_type, source_name, target_name, public)
-    attrs = {
+    extracted = row.source_type != "command"
+    fact = (
+        (row.fact_text or "")
+        if extracted and row.fact_text
+        else render_fact(declared.fact_template if declared else None, row.rel_type, source_name, target_name, public)
+    )
+    attrs: dict[str, Any] = {
         **public,
         "platform_fact_id": str(row.id),
-        "source_command_id": str(row.source_command_id),
         "authority_class": row.authority_class,
         "ontology_version": version_label(spec),
     }
+    if row.source_command_id is not None:
+        attrs["source_command_id"] = str(row.source_command_id)
+    if extracted or row.status != "active":
+        attrs["platform_status"] = row.status
+        attrs["evidence_status"] = row.evidence_status
+        attrs["source_type"] = row.source_type
+    expired = row.decided_at if row.status in NOT_CURRENT and row.decided_at is not None else row.superseded_at
     return RenderedEdge(
         str(row.id),
         str(row.source_entity_id),
@@ -166,9 +185,41 @@ def render_edge(row: Row[Any], source_name: str, target_name: str, spec: Ontolog
         row.valid_from,
         row.valid_to,
         row.recorded_at,
-        row.superseded_at,
+        expired,
         attrs,
+        episodes,
     )
+
+
+def node_diff(want: RenderedNode, got: NodeReadBack) -> list[str]:
+    return [
+        name
+        for name, same in (
+            ("name", got.name == want.name),
+            ("labels", got.labels == frozenset({want.type_key})),
+            ("attributes", got.attributes == want.attributes),
+            ("created_at", got.created_at == want.created_at),
+        )
+        if not same
+    ]
+
+
+def edge_diff(want: RenderedEdge, got: EdgeReadBack) -> list[str]:
+    return [
+        name
+        for name, same in (
+            ("name", got.name == want.name),
+            ("fact", got.fact == want.fact),
+            ("endpoints", (got.source_uuid, got.target_uuid) == (want.source_uuid, want.target_uuid)),
+            ("valid_at", got.valid_at == want.valid_at),
+            ("invalid_at", got.invalid_at == want.invalid_at),
+            ("created_at", got.created_at == want.created_at),
+            ("expired_at", got.expired_at == want.expired_at),
+            ("attributes", got.attributes == want.attributes),
+            ("episodes", tuple(got.episodes) == tuple(want.episodes)),
+        )
+        if not same
+    ]
 
 
 @dataclass
@@ -187,6 +238,15 @@ class ReconcileReport:
     skipped_by_policy: int = 0
     drift: list[Drift] = field(default_factory=list)
     repaired: int = 0
+
+
+@dataclass
+class RestoreReport:
+    """What restoring a scope from Postgres did. `unsettled` are rows whose projection failed (the code is recorded on the row; a retry finishes them)."""
+
+    checked: int = 0
+    repaired: int = 0
+    unsettled: list[tuple[str, uuid.UUID, str | None]] = field(default_factory=list)
 
 
 class Projector:
@@ -249,8 +309,8 @@ class Projector:
             row = (
                 await conn.execute(
                     text(
-                        "SELECT id, type_key, display_name, attributes, classification, revision, ontology_version_id, recorded_at, projection_status, projected_revision "
-                        "FROM entities WHERE workspace_id = :ws AND id = :id"
+                        "SELECT id, type_key, display_name, attributes, classification, revision, ontology_version_id, recorded_at, projection_status, projected_revision, "
+                        "status, merged_into_id FROM entities WHERE workspace_id = :ws AND id = :id"
                     ),
                     {"ws": ctx.workspace_id, "id": entity_id},
                 )
@@ -265,6 +325,16 @@ class Projector:
             return await self._mark_failed(ctx, "entities", entity_id, row.revision, "ontology_unreadable", False, "entity")
         if row.projection_status in PROJECTED and row.projected_revision == row.revision:
             return str(row.projection_status)
+        if row.status == "merged":  # the node is gone: its episodes mention the canonical node now (ADR-028)
+            try:
+                await self._merge_node_away(ctx, row.id, row.merged_into_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                code, retryable = classify_error(exc)
+                return await self._mark_failed(ctx, "entities", entity_id, row.revision, code, retryable, "entity")
+            await self._mark_done(ctx, "entities", entity_id, row.revision, "projected", "entity")
+            return "projected"
         if not self._config.egress_allows(row.classification):
             await self._mark_done(ctx, "entities", entity_id, row.revision, "skipped_by_policy", "entity")
             return "skipped_by_policy"
@@ -283,7 +353,27 @@ class Projector:
         await self._mark_done(ctx, "entities", entity_id, row.revision, "projected", "entity")
         return "projected"
 
+    async def _merge_node_away(self, ctx: WorkspaceContext, from_id: uuid.UUID, into_id: uuid.UUID | None) -> None:
+        """Deletes the merged entity's node after moving its episodes to the canonical node. Idempotent: a node that is already gone is a success."""
+        graph = self._scoped(ctx)
+        if into_id is None or await graph.read_node(str(from_id)) is None:
+            return
+        if await graph.read_node(str(into_id)) is None:  # the canonical node must exist before anything is moved onto it
+            await self.project_entity(ctx, into_id)
+        await graph.merge_nodes(str(from_id), str(into_id))
+
     # ---- fact -----------------------------------------------------------------------------------------------------------------------------
+
+    async def _episodes_of(self, conn: AsyncConnection, ws: uuid.UUID, fact_id: uuid.UUID) -> tuple[str, ...]:
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT episode_uuid FROM fact_evidence WHERE workspace_id = :ws AND fact_id = :f AND source_kind = 'episode' ORDER BY added_at, id"
+                ),
+                {"ws": ws, "f": fact_id},
+            )
+        ).all()
+        return tuple(r.episode_uuid for r in rows)
 
     async def project_fact(self, ctx: WorkspaceContext, fact_id: uuid.UUID) -> str:
         async with tenant_session(self._engine, ctx) as conn:
@@ -292,8 +382,9 @@ class Projector:
                     text(
                         "SELECT f.id, f.rel_type, f.source_entity_id, f.target_entity_id, f.attributes, f.valid_from, f.valid_to, f.recorded_at, f.superseded_at, "
                         "f.authority_class, f.classification, f.source_command_id, f.revision, f.ontology_version_id, f.projection_status, f.projected_revision, "
-                        "s.display_name AS s_name, s.classification AS s_cls, s.projection_status AS s_proj, "
-                        "t.display_name AS t_name, t.classification AS t_cls, t.projection_status AS t_proj "
+                        "f.status, f.source_type, f.fact_text, f.evidence_status, f.decided_at, "
+                        "s.display_name AS s_name, s.classification AS s_cls, s.projection_status AS s_proj, s.status AS s_status, "
+                        "t.display_name AS t_name, t.classification AS t_cls, t.projection_status AS t_proj, t.status AS t_status "
                         "FROM facts f JOIN entities s ON s.workspace_id = f.workspace_id AND s.id = f.source_entity_id "
                         "JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id WHERE f.workspace_id = :ws AND f.id = :id"
                     ),
@@ -306,6 +397,7 @@ class Projector:
                 spec = await self._specs.get(conn, ctx.workspace_id, row.ontology_version_id)
             except Exception:
                 spec = None
+            episodes = await self._episodes_of(conn, ctx.workspace_id, fact_id)
         if spec is None:
             return await self._mark_failed(ctx, "facts", fact_id, row.revision, "ontology_unreadable", False, "fact")
         if row.projection_status in PROJECTED and row.projected_revision == row.revision:
@@ -314,10 +406,13 @@ class Projector:
         if not self._config.egress_allows(classification) or "skipped_by_policy" in (row.s_proj, row.t_proj):
             await self._mark_done(ctx, "facts", fact_id, row.revision, "skipped_by_policy", "fact")
             return "skipped_by_policy"
-        for endpoint, status in ((row.source_entity_id, row.s_proj), (row.target_entity_id, row.t_proj)):
-            if status != "projected":
+        for endpoint, status, estatus in (
+            (row.source_entity_id, row.s_proj, row.s_status),
+            (row.target_entity_id, row.t_proj, row.t_status),
+        ):
+            if status != "projected" and estatus != "merged":
                 await self.project_entity(ctx, endpoint)  # an edge needs both nodes; projecting them first is idempotent
-        edge = render_edge(row, row.s_name, row.t_name, spec)
+        edge = render_edge(row, row.s_name, row.t_name, spec, episodes)
         try:
             with self._egress(ctx, classification):
                 await self._scoped(ctx).upsert_fact_edge(
@@ -331,6 +426,7 @@ class Projector:
                     created_at=edge.created_at,
                     expired_at=edge.expired_at,
                     attributes=edge.attributes,
+                    episodes=edge.episodes,
                 )
         except asyncio.CancelledError:
             raise
@@ -382,7 +478,7 @@ class Projector:
         async with tenant_session(self._engine, ctx) as conn:
             row = (
                 await conn.execute(
-                    text("SELECT status, result, projection_status FROM commands WHERE workspace_id = :ws AND id = :id"),
+                    text("SELECT status, result, projection_status, command_type FROM commands WHERE workspace_id = :ws AND id = :id"),
                     {"ws": ctx.workspace_id, "id": command_id},
                 )
             ).first()
@@ -391,6 +487,18 @@ class Projector:
         result = row.result or {}
         if row.status != "applied" or result.get("matched_existing"):
             return str(row.projection_status)
+        if row.command_type in LEDGER_COMMANDS:  # a review decision or a merge changed rows on both sides of the graph: restore them all
+            report = await self.restore_command(ctx, command_id)
+            status = "projected" if not report.unsettled else "pending"
+            async with tenant_session(self._engine, ctx) as conn:
+                await conn.execute(
+                    text(
+                        "UPDATE commands SET projection_status = :st, projection_attempts = projection_attempts + 1, last_error_code = CASE WHEN :st = 'pending' THEN 'graph_unavailable' END, "
+                        "projected_at = CASE WHEN :st = 'projected' THEN now() END WHERE workspace_id = :ws AND id = :id"
+                    ),
+                    {"st": status, "ws": ctx.workspace_id, "id": command_id},
+                )
+            return status
         if result.get("entity_id") and "fact_id" not in result:
             await self.project_entity(ctx, uuid.UUID(result["entity_id"]))
         fact_ids = [result["fact_id"], *result.get("ended_fact_ids", [])] if result.get("fact_id") else []
@@ -401,6 +509,14 @@ class Projector:
     async def retry_command(self, ctx: WorkspaceContext, command_id: uuid.UUID) -> str:
         """Operator retry (kg commands retry-projection): make the command's rows due again and project them now."""
         async with tenant_session(self._engine, ctx) as conn:
+            kind = (
+                await conn.execute(
+                    text("SELECT command_type FROM commands WHERE workspace_id = :ws AND id = :id"),
+                    {"ws": ctx.workspace_id, "id": command_id},
+                )
+            ).first()
+            if kind is not None and kind.command_type in LEDGER_COMMANDS:
+                return await self.project_command(ctx, command_id)
             for table, own in (("entities", "created_by_command_id"), ("facts", "source_command_id")):
                 await conn.execute(
                     text(
@@ -450,82 +566,211 @@ class Projector:
             ).first()
         return None if row is None else row.last_error_code
 
-    # ---- sweeper (the P2 driver; OFF by default since P3 moved projection onto the outbox, deleted in P4) ---------------------------------------------------------
+    # ---- restore from Postgres (P4: reconcile-then-restore, ADR-027) -------------------------------------------------------------------------
 
-    async def _claim(self, ctx: WorkspaceContext, table: str, limit: int) -> list[uuid.UUID]:
-        """Leases due rows (visibility timeout) with SKIP LOCKED, so parallel sweepers never take the same row and a crash just lets the lease expire."""
+    async def _force_pending(self, ctx: WorkspaceContext, table: str, ids: list[uuid.UUID]) -> None:
+        assert table in ("entities", "facts")
+        if not ids:
+            return
         async with tenant_session(self._engine, ctx) as conn:
-            rows = (
+            await conn.execute(
+                text(
+                    f"UPDATE {table} SET projection_status = 'pending', projected_revision = NULL, projection_attempts = 0, projection_next_at = now() "  # noqa: S608
+                    "WHERE workspace_id = :ws AND id = ANY(:ids)"
+                ),
+                {"ws": ctx.workspace_id, "ids": ids},
+            )
+
+    async def restore_scope(
+        self, ctx: WorkspaceContext, *, entity_ids: Iterable[uuid.UUID], fact_ids: Iterable[uuid.UUID]
+    ) -> RestoreReport:
+        """Makes the graph equal Postgres for these rows, whatever Graphiti did to them: every node and edge is compared and the ones that differ are
+        written again from the row (state-based, so it is idempotent and independent of order). The graph is never trusted; it is only made to agree."""
+        report = RestoreReport()
+        graph = self._scoped(ctx)
+        ent_ids, f_ids = sorted(set(entity_ids), key=str), sorted(set(fact_ids), key=str)
+        async with tenant_session(self._engine, ctx) as conn:
+            entities = (
                 await conn.execute(
-                    text(
-                        f"UPDATE {table} SET projection_next_at = now() + (:lease * interval '1 second') WHERE workspace_id = :ws AND id IN ("  # noqa: S608
-                        f"SELECT id FROM {table} WHERE workspace_id = :ws AND projection_status = 'pending' AND projection_next_at <= now() "  # noqa: S608
-                        "ORDER BY recorded_at, id LIMIT :n FOR UPDATE SKIP LOCKED) RETURNING id"
-                    ),
-                    {"ws": ctx.workspace_id, "lease": LEASE_SECONDS, "n": limit},
+                    text("SELECT * FROM entities WHERE workspace_id = :ws AND id = ANY(:ids)"), {"ws": ctx.workspace_id, "ids": ent_ids}
                 )
             ).all()
-        return [r.id for r in rows]
+            facts = (
+                await conn.execute(
+                    text(
+                        "SELECT f.*, s.display_name AS s_name, t.display_name AS t_name FROM facts f "
+                        "JOIN entities s ON s.workspace_id = f.workspace_id AND s.id = f.source_entity_id "
+                        "JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id WHERE f.workspace_id = :ws AND f.id = ANY(:ids)"
+                    ),
+                    {"ws": ctx.workspace_id, "ids": f_ids},
+                )
+            ).all()
+            episodes: dict[uuid.UUID, list[str]] = {}
+            for ev in (
+                await conn.execute(
+                    text(
+                        "SELECT fact_id, episode_uuid FROM fact_evidence WHERE workspace_id = :ws AND source_kind = 'episode' AND fact_id = ANY(:ids) "
+                        "ORDER BY added_at, id"
+                    ),
+                    {"ws": ctx.workspace_id, "ids": f_ids},
+                )
+            ).all():
+                episodes.setdefault(ev.fact_id, []).append(ev.episode_uuid)
+            specs: dict[uuid.UUID, OntologySpec] = {}
+            for vid in {r.ontology_version_id for r in (*entities, *facts)}:
+                specs[vid] = await self._specs.get(conn, ctx.workspace_id, vid)
+        force_e: list[uuid.UUID] = []
+        force_f: list[uuid.UUID] = []
+        for e in entities:
+            report.checked += 1
+            if e.status == "merged":
+                if await graph.read_node(str(e.id)) is not None:
+                    force_e.append(e.id)
+                continue
+            if e.projection_status == "skipped_by_policy":
+                continue
+            got = await graph.read_node(str(e.id))
+            if (
+                got is None
+                or e.projection_status != "projected"
+                or e.projected_revision != e.revision
+                or node_diff(render_node(e, specs[e.ontology_version_id]), got)
+            ):
+                force_e.append(e.id)
+        for f in facts:
+            report.checked += 1
+            if f.projection_status == "skipped_by_policy":
+                continue
+            want_e = render_edge(f, f.s_name, f.t_name, specs[f.ontology_version_id], tuple(episodes.get(f.id, ())))
+            got_e = await graph.read_edge(want_e.uuid)
+            if got_e is None or f.projection_status != "projected" or f.projected_revision != f.revision or edge_diff(want_e, got_e):
+                force_f.append(f.id)
+        await self._force_pending(ctx, "entities", force_e)
+        await self._force_pending(ctx, "facts", force_f)
+        for eid in force_e:
+            status = await self.project_entity(ctx, eid)
+            if status not in PROJECTED:
+                report.unsettled.append(("entity", eid, None))
+        for fid in force_f:
+            status = await self.project_fact(ctx, fid)
+            if status not in PROJECTED:
+                report.unsettled.append(("fact", fid, None))
+        report.repaired = len(force_e) + len(force_f)
+        return report
 
-    async def sweep_workspace(self, ctx: WorkspaceContext, limit: int = 25) -> int:
-        done = 0
-        for eid in await self._claim(ctx, "entities", limit):
-            await self.project_entity(ctx, eid)
-            done += 1
-        for fid in await self._claim(ctx, "facts", limit):
-            await self.project_fact(ctx, fid)
-            done += 1
-        if done:
-            await self._refresh_recent_commands(ctx)
-        return done
-
-    async def _refresh_recent_commands(self, ctx: WorkspaceContext) -> None:
+    async def interaction_scope(self, ctx: WorkspaceContext, interaction_id: uuid.UUID) -> tuple[set[uuid.UUID], set[uuid.UUID]]:
+        """Every entity and fact an interaction's extraction can have touched: what it mentions, what it produced, and every fact that hangs off
+        those entities (Graphiti's contradiction step can expire ANY edge of a node it resolved)."""
         async with tenant_session(self._engine, ctx) as conn:
-            ids = [
+            ents = {
                 r.id
                 for r in (
                     await conn.execute(
                         text(
-                            "SELECT id FROM commands WHERE workspace_id = :ws AND status = 'applied' AND projection_status IN ('pending','failed') ORDER BY created_at LIMIT 100"
+                            "SELECT entity_id AS id FROM entity_mentions WHERE workspace_id = :ws AND interaction_id = :i "
+                            "UNION SELECT node_uuid::uuid FROM entity_mentions WHERE workspace_id = :ws AND interaction_id = :i AND node_uuid ~ '^[0-9a-f-]{36}$' "
+                            "AND EXISTS (SELECT 1 FROM entities x WHERE x.workspace_id = :ws AND x.id = node_uuid::uuid)"
                         ),
-                        {"ws": ctx.workspace_id},
+                        {"ws": ctx.workspace_id, "i": interaction_id},
                     )
                 ).all()
-            ]
-        for cid in ids:
-            await self.refresh_command(ctx, cid)
+            }
+            facts = {
+                r.id
+                for r in (
+                    await conn.execute(
+                        text(
+                            "SELECT id FROM facts WHERE workspace_id = :ws AND (source_interaction_id = :i OR source_entity_id = ANY(:e) OR target_entity_id = ANY(:e)) "
+                            "UNION SELECT fact_id FROM fact_evidence WHERE workspace_id = :ws AND interaction_id = :i "
+                            # rows the reconciler put back: Graphiti can change a fact on a node this interaction does not mention (a name it resolved to
+                            # a different person than the one the platform kept apart), which the mentions alone would not lead to
+                            "UNION SELECT x::uuid FROM interaction_stages s, jsonb_array_elements_text(COALESCE(s.result -> 'revert_fact_ids', '[]'::jsonb)) x "
+                            "WHERE s.workspace_id = :ws AND s.interaction_id = :i AND s.stage = 'graph_ingest'"
+                        ),
+                        {"ws": ctx.workspace_id, "i": interaction_id, "e": sorted(ents, key=str)},
+                    )
+                ).all()
+            }
+            ents |= {
+                r.id
+                for r in (
+                    await conn.execute(
+                        text(
+                            "SELECT x::uuid AS id FROM interaction_stages s, jsonb_array_elements_text(COALESCE(s.result -> 'revert_entity_ids', '[]'::jsonb)) x "
+                            "WHERE s.workspace_id = :ws AND s.interaction_id = :i AND s.stage = 'graph_ingest'"
+                        ),
+                        {"ws": ctx.workspace_id, "i": interaction_id},
+                    )
+                ).all()
+            }
+        return ents, facts
 
-    async def sweep_once(self, *, workspaces: int = 20, per_workspace: int = 25) -> int:
-        async with system_session(self._engine) as conn:
-            ids = [
-                r[0]
-                for r in (await conn.execute(text("SELECT * FROM ops.workspaces_with_pending_projection(:n)"), {"n": workspaces})).all()
-            ]
-        total = 0
-        pending = 0
-        for ws in ids:
-            ctx = WorkspaceContext.for_system_task(ws, reason="projection sweeper")
-            try:
-                total += await self.sweep_workspace(ctx, per_workspace)
-                pending += await self._pending(ctx)
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:  # one workspace's problem must not starve the others
-                log.warning("projection_sweep_workspace_failed", error_type=type(exc).__name__)
-        metrics.projection_pending.set(pending)
-        return total
+    async def fix_mentions(self, ctx: WorkspaceContext, interaction_id: uuid.UUID) -> int:
+        """Makes the graph's MENTIONS edges agree with `entity_mentions`: a mention the platform did not accept as Graphiti resolved it (a fork) or linked
+        by a rule (a merged name variant) is moved to the right node (ADR-028). Idempotent."""
+        graph = self._scoped(ctx)
+        async with tenant_session(self._engine, ctx) as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT m.node_uuid, m.entity_id, m.episode_uuid, (SELECT x.status FROM entities x WHERE x.workspace_id = m.workspace_id "
+                        "AND x.id::text = m.node_uuid) AS node_status FROM entity_mentions m WHERE m.workspace_id = :ws AND m.interaction_id = :i"
+                    ),
+                    {"ws": ctx.workspace_id, "i": interaction_id},
+                )
+            ).all()
+        moved = 0
+        for m in rows:
+            if m.node_uuid == str(m.entity_id):
+                continue
+            if await graph.read_node(m.node_uuid) is None:
+                continue  # already moved
+            if await graph.read_node(str(m.entity_id)) is None:
+                await self.project_entity(ctx, m.entity_id)
+            if m.node_status is not None and m.node_status != "merged":
+                await graph.move_mentions(
+                    m.node_uuid, str(m.entity_id), episode_uuid=m.episode_uuid
+                )  # a fork: only THIS episode's mention moves
+            else:
+                await graph.merge_nodes(m.node_uuid, str(m.entity_id))  # a name variant that never became an entity, or a merged entity
+            moved += 1
+        return moved
 
-    async def _pending(self, ctx: WorkspaceContext) -> int:
+    async def restore_interaction(self, ctx: WorkspaceContext, interaction_id: uuid.UUID) -> RestoreReport:
+        """The graph_projection job of an interaction: restores everything its extraction could have touched, fixes the mentions, stamps the episode."""
+        ents, facts = await self.interaction_scope(ctx, interaction_id)
+        report = await self.restore_scope(ctx, entity_ids=ents, fact_ids=facts)
+        async with tenant_session(self._engine, ctx) as conn:
+            episodes = (
+                await conn.execute(
+                    text(
+                        "SELECT g.episode_uuid, i.recorded_at FROM graph_episodes g JOIN interactions i ON i.workspace_id = g.workspace_id AND i.id = g.interaction_id "
+                        "WHERE g.workspace_id = :ws AND g.interaction_id = :i"
+                    ),
+                    {"ws": ctx.workspace_id, "i": interaction_id},
+                )
+            ).all()
+        graph = self._scoped(ctx)
+        await self.fix_mentions(ctx, interaction_id)
+        for ep in episodes:
+            await graph.restamp_episode(ep.episode_uuid, created_at=ep.recorded_at)
+        return report
+
+    async def restore_command(self, ctx: WorkspaceContext, command_id: uuid.UUID) -> RestoreReport:
+        """A review decision or a merge: the ids it changed are in its result."""
         async with tenant_session(self._engine, ctx) as conn:
             row = (
                 await conn.execute(
-                    text(
-                        "SELECT (SELECT count(*) FROM entities WHERE workspace_id = :ws AND projection_status = 'pending') + (SELECT count(*) FROM facts WHERE workspace_id = :ws AND projection_status = 'pending') AS n"
-                    ),
-                    {"ws": ctx.workspace_id},
+                    text("SELECT result FROM commands WHERE workspace_id = :ws AND id = :id"), {"ws": ctx.workspace_id, "id": command_id}
                 )
-            ).one()
-        return int(row.n)
+            ).first()
+        if row is None:
+            raise NotFound()
+        result = row.result or {}
+        ents = {uuid.UUID(x) for x in result.get("entity_ids", [])}
+        facts = {uuid.UUID(x) for x in result.get("fact_ids", [])}
+        report = await self.restore_scope(ctx, entity_ids=ents, fact_ids=facts)
+        return report
 
     # ---- drift check ----------------------------------------------------------------------------------------------------------------------
 
@@ -535,7 +780,13 @@ class Projector:
         graph = self._scoped(ctx)
         async with tenant_session(self._engine, ctx) as conn:
             entities = (
-                await conn.execute(text("SELECT * FROM entities WHERE workspace_id = :ws AND status = 'active'"), {"ws": ctx.workspace_id})
+                await conn.execute(
+                    text("SELECT * FROM entities WHERE workspace_id = :ws AND status IN ('active','candidate','untyped')"),
+                    {"ws": ctx.workspace_id},
+                )
+            ).all()
+            merged = (
+                await conn.execute(text("SELECT id FROM entities WHERE workspace_id = :ws AND status = 'merged'"), {"ws": ctx.workspace_id})
             ).all()
             facts = (
                 await conn.execute(
@@ -547,6 +798,16 @@ class Projector:
                     {"ws": ctx.workspace_id},
                 )
             ).all()
+            episodes: dict[uuid.UUID, list[str]] = {}
+            for ev in (
+                await conn.execute(
+                    text(
+                        "SELECT fact_id, episode_uuid FROM fact_evidence WHERE workspace_id = :ws AND source_kind = 'episode' ORDER BY added_at, id"
+                    ),
+                    {"ws": ctx.workspace_id},
+                )
+            ).all():
+                episodes.setdefault(ev.fact_id, []).append(ev.episode_uuid)
             specs: dict[uuid.UUID, OntologySpec] = {}
             for vid in {r.ontology_version_id for r in (*entities, *facts)}:
                 specs[vid] = await self._specs.get(conn, ctx.workspace_id, vid)
@@ -554,6 +815,10 @@ class Projector:
         known = {str(e.id) for e in entities}, {str(f.id) for f in facts}
         repair_entities: list[uuid.UUID] = []
         repair_facts: list[uuid.UUID] = []
+        for m in merged:  # a merged entity has no node of its own any more
+            if str(m.id) in graph_nodes:
+                report.drift.append(Drift("node", str(m.id), "unexpected"))
+                repair_entities.append(m.id)
         for e in entities:
             report.checked_entities += 1
             if e.projection_status == "skipped_by_policy":
@@ -570,17 +835,7 @@ class Projector:
                 report.drift.append(Drift("node", want.uuid, "missing"))
                 repair_entities.append(e.id)
                 continue
-            diff = [
-                name
-                for name, same in (
-                    ("name", got.name == want.name),
-                    ("labels", got.labels == frozenset({want.type_key})),
-                    ("attributes", got.attributes == want.attributes),
-                    ("created_at", got.created_at == want.created_at),
-                )
-                if not same
-            ]
-            if diff:
+            if diff := node_diff(want, got):
                 report.drift.append(Drift("node", want.uuid, "mismatch", diff))
                 repair_entities.append(e.id)
         for f in facts:
@@ -593,30 +848,16 @@ class Projector:
             if f.projection_status != "projected":
                 report.pending += 1
                 continue
-            want_e = render_edge(f, f.s_name, f.t_name, specs[f.ontology_version_id])
+            want_e = render_edge(f, f.s_name, f.t_name, specs[f.ontology_version_id], tuple(episodes.get(f.id, ())))
             got_e = await graph.read_edge(want_e.uuid)
             if got_e is None:
                 report.drift.append(Drift("edge", want_e.uuid, "missing"))
                 repair_facts.append(f.id)
                 continue
-            diff = [
-                name
-                for name, same in (
-                    ("name", got_e.name == want_e.name),
-                    ("fact", got_e.fact == want_e.fact),
-                    ("endpoints", (got_e.source_uuid, got_e.target_uuid) == (want_e.source_uuid, want_e.target_uuid)),
-                    ("valid_at", got_e.valid_at == want_e.valid_at),
-                    ("invalid_at", got_e.invalid_at == want_e.invalid_at),
-                    ("created_at", got_e.created_at == want_e.created_at),
-                    ("expired_at", got_e.expired_at == want_e.expired_at),
-                    ("attributes", got_e.attributes == want_e.attributes),
-                )
-                if not same
-            ]
-            if diff:
+            if diff := edge_diff(want_e, got_e):
                 report.drift.append(Drift("edge", want_e.uuid, "mismatch", diff))
                 repair_facts.append(f.id)
-        orphan_nodes, orphan_edges = graph_nodes - known[0], graph_edges - known[1]
+        orphan_nodes, orphan_edges = graph_nodes - known[0] - {str(m.id) for m in merged}, graph_edges - known[1]
         report.drift += [Drift("edge", u, "orphan") for u in sorted(orphan_edges)] + [
             Drift("node", u, "orphan") for u in sorted(orphan_nodes)
         ]

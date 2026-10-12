@@ -36,6 +36,11 @@ class Action(enum.StrEnum):
     INTERACTION_READ = "interaction.read"
     INTERACTION_READ_CONTENT = "interaction.read_content"
     OPERATIONS_REPAIR = "operations.repair"
+    # P4 (phase-4 plan §6.3)
+    REVIEW_READ = "review.read"
+    REVIEW_DECIDE = "review.decide"
+    REVIEW_READ_EVIDENCE = "review.read_evidence"
+    GRAPH_SEARCH = "graph.search"
 
 
 # The matrix (phase-1 plan §6.3, extended by phase-2 and phase-3 plan §6.3). Later phases add actions; they never widen an existing cell silently
@@ -44,8 +49,23 @@ _READ_KNOWLEDGE = frozenset({Action.WORKSPACE_READ, Action.ONTOLOGY_READ, Action
 ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
     Role.WORKSPACE_ADMIN: frozenset(Action),
     Role.OPERATOR: _READ_KNOWLEDGE
-    | {Action.OPERATIONS_READ, Action.DIAGNOSTICS_RUN, Action.COMMAND_READ, Action.INTERACTION_READ, Action.OPERATIONS_REPAIR},
-    Role.REVIEWER: _READ_KNOWLEDGE | {Action.COMMAND_READ, Action.INTERACTION_READ},
+    | {
+        Action.OPERATIONS_READ,
+        Action.DIAGNOSTICS_RUN,
+        Action.COMMAND_READ,
+        Action.INTERACTION_READ,
+        Action.OPERATIONS_REPAIR,
+        Action.GRAPH_SEARCH,
+    },
+    Role.REVIEWER: _READ_KNOWLEDGE
+    | {
+        Action.COMMAND_READ,
+        Action.INTERACTION_READ,
+        Action.REVIEW_READ,
+        Action.REVIEW_DECIDE,
+        Action.REVIEW_READ_EVIDENCE,
+        Action.GRAPH_SEARCH,
+    },
     Role.APP_WRITER: _READ_KNOWLEDGE | {Action.ENTITY_WRITE, Action.COMMAND_READ, Action.INTERACTION_WRITE, Action.INTERACTION_READ},
     # an agent reads only the interactions it submitted itself (an ownership predicate in the query; P7 generalises it to scopes)
     Role.AGENT: _READ_KNOWLEDGE | {Action.INTERACTION_WRITE, Action.INTERACTION_READ},
