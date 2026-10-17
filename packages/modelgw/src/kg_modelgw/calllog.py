@@ -71,6 +71,10 @@ class DbCallSink:
         self._task: asyncio.Task[None] | None = None
         self._lock = asyncio.Lock()
 
+    @property
+    def engine(self) -> AsyncEngine:
+        return self._engine
+
     def start(self) -> None:
         if self._task is None:
             self._task = asyncio.get_running_loop().create_task(self._loop())

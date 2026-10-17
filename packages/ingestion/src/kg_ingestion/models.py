@@ -50,6 +50,7 @@ class SubjectOut(BaseModel):
     resolved: bool
     ref_type: str | None = None  # unresolved references show their type and system, never the value
     ref_system: str | None = None
+    hidden: bool = False  # P7: the entity is subject-scoped and the caller holds no grant on it; the reference is shown without its id
 
 
 class InteractionSummary(BaseModel):
@@ -77,6 +78,9 @@ class InteractionDetail(InteractionSummary):
     stages: list[StageOut]
     subjects: list[SubjectOut]
     status_url: str
+    # P8 retention: provenance fidelity the workspace's retention window took away (the stored form is gone; replay of the interaction is then not possible)
+    raw_content_expired: bool = False
+    normalized_content_expired: bool = False
 
 
 class ContentOut(BaseModel):
@@ -95,6 +99,8 @@ class ReplayIn(BaseModel):
     reason_code: str = ReasonCode
     # Move the replayed stage to the current pipeline version and the current active ontology (audited). The default stage is graph_ingest.
     repin: bool = False
+    # P5: for an event accepted under an older pipeline, repin every stage that was `skipped_disabled` then and is enabled now (audited). Implies repin.
+    upgrade_pipeline: bool = False
 
 
 class ReplayedStage(BaseModel):
@@ -128,7 +134,7 @@ class AttemptOut(BaseModel):
 class JobSummary(BaseModel):
     id: uuid.UUID
     stage: str
-    subject_type: Literal["interaction", "command"]
+    subject_type: Literal["interaction", "command", "memory"]
     subject_id: uuid.UUID
     status: JobStatus
     attempts: int

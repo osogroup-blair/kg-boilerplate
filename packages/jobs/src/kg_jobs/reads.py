@@ -110,3 +110,24 @@ async def backlog(conn: AsyncConnection, ws: uuid.UUID) -> dict[str, Any]:
         "lease_reclaims_last_hour": reclaims.hour,
         "lease_reclaims_last_day": reclaims.day,
     }
+
+
+async def stage_lag(conn: AsyncConnection, ws: uuid.UUID, stages: tuple[str, ...]) -> dict[str, dict[str, Any]]:
+    """How far behind each pipeline stage is for ONE workspace, by the database clock (P6 source watermarks): the age of the oldest job still waiting (pending or
+    leased), how many dead-lettered jobs are stuck, and when the newest job finished. Counts and ages only: no subject, payload or content."""
+    rows = (
+        await conn.execute(
+            text(
+                "SELECT stage, "
+                "EXTRACT(EPOCH FROM now() - min(created_at) FILTER (WHERE status IN ('pending','leased')))::float8 AS waiting_age, "
+                "count(*) FILTER (WHERE status = 'dead') AS dead, "
+                "max(finished_at) FILTER (WHERE status IN ('succeeded','skipped')) AS last_finished "
+                "FROM outbox_jobs WHERE workspace_id = :ws AND stage = ANY(CAST(:stages AS text[])) GROUP BY stage"
+            ),
+            {"ws": ws, "stages": list(stages)},
+        )
+    ).all()
+    out: dict[str, dict[str, Any]] = {st: {"waiting_age_seconds": None, "dead": 0, "last_finished_at": None} for st in stages}
+    for r in rows:
+        out[r.stage] = {"waiting_age_seconds": r.waiting_age, "dead": int(r.dead), "last_finished_at": r.last_finished}
+    return out

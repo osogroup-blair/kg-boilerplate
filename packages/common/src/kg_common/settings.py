@@ -97,6 +97,52 @@ class Settings(BaseSettings):
         600.0  # one extraction attempt, model calls included; longer is a retryable failure (the lock must not be held forever)
     )
 
+    # Curated memory (P5). The cosine floor of the vector half of a search is a placeholder until the live evaluation sets it from data (ADR-013: E5
+    # similarities cluster high, so a real floor is much higher than the mock's).
+    memory_vec_min_cosine: float = Field(default=0.2, ge=-1.0, le=1.0)
+    memory_propose_timeout_seconds: float = Field(default=120.0, gt=0.0)  # one extraction attempt, model call included
+    memory_embedding_version: int = Field(
+        default=1, ge=1
+    )  # the vector version a read pins (a re-embed to N+1 switches this after coverage is 100%)
+
+    # Context engine (P6). The token margin is PROVISIONAL until TK-02 measures the router's prompt_tokens (ADR-020); every trace records the tokenizer id.
+    context_api_enabled: bool = True  # False: POST /v1/context/build answers 503 feature_disabled (rollback switch)
+    context_token_margin: float = Field(default=0.10, ge=0.0, le=1.0)
+    context_source_timeout_ms: int = Field(
+        default=1500, ge=50, le=60_000
+    )  # per retriever; a source over it is `unavailable` and the package `partial`
+    context_trace_retention_days: int = Field(default=30, ge=1, le=3650)
+    context_rate_per_minute: int = Field(default=60, ge=1)  # per principal, in-process token bucket (the multi-replica limiter is P9)
+    context_rate_burst: int = Field(default=20, ge=1)
+    context_workspace_concurrency: int = Field(
+        default=6, ge=1
+    )  # builds in flight per workspace (a build holds up to three connections; the API pool is 20)
+    context_debug_ttl_hours: float = Field(default=24.0, gt=0.0, le=24 * 7)
+    context_ablate: str = (
+        ""  # evaluation only (`make eval-context --ablate <feature>`): zero one ranking weight. Refused when ENV=production.
+    )
+
+    # Agents and quotas (P7). The platform default for a principal whose registration sets no limit; daily token and interaction quotas default to unlimited.
+    principal_api_enabled: bool = True  # False: the registration API (POST/PATCH/DELETE /v1/principals...) answers 503 feature_disabled; manage principals with the CLI
+    principal_requests_per_minute: int = Field(default=1200, ge=1)  # in-process token bucket per principal (the shared limiter is P9)
+    principal_usage_flush_seconds: float = Field(default=10.0, gt=0.0)
+
+    # Governance (P8). Deletion intake can be switched off (frozen requests stay frozen, which keeps reads safe); the journal lives OUTSIDE the database and its backups.
+    deletion_api_enabled: bool = True  # False: POST /v1/deletion-requests answers 503 feature_disabled
+    workspace_egress_ttl_seconds: float = Field(
+        default=30.0, ge=0.0, le=600.0
+    )  # how long a process trusts a workspace's egress narrowing before it asks again (a change made through this process is seen at once)
+    deletion_journal_dir: str = (
+        ""  # empty: <repo>/.local/deletion-journal in dev; production requires it to be set (outside the database volume)
+    )
+    workspace_deletion_cooling_hours: float = Field(default=24.0, ge=0.0, le=24 * 30)
+    backup_retention_days: int = Field(default=30, ge=1, le=3650)  # receipts state when backup copies expire (P9 makes backups honour it)
+    consolidation_debounce_minutes: float = Field(default=10.0, ge=0.0)
+    retention_sweep_seconds: float = Field(default=300.0, gt=0.0)
+    simulation_cleanup_minutes: float = Field(
+        default=60.0, gt=0.0
+    )  # a delayed job removes a staging namespace this long after a run started
+
     # Test-only failure injection (P3 §5.7). Refused when ENV=production.
     kg_faults: str = ""  # "stage:point:count,..." e.g. "normalize:after_claim:3"
     kg_faults_dir: str = ""  # holds the persistent fire counters and an optional `spec` file the dev worker re-reads
@@ -147,6 +193,12 @@ class Settings(BaseSettings):
             problems.append("PAYLOAD_ACTIVE_KID is not in PAYLOAD_KEYS")
         if self.kg_faults or self.kg_faults_dir:
             problems.append("KG_FAULTS / KG_FAULTS_DIR (failure injection) must not be set in production")
+        if self.context_ablate:
+            problems.append("CONTEXT_ABLATE (a ranking ablation for evaluation) must not be set in production")
+        if not self.deletion_journal_dir:
+            problems.append(
+                "DELETION_JOURNAL_DIR must be set in production (the deletion journal lives outside the database and its backups)"
+            )
         if problems:
             raise ValueError("; ".join(problems))
         return self

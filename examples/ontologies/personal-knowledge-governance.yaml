@@ -1,0 +1,134 @@
+# The example ontology at v1.5.0 (phase 8): v1.4.0 plus the relationship the "Michael manages Sarah" story needs and the consolidation policy.
+#  * `MANAGES` (Person -> Person): the mistaken extraction the blueprint uses to teach corrections (06-reference/01). Under v1.4.0 the model's MANAGES claim is rejected
+#    as out_of_ontology; under v1.5.0 it is a real, unverified fact that a reviewer can then reject (Flow D) and the next context no longer shows.
+#  * `memory_policies.default.consolidation: reinforce` (ADR-043): three or more near-identical memories of one scope fold into one, deterministically, with their evidence
+#    merged. `semantic.consolidation: synthesize` additionally proposes a summary that cites its sources; a person approves it, or it never takes effect.
+# `kg ontology simulate` previews this version against sample interactions BEFORE it is published (ONT-05): the draft runs in an isolated staging namespace of the graph and
+# never touches the workspace. `kg seed demo --ontology examples/ontologies/personal-knowledge-governance.yaml` publishes it; rolling back is activating v1.4.0.
+#
+# The blueprint's example ontology (06-reference/02 §A), extended for the platform (see personal-knowledge-memory.yaml for the type, relationship and memory-policy notes):
+ontology:
+  id: personal-knowledge
+  version: 1.5.0
+  mode: strict
+entity_types:
+  Person:
+    description: A human being
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+      aliases: [name]
+    allowed_classifications: [internal, confidential, restricted]
+    access: subject_scoped
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      birth_date: {type: date, required: false, sensitivity: restricted}
+  Organization:
+    description: A company or institution
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Topic:
+    description: A subject someone can consider or discuss
+    identity: {key: platform_uuid}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+relationship_types:
+  WORKS_AT:
+    description: Employment
+    source: Person
+    target: Organization
+    temporal: true
+    fact_template: "{source} works at {target}{role?: as {role}}"
+    attributes:
+      role: {type: string, required: false, max_length: 200}
+    rules:
+      - require_source
+      - preserve_valid_time
+      - kind: succession
+        params: {match: [source, target]}
+        tests:
+          - name: a later role at the same organization succeeds the earlier one
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2022-01-10}
+            command: {valid_from: 2024-06-01, source_system: hr, source_ref: evt_x}
+            expect: accept
+          - name: a role starting before an existing one is out of order
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2024-06-01}
+            command: {valid_from: 2022-01-10, source_system: hr, source_ref: evt_x}
+            expect: reject
+  CONSIDERING:
+    description: A person is weighing up a topic
+    source: Person
+    target: Topic
+    temporal: true
+    fact_template: "{source} is considering {target}"
+    rules:
+      - require_source
+      - require_review_if_inferred
+  KNOWS:
+    description: Acquaintance
+    source: Person
+    target: Person
+    temporal: true
+    fact_template: "{source} knows {target}"
+    rules: [require_source]
+  MANAGES:
+    description: One person manages another
+    source: Person
+    target: Person
+    temporal: true
+    fact_template: "{source} manages {target}"
+    rules:
+      - require_source
+      - require_review_if_inferred
+context_profiles:
+  quick_answer:
+    expected_signals:
+      - {key: current_employer, label: current employer, for_types: [Person], satisfied_by: [{relationship: WORKS_AT, direction: out}]}
+  planning:
+    max_tokens: 1200
+    max_items: 30
+    include: [current_facts, relevant_facts, episodic, semantic, procedural, uncertainty]
+    evidence_required: false
+    evidence_threshold: 0.0
+    compression: [structured, extractive]
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic, procedural], limit_per_type: 8}
+    weights: {relevance: 1.0, authority: 0.6, importance: 0.4, evidence: 0.3, proximity: 0.5, recency: 0.0, diversity: 0.3}
+    section_budget: {current_facts: 0.30, conflicts_unknowns: 0.15, instructions: 0.15, relevant: 0.40}
+    history: when_relevant
+    current_facts: always
+    required_current_k: 3
+    required_procedural_k: 1
+    expected_signals:
+      - {key: current_employer, label: current employer, for_types: [Person], satisfied_by: [{relationship: WORKS_AT, direction: out}]}
+      - {key: financial_runway, label: financial runway, for_types: [Person], satisfied_by: [{memory_predicate: financial_runway}, {attribute: financial_runway}]}
+memory_policies:
+  default:
+    extraction: enabled
+    extraction_min_importance: 0.5
+    max_memories_per_interaction: 3
+    auto_activate: [episodic, semantic]
+    procedural_requires_review: true
+    agent_shared_requires_review: true
+    working_ttl_hours: 24
+    max_content_chars: 2000
+    default_extracted_scope: subject
+    excluded_classifications: [local_only]
+    archive_after_days: null
+    consolidation: reinforce               # P8: deterministic folding of near-identical memories of one scope; never writes new text
+    consolidation_min_group: 3
+    near_duplicate_jaccard: 0.9
+  semantic:
+    agent_shared_requires_review: false
+  episodic:
+    consolidation: synthesize              # P8: a summary of an episodic group, proposed with citations; a reviewer approves it or it never takes effect
+    episodic_window_days: 14

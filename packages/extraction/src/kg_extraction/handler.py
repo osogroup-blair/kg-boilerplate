@@ -20,6 +20,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from kg_common.ids import episode_uuid
 from kg_common.settings import Settings
 from kg_db.session import tenant_session
 from kg_domain.principal import WorkspaceContext
@@ -27,7 +28,7 @@ from kg_governance.audit import AuditMetadata, PipelineStage, SystemAudit
 from kg_graph.compile import compiled_for
 from kg_graph.service import GraphService
 from kg_ingestion.crypto import PayloadCipher
-from kg_ingestion.normalize import TERMINAL_OK, lock_stage
+from kg_ingestion.normalize import TERMINAL_OK, lock_stage, stage_unavailable
 from kg_ingestion.pipeline import DEAD, FAILED, SKIPPED_POLICY, SUCCEEDED, Orchestrator
 from kg_ingestion.store import read_content
 from kg_jobs import faults
@@ -52,15 +53,9 @@ from kg_extraction.reconcile import Inputs, Reconciler, ReconcileSummary
 
 log = get_logger("kg.extraction.graph_ingest")
 STAGE = "graph_ingest"
-EPISODE_NS = uuid.UUID("5d0d0c3e-62a6-4a0e-9c1b-0f6a6a1f4e52")
 EPISODE_SOURCE = {"message": "message", "conversation": "message", "observation": "text", "document": "text", "json": "json"}
 _TIMESTAMP_PREFIX = re.compile(r"^\[[^\]\n]{1,40}\] ", re.MULTILINE)
 RESULT_ID_CAP = 200
-
-
-def episode_uuid(interaction_id: uuid.UUID, generation: int) -> str:
-    """Deterministic (GR-09): the same interaction and generation always address the same episode, so a re-run finds its own work."""
-    return str(uuid.uuid5(EPISODE_NS, f"{interaction_id}:g{generation}"))
 
 
 class GraphIngestResult(BaseModel):
@@ -142,7 +137,7 @@ class GraphIngestJob:
         async with tenant_session(self._engine, ctx) as conn:
             st = await lock_stage(conn, ws, iid, STAGE)
             if st is None:
-                raise JobError(Category.CONFIG_TERMINAL, "stage_missing")
+                raise await stage_unavailable(conn, ws, iid)
             if st.generation > gen:
                 return "stale"  # a replay superseded this job
             if st.generation < gen:
@@ -155,7 +150,8 @@ class GraphIngestJob:
                 await conn.execute(
                     text(
                         "SELECT i.kind, i.classification, i.consent_external, i.occurred_at, i.recorded_at, i.source_system, i.source_ref, i.submitted_by, "
-                        "i.ontology_version_id, p.kind AS submitter_kind FROM interactions i JOIN principals p ON p.workspace_id = i.workspace_id AND p.id = i.submitted_by "
+                        "i.ontology_version_id, p.kind AS submitter_kind, (p.status = 'revoked' AND p.revoke_reason = 'compromised') AS submitter_compromised "
+                        "FROM interactions i JOIN principals p ON p.workspace_id = i.workspace_id AND p.id = i.submitted_by "
                         "WHERE i.workspace_id = :ws AND i.id = :id"
                     ),
                     {"ws": ws, "id": iid},
@@ -165,7 +161,9 @@ class GraphIngestJob:
                 raise JobError(Category.CONFIG_TERMINAL, "interaction_missing")
             pinned = st.ontology_version_id or head.ontology_version_id
             skip = (
-                "no_active_ontology"
+                "submitter_compromised"  # P7: a compromised principal's submission is not extracted, even by a job that was already claimed
+                if head.submitter_compromised
+                else "no_active_ontology"
                 if pinned is None
                 else "consent_denied"
                 if not head.consent_external

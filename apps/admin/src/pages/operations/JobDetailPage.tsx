@@ -49,7 +49,7 @@ export function JobDetailPage() {
       <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm">
         <dt className="text-slate-500">Stage</dt><dd className="font-mono">{j.stage} · generation {j.generation}</dd>
         <dt className="text-slate-500">Subject</dt>
-        <dd>{j.subject_type === "interaction" ? <Link className="underline" to={`/interactions/${j.subject_id}`}>event {j.subject_id.slice(0, 8)}…</Link> : <Link className="underline" to={`/commands/${j.subject_id}`}>command {j.subject_id.slice(0, 8)}…</Link>}</dd>
+        <dd>{j.subject_type === "interaction" ? <Link className="underline" to={`/interactions/${j.subject_id}`}>event {j.subject_id.slice(0, 8)}…</Link> : j.subject_type === "memory" ? <span className="font-mono text-xs" title="Operators see that a memory job exists, not the memory">memory {j.subject_id.slice(0, 8)}…</span> : <Link className="underline" to={`/commands/${j.subject_id}`}>command {j.subject_id.slice(0, 8)}…</Link>}</dd>
         <dt className="text-slate-500">Attempts</dt><dd>{j.attempts} of {j.max_attempts}</dd>
         <dt className="text-slate-500">Last error</dt><dd className="font-mono text-xs text-red-700">{j.last_error_category ? `${j.last_error_category}: ` : ""}{j.last_error_code ?? "—"}</dd>
         <dt className="text-slate-500">Pinned</dt><dd className="font-mono text-xs">{j.pipeline_version}{j.ontology_version_id ? ` · ontology ${j.ontology_version_id.slice(0, 8)}…` : ""}</dd>

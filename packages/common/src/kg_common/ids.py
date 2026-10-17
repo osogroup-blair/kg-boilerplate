@@ -12,6 +12,15 @@ _last_ms = 0
 _last_seq = 0
 
 
+EPISODE_NS = uuid.UUID("5d0d0c3e-62a6-4a0e-9c1b-0f6a6a1f4e52")
+
+
+def episode_uuid(interaction_id: uuid.UUID, generation: int) -> str:
+    """Deterministic (GR-09): the same interaction and generation always address the same episode, so a re-run finds its own work. A deletion uses it too, to find an
+    episode a half-finished extraction left in the graph (no Postgres row names it)."""
+    return str(uuid.uuid5(EPISODE_NS, f"{interaction_id}:g{generation}"))
+
+
 def uuid7() -> uuid.UUID:
     """RFC 9562 UUIDv7: 48-bit unix-ms timestamp, 12-bit counter (monotonic within a millisecond), 62 random bits."""
     global _last_ms, _last_seq

@@ -30,6 +30,10 @@ from kg_modelgw.factory import build_router_stack
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from kg_cli.context_cmds import context_app
+from kg_cli.deletion_cmds import deletions_app
+from kg_cli.memory_cmds import memories_app, scopes_app
+from kg_cli.principals_cmds import principals_app
 from kg_cli.seed import publish_ontology, seed_demo, workspace_id_for, write_credentials
 
 app = typer.Typer(no_args_is_help=True, help="Knowledge & Memory Platform operator CLI")
@@ -47,6 +51,13 @@ app.add_typer(jobs_app, name="jobs", help="Outbox jobs: list, show, retry, cance
 app.add_typer(payloads_app, name="payloads", help="Payload encryption keys")
 app.add_typer(reviews_app, name="reviews", help="Review queue: list, show, decide (identity matches, contradictions, invalidations)")
 app.add_typer(extraction_app, name="extraction", help="Extraction cost evidence and the guarded purge")
+app.add_typer(memories_app, name="memories", help="Curated memory: list, show, search, supersede, expire, re-embed")
+app.add_typer(context_app, name="context", help="Context engine: build as an agent, read a trace, purge old traces")
+app.add_typer(scopes_app, name="scopes", help="Scope grants for memory: grant, revoke, list")
+app.add_typer(
+    deletions_app, name="deletions", help="Deletion requests: list, show, cancel a workspace deletion, retry, journal, retention sweep"
+)
+app.add_typer(principals_app, name="principals", help="Agents & Access: register, update, keys, grants, revoke, activity")
 CREDENTIALS = REPO_ROOT / ".local" / "dev-credentials.json"
 
 
@@ -62,11 +73,27 @@ def db_downgrade(
     force_drop_extracted: Annotated[
         bool, typer.Option("--force-drop-extracted", help="delete extracted entities, facts and episodes so 0004 can be undone")
     ] = False,
+    force_drop_memories: Annotated[
+        bool, typer.Option("--force-drop-memories", help="delete curated memories (not recoverable) so 0005 can be undone")
+    ] = False,
+    force_forget_privileges: Annotated[
+        bool, typer.Option("--force-forget-privileges", help="drop grants that carry the publish privilege so 0007 can be undone")
+    ] = False,
+    force_drop_governance: Annotated[
+        bool, typer.Option("--force-drop-governance", help="keep rows made by corrections as ordinary rows so 0008 can be undone")
+    ] = False,
 ) -> None:
     if get_settings().is_production:
         raise typer.Exit(_fail("refusing to downgrade in production"))
     try:
-        migrate.downgrade(get_settings().database_url_owner.get_secret_value(), revision, force_drop_extracted=force_drop_extracted)
+        migrate.downgrade(
+            get_settings().database_url_owner.get_secret_value(),
+            revision,
+            force_drop_extracted=force_drop_extracted,
+            force_drop_memories=force_drop_memories,
+            force_forget_privileges=force_forget_privileges,
+            force_drop_governance=force_drop_governance,
+        )
     except RuntimeError as exc:
         raise typer.Exit(_fail(str(exc))) from exc
     typer.echo(f"database at {revision}")
@@ -88,11 +115,20 @@ def seed_demo_cmd(
     ontology: Annotated[
         Path | None, typer.Option("--ontology", help="publish and activate this ontology YAML for the demo workspace (idempotent)")
     ] = None,
+    no_memory_extraction: Annotated[
+        bool,
+        typer.Option(
+            "--no-memory-extraction",
+            help="publish the ontology with memory extraction disabled (the P2-P4 demos predate memory and have no memory fixtures)",
+        ),
+    ] = False,
 ) -> None:
     settings = get_settings()
     if settings.is_production:
         raise typer.Exit(_fail("refusing to seed when ENV=production"))
     ontology_text = ontology.read_text() if ontology is not None else ""
+    if no_memory_extraction:
+        ontology_text = ontology_text.replace("    archive_after_days: null\n", "    archive_after_days: null\n    extraction: disabled\n")
 
     async def run() -> None:
         engine = create_app_engine(settings, pool_size=2, max_overflow=0)
@@ -210,7 +246,7 @@ async def knowledge_runtime(engine: AsyncEngine) -> AsyncIterator[tuple[Knowledg
     router = build_router_stack(settings, service="kg-worker", sink=sink)
     graph = GraphService(settings, router.transport, router.config)
     try:
-        yield build_knowledge(engine, graph, router.config, service="kg-worker"), graph
+        yield build_knowledge(engine, graph, router.config, service="kg-worker", settings=settings), graph
     finally:
         await sink.aclose()
         await graph.aclose()
@@ -328,6 +364,13 @@ def interactions_replay(
     repin: Annotated[
         bool, typer.Option("--repin", help="move the stage to the current pipeline version and the CURRENT active ontology (audited)")
     ] = False,
+    upgrade_pipeline: Annotated[
+        bool,
+        typer.Option(
+            "--upgrade-pipeline",
+            help="repin every stage this event skipped as disabled that the current pipeline enables, e.g. memory_propose for a p4.v1 event (audited)",
+        ),
+    ] = False,
 ) -> None:
     """Bumps the generation of a dead / failed stage and enqueues it again, with an audit entry (ING-05)."""
     settings = get_settings()
@@ -340,7 +383,7 @@ def interactions_replay(
             async with tenant_session(engine, ctx) as conn:
                 audit = await _acting_as(conn, ctx, actor)
                 out = await ingestion.operations.replay_interaction(
-                    conn, ctx, audit, uuid.UUID(event_id), stage=stage, reason_code=reason, repin=repin
+                    conn, ctx, audit, uuid.UUID(event_id), stage=stage, reason_code=reason, repin=repin, upgrade_pipeline=upgrade_pipeline
                 )
             return out.model_dump_json()
         finally:
@@ -588,6 +631,12 @@ def reviews_decide(
         ctx = WorkspaceContext.for_system_task(workspace_id_for(workspace), reason="cli reviews decide")
         try:
             async with knowledge_runtime(engine) as (knowledge, _):
+                from kg_memory.services import build_memory
+                from kg_modelgw.config import load_config
+
+                build_memory(
+                    settings, knowledge, None, load_config(settings.model_purposes_path, settings.pricing_path), service="kg-cli"
+                )  # registers memory decisions
                 async with tenant_session(engine, ctx) as conn:
                     principal = await _acting_principal(conn, ctx, actor)
                     if not (principal.roles & {Role.WORKSPACE_ADMIN, Role.REVIEWER}):
@@ -603,7 +652,7 @@ def reviews_decide(
                         key=f"cli-{review_id}-{decision}",
                         if_match=current.revision,
                     )
-                if out.command_id is not None:
+                if out.command_id is not None and out.projection_status != "not_applicable":
                     async with knowledge.lock.hold(ctx.workspace_id, wait_seconds=30.0):
                         out.projection_status = await knowledge.projector.project_command(ctx, out.command_id)  # type: ignore[assignment]
                 return out.model_dump_json()
@@ -760,17 +809,26 @@ def build_knowledge_offline(engine: AsyncEngine) -> KnowledgeServices:
     """Knowledge services for read-only CLI commands: no router, no graph, nothing that could call a model."""
     from kg_graph.compile import GraphCompiler
     from kg_knowledge.commands import CommandPipeline
+    from kg_knowledge.corrections import Corrections
     from kg_knowledge.extracted import ExtractedKnowledge
     from kg_knowledge.reads import Reads
     from kg_knowledge.reviews import ReviewService
     from kg_knowledge.specs import SpecCache
 
+    settings = get_settings()
     specs = SpecCache()
     reads = Reads(specs)
     extracted = ExtractedKnowledge()
+    pipeline = CommandPipeline(specs)
     services = KnowledgeServices.__new__(KnowledgeServices)
-    services.reviews = ReviewService(specs, extracted, CommandPipeline(specs), reads)
-    services.reads, services.specs, services.extracted = reads, specs, extracted
+    services.reviews = ReviewService(specs, extracted, pipeline, reads)
+    services.reads, services.specs, services.extracted, services.pipeline = reads, specs, extracted, pipeline
+    services.corrections = Corrections(
+        specs,
+        extracted,
+        hmac_secret=settings.content_hmac_secret.get_secret_value().encode(),
+        trace_retention_days=settings.context_trace_retention_days,
+    )
     _ = GraphCompiler
     return services
 

@@ -7,12 +7,13 @@ import { useCan } from "../../auth/permissions";
 import { Badge, Banner, btn, EvidenceBadge, FactStatusBadge, ProjectionBadge } from "../../components/ui";
 import { ErrorState, Loading, stateForStatus } from "../../components/states";
 import { displayValue, fmt, fmtDate, isRedacted } from "../../lib/format";
+import { CorrectEntityDialog, CorrectFactDialog, SplitEntityDialog } from "../corrections/CorrectionDialogs";
 import { AssertRelationshipDialog, EndRelationshipDialog } from "./RelationshipDialogs";
 
 type Fact = components["schemas"]["FactOut"];
 const PHASE_TONE = { current: "green", historical: "slate", future: "blue" } as const;
 
-function FactRow({ fact, entityId, onEnd, canEnd }: { fact: Fact; entityId: string; onEnd: (id: string) => void; canEnd: boolean }) {
+function FactRow({ fact, entityId, onEnd, canEnd, onCorrect }: { fact: Fact; entityId: string; onEnd: (id: string) => void; canEnd: boolean; onCorrect?: (f: Fact) => void }) {
   const outgoing = fact.source.id === entityId;
   const other = outgoing ? fact.target : fact.source;
   const attrs = Object.entries(fact.attributes);
@@ -32,6 +33,7 @@ function FactRow({ fact, entityId, onEnd, canEnd }: { fact: Fact; entityId: stri
         {fact.source_command_id ? <Link to={`/commands/${fact.source_command_id}`} className="underline-offset-2 hover:underline">command</Link> : fact.source_interaction_id ? <Link to={`/interactions/${fact.source_interaction_id}`} className="underline-offset-2 hover:underline">interaction</Link> : "—"}
         {fact.fact_text ? <div className="max-w-xs whitespace-normal text-slate-500" title="The text the source gave">“{fact.fact_text}”</div> : null}
         {canEnd && fact.status === "active" && !fact.valid_to ? <> · <button type="button" className={btn.link} onClick={() => onEnd(fact.id)}>End…</button></> : null}
+        {onCorrect && fact.status !== "deleted" && fact.status !== "superseded" ? <> · <button type="button" className={btn.link} aria-label={`Correct ${fact.rel_type} fact`} onClick={() => onCorrect(fact)}>Correct…</button></> : null}
       </td>
     </tr>
   );
@@ -47,6 +49,9 @@ export function EntityDetailPage() {
   const include = [history ? "history" : "", proposed ? "proposed" : "", disputed ? "disputed" : ""].filter(Boolean).join(",");
   const [adding, setAdding] = useState(false);
   const [ending, setEnding] = useState<string | null>(null);
+  const [correctingFact, setCorrectingFact] = useState<Fact | null>(null);
+  const [correctingEntity, setCorrectingEntity] = useState(false);
+  const [splitting, setSplitting] = useState(false);
   const q = useQuery({
     queryKey: ["entity", entityId, include === "history" ? true : include === "" ? false : include],
     queryFn: () => api.GET("/v1/entities/{entity_id}", { params: { path: { entity_id: entityId }, query: { include: include || undefined } } }),
@@ -75,7 +80,10 @@ export function EntityDetailPage() {
         </div>
         <div className="flex gap-2">
           <Link to={`/graph?entity=${e.id}`} className={btn.secondary}>Graph Explorer</Link>
+          {e.memories != null ? <Link to={`/memories?subject_id=${e.id}`} className={btn.secondary} data-testid="entity-memories-link">Memories ({e.memories})</Link> : null}
           <Link to={`/commands?entity_id=${e.id}`} className={btn.secondary}>Commands</Link>
+          {can.correctRecords && e.status === "active" ? <button type="button" className={btn.secondary} onClick={() => setCorrectingEntity(true)}>Correct…</button> : null}
+          {can.correctRecords && e.status === "active" ? <button type="button" className={btn.secondary} onClick={() => setSplitting(true)}>Split…</button> : null}
           {can.writeEntities ? <button type="button" className={btn.primary} onClick={() => setAdding(true)}>Add relationship…</button> : null}
         </div>
       </div>
@@ -123,7 +131,7 @@ export function EntityDetailPage() {
         {e.relationships.length === 0 ? <p className="text-sm text-slate-500">{history ? "No relationships, past or present." : "No current relationships."}</p> : (
           <table className="w-full text-left text-sm">
             <thead className="text-slate-500"><tr><th className="py-1 pr-4">Relationship</th><th className="pr-4">Valid</th><th className="pr-4">Status</th><th className="pr-4">Recorded</th><th className="pr-4">Source</th><th>Provenance</th></tr></thead>
-            <tbody>{e.relationships.map((f) => <FactRow key={f.id} fact={f} entityId={e.id} canEnd={can.writeEntities} onEnd={setEnding} />)}</tbody>
+            <tbody>{e.relationships.map((f) => <FactRow key={f.id} fact={f} entityId={e.id} canEnd={can.writeEntities} onEnd={setEnding} onCorrect={can.correctRecords ? setCorrectingFact : undefined} />)}</tbody>
           </table>
         )}
       </section>
@@ -154,6 +162,9 @@ export function EntityDetailPage() {
 
       {adding ? <AssertRelationshipDialog entity={{ id: e.id, type: e.type, name: e.name }} onClose={() => setAdding(false)} /> : null}
       {ending ? <EndRelationshipDialog factId={ending} onClose={() => setEnding(null)} /> : null}
+      {correctingFact ? <CorrectFactDialog fact={correctingFact} onClose={() => setCorrectingFact(null)} /> : null}
+      {correctingEntity ? <CorrectEntityDialog entity={{ id: e.id, revision: e.revision, name: e.name }} attributes={Object.keys(e.attributes)} onClose={() => setCorrectingEntity(false)} /> : null}
+      {splitting ? <SplitEntityDialog entity={{ id: e.id, revision: e.revision, name: e.name, type: e.type, externalIds: e.external_ids }} onClose={() => setSplitting(false)} /> : null}
     </div>
   );
 }

@@ -155,3 +155,94 @@ p4_additions:
   extraction:
     graphiti: "0.30.2 (add_episode with a pre-created episode uuid; communities off); see docs/adr/ADR-026-graphiti-extraction-behaviour.md"
     thresholds: "IDENTITY_TRGM_MIN 0.45, IDENTITY_COS_MIN 0.92 (to be finalised by make eval-extraction-live)"
+
+# Phase 5 additions (2026-10-12). No new third-party package (pgvector and pg_trgm are already installed; `unaccent` was considered for the lexical half and NOT adopted:
+# the `simple` configuration plus a function-word list is enough, and the lexical half is a recall aid for the vector half). Python gained one workspace package.
+p5_additions:
+  workspace_packages:
+    kg-memory: "0.1.0"      # curated memory: scopes, writers, scoped search, memory_propose / embed / expire, review decisions; import-linter keeps it from the graph, Graphiti, apps and the OpenAI SDK
+  python_packages: {}
+  admin_packages: {}
+  migrations:
+    head: "0005_curated_memory"
+  postgres_functions:
+    ops: "claim_jobs, heartbeat_jobs, complete_job, release_jobs, cancel_job, backlog_stats, review_stats, memory_stats (P5: aggregates only)"
+  pipeline:
+    version: "p5.v1"        # stages: normalize, graph_ingest, memory_propose (enabled, after graph_ingest)
+  memory:
+    prompt: "mem.v1 (kg_memory/prompts/mem_v1.py); purpose memory_extraction -> oso/general (PROVISIONAL until make verify-router confirms GR-12)"
+    embeddings: "E5 passage:/query: through ModelGateway.embed, vector(384), embedding_version 1 (MEMORY_EMBEDDING_VERSION), exact cosine, no ANN index (ADR-019)"
+    ranker: "mem-rrf.v1 (ADR-031)"
+    thresholds: "MEMORY_VEC_MIN_COSINE 0.2 (mock placeholder; set from make eval-memory-live), extraction_min_importance 0.5, max_memories_per_interaction 3"
+
+# Phase 6 additions (2026-10-12). One new third-party DEV package: Hypothesis, pinned exactly, for the property tests of the context invariants (CTX-01 budget ceiling, CTX-02 every item
+# cited, CTX-05 required items kept, CTX-06 byte-stable output, CTX-08 inert content). The P2 ADR deferred it until a property needed it; the hard token ceiling is that property.
+# No runtime package was added. Python gained one workspace package and the CLI gained httpx (already a workspace dependency of the API) to call the API.
+p6_additions:
+  workspace_packages:
+    kg-context: "0.1.0"     # the task-aware context engine; import-linter keeps it off the graph, graphiti_core and kg_memory.store, and lets only the API and worker import it
+  python_packages: {}
+  python_dev_packages:
+    hypothesis: "6.169.0"   # property tests (packages/context/tests/test_properties.py)
+  admin_packages: {}
+  migrations:
+    head: "0006_context_traces"
+  postgres_functions:
+    ops: "claim_jobs, heartbeat_jobs, complete_job, release_jobs, cancel_job, backlog_stats, review_stats, memory_stats, purge_expired_context_traces, purge_expired_context_debug (P6: counts only)"
+  pipeline:
+    version: "p5.v1"        # unchanged: a context build is a read, not a pipeline stage
+  context:
+    ranker: "ctx-rank.v1 (ADR-033)"
+    tokenizer: "tiktoken max(o200k_base, cl100k_base) x (1 + CONTEXT_TOKEN_MARGIN 0.10): PROVISIONAL until TK-02 measures the router's prompt_tokens (ADR-020)"
+    compression: "structured (default) | extractive | summarized (opt-in per profile, validated, falls back); purpose context_compression -> oso/fast (PROVISIONAL until make verify-router)"
+    query_embedding: "ONCE per build: ModelGateway.embed(kind=query) shared by the graph (graphiti search with query_vector) and the memory search (CX-01, ADR-032 §6)"
+    thresholds: "evidence recall >= 0.9 (cases 1-8), irrelevant inclusion <= 10%, temporal correctness 100% (PROPOSED; strict: leakage 0, budget adherence 100%, attribution 100%)"
+
+# Phase 7 additions (2026-10-12). Two new workspace members that are CLIENTS of the platform, not parts of it (import-linter forbids them from importing any kg_* package but the SDK),
+# one new runtime package (the MCP SDK, for apps/mcp only) and one new DEV package (the SDK model generator). No server-side dependency was added.
+p7_additions:
+  workspace_packages:
+    kg-platform-sdk: "0.1.0"   # sdk/python: a thin typed client (httpx + pydantic); models generated from contracts/openapi.json (scripts/gen_sdk_models.py, drift-tested)
+    kg-mcp: "0.1.0"            # apps/mcp: stateless Streamable HTTP MCP server over the SDK; forwards the caller's own key; no database, router or service credential
+  python_packages:
+    mcp: "1.30.0"              # the official Python MCP SDK (low-level Server + StreamableHTTPSessionManager, stateless, JSON responses); apps/mcp only. 2.x exists (2.3.0) and is a different API: not adopted
+  python_dev_packages:
+    datamodel-code-generator: "0.83.0"   # generates the SDK's pydantic models from the OpenAPI contract; run by `make sdk-models` and by the drift test
+  admin_packages: {}
+  migrations:
+    head: "0007_agents_and_acls"
+  postgres_functions:
+    ops: "claim_jobs, heartbeat_jobs, complete_job, release_jobs, cancel_job, backlog_stats, review_stats, memory_stats, purge_expired_context_traces, purge_expired_context_debug (P7: none added)"
+    public: "curated_memories_evidence_guard, memory_scope_repoint_guard, memory_subject_repoint_guard (triggers: the only legal moves of evidence_status and of a merged subject's references)"
+  pipeline:
+    version: "p5.v1"        # unchanged: registration, grants and revocation are not pipeline stages. A compromised submitter's pending stages are skipped_by_policy (submitter_compromised)
+  agents:
+    grants: "principal_scopes.privileges subset of {read, propose, publish}; backfill {read, propose}; publish is never implicit (ADR-036, ADR-038)"
+    subject_acl: "entity_types.<T>.access: workspace | subject_scoped (ontology v1.4.0 example); SubjectFilter is a REQUIRED argument of every kg_knowledge read (ADR-037)"
+    quotas: "requests per minute (in-process bucket, PRINCIPAL_REQUESTS_PER_MINUTE default 1200), context tokens and interactions per UTC day (durable tables, DB clock); shared limiter is P9"
+    revocation: "retired | compromised (final); compromised quarantines derivatives as disputed + a source_compromised review item (ADR-039)"
+    sdk_mcp: "SDK retries only 429/502/503/504, one Idempotency-Key per logical call; MCP tools are the SDK's request models with additionalProperties:false (ADR-040)"
+
+# Phase 8 additions (2026-10-15). NO new third-party package (Python, dev or admin): the purge gate, the journal, the simulation and the consolidation validator are plain
+# Postgres, the standard library and the Neo4j driver already pinned for Graphiti. No new workspace package either: the code lives in kg-governance, kg-knowledge, kg-memory,
+# kg-extraction, kg-graph and the apps.
+p8_additions:
+  workspace_packages: {}
+  python_packages: {}
+  python_dev_packages: {}
+  admin_packages: {}
+  migrations:
+    head: "0008_governance"
+  postgres_functions:
+    ops: "write_platform_receipt, read_platform_receipt, purge_workspace_rows, retention_candidates, retention_purge_model_calls, workspace_egress_denials, deletion_stats, workspaces_with_deletion_work (ids, counts and codes only)"
+    public: "purge_gate, purge_guard (generic row trigger on every gated table), commands_payload_guard, review_text_guard, context_trace_redact_guard, outbox_payload_guard, deletion_requests_guard, deletion_items_guard, deletion_records_guard (tombstones and suppressions are append-only)"
+  pipeline:
+    version: "p5.v1"        # unchanged: deletion, consolidation and simulation are separate job stages (deletion_plan, deletion_purge, deletion_verify, memory_consolidate, ontology_simulation, simulation_cleanup)
+  models:
+    purposes: "memory_consolidation and ontology_simulation, both oso/general (PROVISIONAL until make eval-consolidation-live / eval-simulation-live)"
+    prompt: "cons.v1 (kg_memory/prompts/cons_v1.py)"
+  governance:
+    purge_gate: "a DELETE or redaction is allowed only for a row listed in a purging request of the same workspace (or kind = workspace); audit_log is never alterable (ADR-044)"
+    journal: "DELETION_JOURNAL_DIR/deletions.jsonl, HMAC-chained, ids and suppression HMACs only (ADR-045); required in production"
+    egress: "workspace setting = deny list unioned with the platform's; cache WORKSPACE_EGRESS_TTL_SECONDS (30 s default) (ADR-047)"
+    simulation: "staging group ws-<uuid>-sim-<run12> on the same Neo4j database, removed by the run and by a delayed job (ADR-046)"

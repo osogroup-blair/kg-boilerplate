@@ -21,6 +21,7 @@ from kg_common.errors import (
     NotFound,
     PreconditionFailed,
     PreconditionRequired,
+    SubjectSuppressed,
     UnknownEntity,
     ValidationFailed,
 )
@@ -84,13 +85,22 @@ class PipelineResult:
     created: bool = True  # False when an entity.create matched an existing entity (HTTP 200)
 
 
-def derive_authority(principal: Principal, requested: str | None) -> str:
-    """The authority class comes from the caller's role, never from the request: a request may only lower it (blueprint source classification)."""
+async def derive_authority(cc: CommandContext, requested: str | None) -> str:
+    """The authority class comes from the caller's role, never from the request: a request may only lower it (blueprint source classification). An app holds
+    `authoritative_system` only when it is registered as a TRUSTED SOURCE (P7, ADR-036); any other app asserts what a user would (`user_asserted`)."""
+    principal = cc.principal
     granted = "user_asserted"
     if Role.WORKSPACE_ADMIN in principal.roles:
         granted = "admin_asserted"
     if Role.APP_WRITER in principal.roles:
-        granted = "authoritative_system"
+        trusted = (
+            await cc.conn.execute(
+                text("SELECT trusted_source FROM principals WHERE workspace_id = :ws AND id = :p"),
+                {"ws": principal.workspace_id, "p": principal.principal_id},
+            )
+        ).scalar_one_or_none()
+        if trusted:
+            granted = "authoritative_system"
     if requested is not None and AUTHORITY_RANK[requested] > AUTHORITY_RANK[granted]:
         raise ValidationFailed("authority cannot be raised above what the caller's role grants", details={"fields": ["authority"]})
     return requested or granted
@@ -126,6 +136,26 @@ def _fact_snap(r: Row[Any]) -> FactSnap:
 class CommandPipeline:
     def __init__(self, specs: SpecCache):
         self._specs = specs
+        self._ref_hmac: Callable[[uuid.UUID, str, str, str], str] | None = None
+
+    def set_ref_hmac(self, fn: Callable[[uuid.UUID, str, str, str], str]) -> None:
+        """P8: the composition root gives the pipeline the keyed hash of an external identifier, so it can refuse one whose subject was deleted (ADR-045)."""
+        self._ref_hmac = fn
+
+    async def _guard_suppressed(self, cc: CommandContext, type_key: str, ids: tuple[tuple[str, str], ...]) -> None:
+        if self._ref_hmac is None or not ids:
+            return
+        digests = [self._ref_hmac(cc.ctx.workspace_id, type_key, system, value) for system, value in ids]
+        hit = (
+            await cc.conn.execute(
+                text(
+                    "SELECT 1 FROM deletion_suppressions WHERE workspace_id = :ws AND kind = 'external_id' AND value_hmac = ANY(:h) AND lifted_at IS NULL LIMIT 1"
+                ),
+                {"ws": cc.ctx.workspace_id, "h": digests},
+            )
+        ).first()
+        if hit is not None:
+            raise SubjectSuppressed()
 
     # ---- shared steps ---------------------------------------------------------------------------------------------------------------------
 
@@ -345,8 +375,9 @@ class CommandPipeline:
             return pre
         version_id, spec = pre
         ws = cc.ctx.workspace_id
-        authority = derive_authority(cc.principal, body.authority)
+        authority = await derive_authority(cc, body.authority)
         ext = tuple(sorted({(e.system, e.value) for e in body.external_ids}))
+        await self._guard_suppressed(cc, body.type, ext)
         cmd = RuleCommand(
             kind="entity.create",
             entity_type=body.type,
@@ -481,9 +512,10 @@ class CommandPipeline:
             raise PreconditionRequired()
         if expected_revision != row.revision:
             raise PreconditionFailed()
-        authority = derive_authority(cc.principal, body.authority)
+        authority = await derive_authority(cc, body.authority)
         classification = body.classification or row.classification
         new_ext = tuple(sorted({(e.system, e.value) for e in body.add_external_ids}))
+        await self._guard_suppressed(cc, row.type_key, new_ext)
         cmd = RuleCommand(
             kind="entity.update",
             entity_type=row.type_key,
@@ -600,7 +632,7 @@ class CommandPipeline:
             return pre
         version_id, spec = pre
         ws = cc.ctx.workspace_id
-        authority = derive_authority(cc.principal, body.authority)
+        authority = await derive_authority(cc, body.authority)
         source_row = await self._resolve(cc, body.source, "source")
         target_row = await self._resolve(cc, body.target, "target")
         # serialise concurrent commands on this source: succession must see a consistent chain (WP6)
@@ -733,7 +765,7 @@ class CommandPipeline:
                 {"ws": ws, "id": fact_id},
             )
         ).one()
-        authority = derive_authority(cc.principal, body.authority)
+        authority = await derive_authority(cc, body.authority)
         cmd = RuleCommand(
             kind="relationship.end",
             rel_type=fact.rel_type,

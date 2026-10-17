@@ -18,7 +18,31 @@ REDACTED_VALUE: dict[str, bool] = {"redacted": True}
 ProjectionStatus = Literal["pending", "projected", "failed", "skipped_by_policy", "not_applicable"]
 EmbeddingStatus = Literal["pending", "embedded", "skipped_by_policy"]
 CommandStatus = Literal["applied", "rejected", "needs_review"]
-CommandTypeName = Literal["entity.create", "entity.update", "relationship.assert", "relationship.end", "review.decide", "entity.merge"]
+CommandTypeName = Literal[
+    "entity.create",
+    "entity.update",
+    "relationship.assert",
+    "relationship.end",
+    "review.decide",
+    "entity.merge",
+    "memory.save",
+    "memory.propose",
+    "memory.extract",
+    "memory.supersede",
+    "memory.expire",
+    "memory.dispute",
+    "memory.publish",
+    "memory.review",
+    "correction.fact_reject",
+    "correction.fact_supersede",
+    "correction.fact_end",
+    "correction.fact_restore",
+    "correction.attribute",
+    "correction.rename",
+    "correction.memory",
+    "entity.split",
+    "memory.consolidate",
+]
 
 
 def _instant(value: Any) -> Any:
@@ -199,7 +223,7 @@ class EntityOut(BaseModel):
     attributes: dict[str, Any]
     classification: Classification
     status: Literal["active", "deleted", "candidate", "untyped", "merged"]
-    origin: Literal["command", "extracted"] = "command"
+    origin: Literal["command", "extracted", "correction"] = "command"
     merged_into_id: uuid.UUID | None = None
     revision: int
     external_ids: list[ExternalId]
@@ -252,7 +276,7 @@ class FactOut(BaseModel):
     phase: Literal["current", "historical", "future"]
     authority_class: AnyAuthority
     classification: Classification
-    source_type: Literal["command", "extracted", "inferred"]
+    source_type: Literal["command", "extracted", "inferred", "correction"]
     evidence_status: Literal["verified", "unverified"] = "verified"
     evidence: list[EvidenceOut] = []
     decision_code: str | None = None
@@ -268,6 +292,7 @@ class FactOut(BaseModel):
 
 class EntityDetailOut(EntityOut):
     relationships: list[FactOut]
+    memories: int | None = None  # curated memories about this entity that THE CALLER may see (P5); never a count of what it may not
 
 
 # ---- commands -------------------------------------------------------------------------------------------------------------------------------
@@ -302,7 +327,7 @@ class CommandSummary(BaseModel):
     classification: Classification
     source_system: str | None
     source_ref: str | None
-    ontology_version_id: uuid.UUID
+    ontology_version_id: uuid.UUID | None  # None only for memory commands of a workspace with no active ontology
     http_status: int
     projection_status: ProjectionStatus
     projection_attempts: int
@@ -321,7 +346,19 @@ class CommandDetailOut(CommandSummary):
 
 # ---- P4: reviews, evidence, graph ----------------------------------------------------------------------------------------------------------
 
-ReviewType = Literal["policy_violation", "identity_match", "contradiction", "graphiti_invalidation"]
+ReviewType = Literal[
+    "policy_violation",
+    "identity_match",
+    "contradiction",
+    "graphiti_invalidation",
+    "memory_proposal",
+    "memory_conflict",
+    "source_compromised",
+    "deletion_exception",
+    "consolidation_proposal",
+    "correction_request",
+    "authoritative_override",
+]
 ReviewStatusFilter = Literal["open", "decided"]
 Decision = Literal[
     "same_entity",
@@ -334,6 +371,16 @@ Decision = Literal[
     "open_correction",
     "approve",
     "reject",
+    "approve_with_edit",
+    "supersede_existing",
+    "restore",
+    "confirm_removal",
+    "redact_text",
+    "delete_item",
+    "retain_with_reason",
+    "retry_verification",
+    "apply_correction",
+    "dismiss",
 ]
 RationaleCode = Literal[
     "verified_with_source",
@@ -354,6 +401,17 @@ ALLOWED_DECISIONS: dict[str, tuple[str, ...]] = {
     "contradiction": ("keep_existing", "mark_disputed", "accept_claim"),
     "graphiti_invalidation": ("acknowledge", "open_correction"),
     "policy_violation": ("approve", "reject"),
+    "memory_proposal": ("approve", "reject", "approve_with_edit"),
+    "memory_conflict": ("keep_existing", "supersede_existing", "mark_disputed"),
+    "source_compromised": (
+        "restore",
+        "confirm_removal",
+    ),  # P7: a derivative of a compromised principal: reinstate it, or confirm it is refused
+    # P8. A deletion exception: redact the text that names the deleted subject, delete the item, retain it under a legal hold, or verify again.
+    "deletion_exception": ("redact_text", "delete_item", "retain_with_reason", "retry_verification"),
+    "consolidation_proposal": ("approve", "reject"),  # approving supersedes the sources (their evidence is kept by reference)
+    "correction_request": ("apply_correction", "dismiss"),
+    "authoritative_override": ("acknowledge",),  # the source system's owner has been told
 }
 
 
@@ -363,6 +421,9 @@ class DecisionIn(_In):
     rationale_text: str | None = Field(
         default=None, max_length=1000
     )  # stored on the review row only: never copied to audit, logs or metrics
+    edited_content: str | None = Field(
+        default=None, min_length=1, max_length=10_000
+    )  # approve_with_edit on a memory proposal: the reviewer's wording
 
 
 class ReviewOut(BaseModel):
@@ -380,10 +441,18 @@ class ReviewOut(BaseModel):
     fact_id: uuid.UUID | None = None
     competing_fact_id: uuid.UUID | None = None
     interaction_id: uuid.UUID | None = None
+    memory_id: uuid.UUID | None = None
+    competing_memory_id: uuid.UUID | None = None
     decision: str | None = None
     rationale_code: str | None = None
     decided_by: uuid.UUID | None = None
     decided_at: dt.datetime | None = None
+    submitter_revoked: bool = (
+        False  # P7: the principal that submitted the memory behind this item has been revoked (a badge for the reviewer)
+    )
+    agent_generated: bool = (
+        False  # P7: the memory behind this item was produced by an agent (it stays unverified until a reviewer approves it)
+    )
 
 
 class ReviewEntityView(BaseModel):
@@ -421,6 +490,26 @@ class InteractionRef(BaseModel):
     recorded_at: dt.datetime
 
 
+class ReviewMemoryView(BaseModel):
+    """One memory a review item is about (P5). Filled by the API from kg_memory with the REVIEWER's own visibility, so it never shows a scope or a memory the
+    reviewer could not open directly."""
+
+    role: Literal["candidate", "competing", "source"]  # source: a memory a consolidation proposal would fold in
+    id: uuid.UUID
+    type: str
+    origin: str
+    status: str
+    summary: str
+    content: str
+    authority_class: str
+    evidence_status: str
+    classification: str
+    scopes: list[dict[str, str]]
+    subject_ids: list[uuid.UUID]
+    created_by: uuid.UUID
+    recorded_at: dt.datetime
+
+
 class ReviewDetail(ReviewOut):
     allowed_decisions: list[str]
     rationale_text: str | None = None
@@ -429,6 +518,10 @@ class ReviewDetail(ReviewOut):
     candidates: list[IdentityCandidate] = []
     interactions: list[InteractionRef] = []
     violations: list[dict[str, Any]] = []  # a queued command's rule trace: codes and paths, never values
+    memories: list[ReviewMemoryView] = []
+    # P8: a deletion exception names its request and the codes of what is left to decide (never the text); other types leave these empty
+    deletion_request_id: uuid.UUID | None = None
+    detail: dict[str, Any] = {}
 
 
 class DecisionOut(BaseModel):
@@ -440,10 +533,12 @@ class DecisionOut(BaseModel):
     projection_status: ProjectionStatus
     entity_ids: list[uuid.UUID] = []
     fact_ids: list[uuid.UUID] = []
+    memory_ids: list[uuid.UUID] = []
     applied_command_id: uuid.UUID | None = None  # policy_violation approve: the command that was applied
 
 
 class MentionOut(BaseModel):
+    id: uuid.UUID  # what an identity split names to move a mention
     interaction_id: uuid.UUID
     episode_uuid: str
     resolution: str

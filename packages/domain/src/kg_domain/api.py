@@ -47,6 +47,8 @@ class MeOut(BaseModel):
 
 class KeyInfo(BaseModel):
     prefix: str
+    id: uuid.UUID | None = None
+    name: str = ""
     created_at: datetime
     expires_at: datetime | None = None
     revoked_at: datetime | None = None
@@ -63,6 +65,19 @@ class PrincipalOut(BaseModel):
     keys: list[KeyInfo]
     created_at: datetime
     revoked_at: datetime | None = None
+    # P7 (registration profile and the revocation record)
+    description: str = ""
+    owner_principal_id: uuid.UUID | None = None
+    trusted_source: bool = False
+    model_disclosure: Literal["allowed", "denied"] = "allowed"
+    allowed_profiles: list[str] = []
+    quota_requests_per_minute: int | None = None
+    quota_context_tokens_per_day: int | None = None
+    quota_interactions_per_day: int | None = None
+    revoke_reason: Literal["retired", "compromised"] | None = None
+    revoked_by: uuid.UUID | None = None
+    updated_at: datetime | None = None
+    revision: int = 1
 
 
 class AuditEventOut(BaseModel):

@@ -222,7 +222,8 @@ async def test_the_command_ledger_is_immutable_except_projection_columns(app_eng
         "idempotency_key = 'z'",
         "request_hash = 'z'",
     ):
-        with pytest.raises(ProgrammingError, match="permission denied"):
+        # a column grant refuses every column but the projection ones; P8 added a trigger for the one redaction column (`payload`), which names the deletion plan
+        with pytest.raises(ProgrammingError, match="permission denied|approved deletion plan"):
             async with tenant_session(app_engine, ctx(rows.ws)) as c:
                 await c.execute(text(f"UPDATE commands SET {stmt} WHERE id = :i"), {"i": rows.command})
     with pytest.raises(ProgrammingError, match="permission denied"):

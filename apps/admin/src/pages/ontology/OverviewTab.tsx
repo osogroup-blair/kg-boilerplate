@@ -61,6 +61,14 @@ function DiffPanel({ diff }: { diff: DiffOut }) {
           ))}
         </tbody>
       </table>
+      {(diff.access_impact ?? []).map((a) => (
+        <Banner key={`access:${a.type_key}`} tone="amber" role="alert">
+          <strong>Access tightened for <span className="font-mono">{a.type_key}</span>.</strong>{" "}
+          {a.entities} active entit{a.entities === 1 ? "y" : "ies"} become subject-scoped: {a.principals_affected} principal{a.principals_affected === 1 ? "" : "s"} without a grant
+          lose sight of them and of every fact touching them ({a.entities_hidden_from_a_principal} principal-entity pair{a.entities_hidden_from_a_principal === 1 ? "" : "s"} in all).
+          Grant the subjects first, or roll back by activating the previous version.
+        </Banner>
+      ))}
       {diff.impact.length > 0 ? (
         <div>
           <h4 className="text-sm font-medium">Rows these types hold today</h4>

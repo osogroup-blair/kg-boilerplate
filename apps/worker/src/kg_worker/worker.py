@@ -16,6 +16,8 @@ from kg_jobs import faults
 from kg_jobs.client import OpsClient
 from kg_jobs.dispatcher import Dispatcher
 from kg_knowledge.services import build_knowledge
+from kg_memory.deletion import RetentionSweeper, build_deletion
+from kg_memory.services import build_memory
 from kg_modelgw.calllog import DbCallSink
 from kg_modelgw.factory import build_router_stack
 from kg_modelgw.health import router_health
@@ -43,6 +45,8 @@ class Worker:
         self.worker_id = f"{socket.gethostname()}-{os.getpid()}-{uuid.uuid4().hex[:6]}"
         self.started_at = time.time()
         self.indices_ready = False
+        self._last_trace_purge = 0.0
+        self._last_retention = 0.0
 
     async def _beat(self, engine, status: str = "running") -> None:  # type: ignore[no-untyped-def]
         async with system_session(engine) as conn:
@@ -68,10 +72,83 @@ class Worker:
             seen.add(r.item_type)
             metrics.review_items_open.labels(type=r.item_type).set(r.open_items)
             metrics.review_age_seconds.labels(type=r.item_type).set(r.oldest_age_seconds or 0)
-        for kind in ("identity_match", "contradiction", "graphiti_invalidation", "policy_violation"):
+        for kind in (
+            "identity_match",
+            "contradiction",
+            "graphiti_invalidation",
+            "policy_violation",
+            "memory_proposal",
+            "memory_conflict",
+            "source_compromised",
+        ):
             if kind not in seen:  # a type that drained must read 0, not its last value
                 metrics.review_items_open.labels(type=kind).set(0)
                 metrics.review_age_seconds.labels(type=kind).set(0)
+
+    async def _memory_gauges(self, engine) -> None:  # type: ignore[no-untyped-def]
+        """Memories by type and status, and how many live ones have a vector, across all workspaces (aggregates only: ops.memory_stats carries no ids)."""
+        async with system_session(engine) as conn:
+            rows = (await conn.execute(text("SELECT * FROM ops.memory_stats()"))).all()
+        counts: dict[tuple[str, str], int] = {}
+        live = embedded = 0
+        for r in rows:
+            counts[(r.type, r.status)] = counts.get((r.type, r.status), 0) + int(r.memories)
+            if r.status == "active" and r.embedding_status != "skipped_by_policy":
+                live += int(r.memories)
+                embedded += int(r.memories) if r.embedding_status == "ready" else 0
+        for memory_type in ("working", "episodic", "semantic", "procedural"):
+            for status in ("proposed", "active", "superseded", "disputed", "expired", "rejected", "deleted"):
+                metrics.memories_total.labels(type=memory_type, status=status).set(counts.get((memory_type, status), 0))
+        metrics.memory_embedding_coverage.set(embedded / live if live else 1.0)
+
+    async def _principal_gauges(self, engine) -> None:  # type: ignore[no-untyped-def]
+        """Principals by kind and status and grants by scope kind, across all workspaces (P7; aggregates only: ops.principal_stats / ops.grant_stats carry no ids or handles)."""
+        async with system_session(engine) as conn:
+            principals = (await conn.execute(text("SELECT * FROM ops.principal_stats()"))).all()
+            grants = (await conn.execute(text("SELECT * FROM ops.grant_stats()"))).all()
+        have = {(r.kind, r.status): int(r.principals) for r in principals}
+        for kind in ("user", "app", "agent", "service"):
+            for status in ("active", "revoked"):
+                metrics.principals_total.labels(kind=kind, status=status).set(have.get((kind, status), 0))
+        held = {r.scope_kind: int(r.grants) for r in grants}
+        for scope_kind in ("workspace", "subject", "project", "agent", "session", "classification"):
+            metrics.grants_total.labels(scope_kind=scope_kind).set(held.get(scope_kind, 0))
+
+    async def _context_housekeeping(self, engine) -> None:  # type: ignore[no-untyped-def]
+        """Retention for the context engine (P6): expired debug snapshots go every beat (they hold task text, encrypted), traces older than CONTEXT_TRACE_RETENTION_DAYS
+        every ten minutes. The functions return counts and nothing else; no workspace is named."""
+        async with system_session(engine) as conn:
+            snapshots = (await conn.execute(text("SELECT ops.purge_expired_context_debug() AS n"))).one().n
+            if time.monotonic() - self._last_trace_purge >= 600.0:
+                self._last_trace_purge = time.monotonic()
+                purged = (
+                    (
+                        await conn.execute(
+                            text("SELECT ops.purge_expired_context_traces(make_interval(days => :d)) AS n"),
+                            {"d": self.settings.context_trace_retention_days},
+                        )
+                    )
+                    .one()
+                    .n
+                )
+                if purged:
+                    log.info("context_traces_purged", count=int(purged))
+        if snapshots:
+            log.info("context_debug_snapshots_purged", count=int(snapshots))
+
+    async def _governance_housekeeping(self, engine) -> None:  # type: ignore[no-untyped-def]
+        """P8: the deletion gauges every beat (aggregates only: ops.deletion_stats carries no ids), and the retention sweep every RETENTION_SWEEP_SECONDS."""
+        async with system_session(engine) as conn:
+            rows = (await conn.execute(text("SELECT * FROM ops.deletion_stats()"))).all()
+        have = {(r.kind, r.status): int(r.requests) for r in rows}
+        for kind in ("subject", "interaction", "memory", "principal_data", "workspace", "retention"):
+            for status in ("frozen", "planned", "purging", "verifying", "blocked_legal_hold", "failed", "completed_with_exceptions"):
+                metrics.deletion_requests_open.labels(kind=kind, status=status).set(have.get((kind, status), 0))
+        if time.monotonic() - self._last_retention >= self.settings.retention_sweep_seconds:
+            self._last_retention = time.monotonic()
+            swept = await self._sweeper.sweep()
+            if swept:
+                log.info("retention_swept", **{k: v for k, v in swept.items()})
 
     async def _ensure_indices(self, graph: GraphService, *, attempts: int) -> None:
         for i in range(attempts):
@@ -102,11 +179,14 @@ class Worker:
         router = build_router_stack(s, service="kg-worker", sink=sink)
         graph = GraphService(s, router.transport, router.config)
         sink.start()
-        knowledge = build_knowledge(engine, graph, router.config, service="kg-worker")
+        knowledge = build_knowledge(engine, graph, router.config, service="kg-worker", settings=s)
         faults.configure(s.kg_faults, s.kg_faults_dir)  # test-only failure injection; a no-op unless KG_FAULTS / KG_FAULTS_DIR is set
-        registry = build_registry(
-            engine, knowledge, graph, PayloadCipher.from_settings(s), ContentHasher.from_settings(s), router.config, s, sink.flush
-        )
+        hasher = ContentHasher.from_settings(s)
+        memory = build_memory(s, knowledge, router.gateway, router.config, service="kg-worker", hasher=hasher)
+        cipher = PayloadCipher.from_settings(s)
+        deletion = build_deletion(s, engine, knowledge, graph, cipher, hasher, memory.writer)
+        registry = build_registry(engine, knowledge, graph, cipher, hasher, router.config, s, sink.flush, memory, router.gateway, deletion)
+        self._sweeper = RetentionSweeper(engine, deletion.service, graph)
         dispatcher = Dispatcher(
             OpsClient(engine),
             registry.as_mapping(),
@@ -140,6 +220,10 @@ class Worker:
                 try:
                     await self._beat(engine)
                     await self._review_gauges(engine)
+                    await self._memory_gauges(engine)
+                    await self._principal_gauges(engine)
+                    await self._context_housekeeping(engine)
+                    await self._governance_housekeeping(engine)
                     if not self.indices_ready:
                         await self._ensure_indices(graph, attempts=1)
                 except Exception as exc:

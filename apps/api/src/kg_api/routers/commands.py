@@ -10,7 +10,7 @@ from kg_domain.envelope import Page
 from kg_governance.authz.policy import Action, requires
 from kg_knowledge.models import CommandDetailOut, CommandStatus, CommandSummary, CommandTypeName
 
-from kg_api.deps import DbDep, StateDep, WorkspaceDep
+from kg_api.deps import DbDep, StateDep, SubjectsDep, WorkspaceDep
 
 router = APIRouter(prefix="/v1/commands", tags=["commands"])
 
@@ -21,6 +21,7 @@ async def list_commands(
     state: StateDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     status: CommandStatus | None = None,
     type: CommandTypeName | None = None,
     entity_id: uuid.UUID | None = None,
@@ -28,11 +29,11 @@ async def list_commands(
     cursor: str | None = None,
 ) -> Page[CommandSummary]:
     return await state.knowledge.reads.list_commands(
-        db, ws, status=status, command_type=type, entity_id=entity_id, limit=limit, cursor=cursor
+        db, ws, subjects=subjects, status=status, command_type=type, entity_id=entity_id, limit=limit, cursor=cursor
     )
 
 
 @router.get("/{command_id}", response_model=CommandDetailOut)
 @requires(Action.COMMAND_READ)
-async def get_command(command_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> CommandDetailOut:
-    return await state.knowledge.reads.get_command(db, ws, command_id)
+async def get_command(command_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep) -> CommandDetailOut:
+    return await state.knowledge.reads.get_command(db, ws, command_id, subjects=subjects)

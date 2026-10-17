@@ -1,5 +1,5 @@
 # Phase 1 stack. Host ports avoid the other Postgres containers on this machine (5432-5437, 5543 is the spike stack).
-# postgres 5544 · neo4j 7475/7688 · mock-router 8782 · api 8000 (+9100 metrics) · worker metrics 9101 · admin 5273
+# postgres 5544 · neo4j 7475/7688 · mock-router 8782 · api 8000 (+9100 metrics) · worker metrics 9101 · admin 5273 · mcp 8010 (profile agents)
 name: kg
 
 x-python-env: &python-env
@@ -97,6 +97,10 @@ services:
     environment:
       <<: *python-env
       SERVICE_NAME: kg-api
+      # P8: the out-of-band deletion journal (outside the database and its backups); the worker appends, the API and the CLI read. Production mounts a separate, append-only volume.
+      DELETION_JOURNAL_DIR: ${DELETION_JOURNAL_DIR:-/journal}
+      WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}   # development: a settings change reaches the worker within seconds (production keeps 30)
+    volumes: ["../../.local/deletion-journal:/journal"]
     ports: ["127.0.0.1:8000:8000", "127.0.0.1:9100:9100"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
@@ -123,7 +127,9 @@ services:
       WORKER_SHUTDOWN_GRACE_SECONDS: ${WORKER_SHUTDOWN_GRACE_SECONDS:-20}
       # Development-only failure injection: `make demo-p3` arms it by writing .local/faults/spec. ENV=production refuses KG_FAULTS_DIR.
       KG_FAULTS_DIR: ${KG_FAULTS_DIR:-/faults}
-    volumes: ["../../.local/faults:/faults"]
+      DELETION_JOURNAL_DIR: ${DELETION_JOURNAL_DIR:-/journal}
+      WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}
+    volumes: ["../../.local/faults:/faults", "../../.local/deletion-journal:/journal"]
     stop_grace_period: 30s
     ports: ["127.0.0.1:9101:9101"]
     extra_hosts: ["host.docker.internal:host-gateway"]
@@ -138,6 +144,26 @@ services:
       timeout: 5s
       retries: 30
       start_period: 10s
+
+  # P7: the MCP server (profile `agents`; `make mcp-up`). The same image, but NONE of the platform's environment: it holds the address of the API and nothing else, no database,
+  # no router, no key. Each tool call forwards the CALLER's own key (Authorization: Bearer) to the API through the SDK.
+  mcp:
+    profiles: ["agents"]
+    image: kg-python:dev
+    command: ["python", "-m", "kg_mcp"]
+    environment:
+      KG_API_URL: http://api:8000
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8010"
+    ports: ["127.0.0.1:8010:8010"]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8010/health').status==200 else 1)"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 3s
 
   admin:
     profiles: ["dev"]

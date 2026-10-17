@@ -46,7 +46,7 @@ async def ledger_command(
     command_type: CommandType,
     key: str,
     actor_principal_id: uuid.UUID,
-    ontology_version_id: uuid.UUID,
+    ontology_version_id: uuid.UUID | None,
     payload: dict[str, object],
     result: dict[str, object],
     authority: str = "user_asserted",
@@ -215,6 +215,9 @@ async def merge_entity(
         last_command_id=command_id,
     )
     await touch(conn, ws, "entities", into_id, last_command_id=command_id)
+    await _repoint_references(
+        conn, ws, from_id, into_id
+    )  # after the old entity is `merged` (the database accepts a re-point only for a merged entity)
     result = MergeResult(command_id, from_id, into_id, fact_ids=list(moved))
     # assess the extracted facts that moved against the canonical entity's other facts (a merge can surface a conflict)
     for fid in moved:
@@ -250,6 +253,47 @@ async def merge_entity(
             ),
         )
     return result
+
+
+async def _repoint_references(conn: AsyncConnection, ws: uuid.UUID, from_id: uuid.UUID, into_id: uuid.UUID) -> None:
+    """Grants and memory references that name the merged entity follow the canonical one, in the same transaction (P7, T5): a principal granted a candidate that is then
+    merged into Sarah keeps seeing Sarah, and a memory scoped to the candidate stays visible to the people granted Sarah. Where the holder already has a row for the
+    canonical entity the rows are folded (privileges are unioned), never duplicated."""
+    p = {"ws": ws, "from_s": str(from_id), "into_s": str(into_id), "from": from_id, "into": into_id}
+    await conn.execute(
+        text(
+            "UPDATE principal_scopes c SET privileges = ARRAY(SELECT DISTINCT x FROM unnest(c.privileges || m.privileges) x ORDER BY x) "
+            "FROM principal_scopes m WHERE c.workspace_id = :ws AND m.workspace_id = :ws AND c.principal_id = m.principal_id "
+            "AND c.scope_kind = 'subject' AND m.scope_kind = 'subject' AND c.scope_ref = :into_s AND m.scope_ref = :from_s"
+        ),
+        p,
+    )
+    await conn.execute(
+        text(
+            "UPDATE principal_scopes s SET scope_ref = :into_s WHERE s.workspace_id = :ws AND s.scope_kind = 'subject' AND s.scope_ref = :from_s "
+            "AND NOT EXISTS (SELECT 1 FROM principal_scopes x WHERE x.workspace_id = s.workspace_id AND x.principal_id = s.principal_id "
+            "AND x.scope_kind = 'subject' AND x.scope_ref = :into_s)"
+        ),
+        p,
+    )
+    await conn.execute(
+        text("DELETE FROM principal_scopes WHERE workspace_id = :ws AND scope_kind = 'subject' AND scope_ref = :from_s"), p
+    )  # what is left already had a canonical row, whose privileges now include these
+    await conn.execute(
+        text(
+            "UPDATE memory_scopes s SET scope_ref = :into_s WHERE s.workspace_id = :ws AND s.scope_kind = 'subject' AND s.scope_ref = :from_s "
+            "AND NOT EXISTS (SELECT 1 FROM memory_scopes x WHERE x.workspace_id = s.workspace_id AND x.memory_id = s.memory_id "
+            "AND x.scope_kind = 'subject' AND x.scope_ref = :into_s)"
+        ),
+        p,
+    )
+    await conn.execute(
+        text(
+            "UPDATE memory_subjects s SET entity_id = :into WHERE s.workspace_id = :ws AND s.entity_id = :from "
+            "AND NOT EXISTS (SELECT 1 FROM memory_subjects x WHERE x.workspace_id = s.workspace_id AND x.memory_id = s.memory_id AND x.entity_id = :into)"
+        ),
+        p,
+    )
 
 
 def _now() -> dt.datetime:

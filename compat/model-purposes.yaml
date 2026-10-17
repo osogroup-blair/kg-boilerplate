@@ -17,6 +17,14 @@ model_purposes:
     alias: oso/general
     requires: [structured_output]
     task_type: extraction
+  memory_consolidation:
+    alias: oso/general              # P8: a condensed group of memories, validated sentence by sentence and ALWAYS reviewed (ADR-043)
+    requires: [structured_output]
+    task_type: summarization
+  ontology_simulation:
+    alias: oso/general              # P8: extraction of sample interactions under a DRAFT ontology, in an isolated staging namespace (ADR-046)
+    requires: [structured_output]
+    task_type: extraction
   graph_projection:
     alias: oso/embedding            # embedding-only: deterministic command projections write nodes/edges directly and never call a chat model (ADR-016)
     requires: []

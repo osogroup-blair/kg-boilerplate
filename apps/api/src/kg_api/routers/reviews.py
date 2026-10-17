@@ -19,7 +19,9 @@ from kg_governance.authz.policy import Action, is_allowed, requires
 from kg_ingestion.models import ContentOut
 from kg_knowledge.commands import CommandContext
 from kg_knowledge.graphlock import GraphBusy
-from kg_knowledge.models import DecisionIn, DecisionOut, ReviewDetail, ReviewOut
+from kg_knowledge.models import DecisionIn, DecisionOut, ReviewDetail, ReviewMemoryView, ReviewOut
+from kg_memory.reads import Viewer
+from kg_memory.scopes import ScopeGrants
 from kg_obs import context
 from kg_obs.logging import get_logger
 
@@ -38,7 +40,20 @@ async def list_reviews(
     state: StateDep,
     ws: WorkspaceDep,
     db: DbDep,
-    type: Literal["policy_violation", "identity_match", "contradiction", "graphiti_invalidation"] | None = None,
+    type: Literal[
+        "policy_violation",
+        "identity_match",
+        "contradiction",
+        "graphiti_invalidation",
+        "memory_proposal",
+        "memory_conflict",
+        "source_compromised",
+        "deletion_exception",
+        "consolidation_proposal",
+        "correction_request",
+        "authoritative_override",
+    ]
+    | None = None,
     status: Literal["open", "decided"] | None = None,
     limit: LimitQ = 50,
     cursor: str | None = None,
@@ -50,6 +65,16 @@ async def list_reviews(
 @requires(Action.REVIEW_READ)
 async def get_review(review_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep) -> JSONResponse:
     out = await state.knowledge.reviews.get(db, ws, review_id, can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE))
+    if out.memory_id is not None:  # P5: the memory (or memories) the item is about, with the REVIEWER's own visibility, never more
+        grants = await ScopeGrants.for_principal(db, principal)
+        views = await state.memory.reads.review_views(
+            db,
+            Viewer(principal, grants, curator=is_allowed(principal, Action.MEMORY_CURATE)),
+            out.memory_id,
+            out.competing_memory_id,
+            sources_of=out.memory_id if out.item_type == "consolidation_proposal" else None,
+        )
+        out.memories = [ReviewMemoryView.model_validate(v) for v in views]
     return JSONResponse(out.model_dump(mode="json"), headers={"ETag": etag(out.revision)})
 
 

@@ -93,7 +93,7 @@ async def test_principals_list_detail_and_pagination(api):
     r = await api.client.get("/v1/principals", headers=h)
     assert r.status_code == 200, r.text
     items = r.json()["items"]
-    assert len(items) == 6 and r.json()["next_cursor"] is None
+    assert len(items) == 7 and r.json()["next_cursor"] is None
     assert {i["handle"] for i in items} == {
         "admin@demo",
         "reviewer@demo",
@@ -101,10 +101,11 @@ async def test_principals_list_detail_and_pagination(api):
         "conversation_app",
         "agent_research",
         "agent_planning",
+        "agent_support",  # P5: an agent in the workspace with no scope grants
     }
     one = next(i for i in items if i["handle"] == "agent_planning")
     assert one["kind"] == "agent" and one["roles"] == ["agent"] and len(one["keys"]) >= 1
-    assert set(one["keys"][0]) == {"prefix", "created_at", "expires_at", "revoked_at", "last_used_at"}  # never a hash
+    assert set(one["keys"][0]) == {"prefix", "id", "name", "created_at", "expires_at", "revoked_at", "last_used_at"}  # never a hash
     assert "key_hash" not in r.text and "kgk_" not in r.text.replace(one["keys"][0]["prefix"], "")
     seen, cursor = [], None
     for _ in range(5):
@@ -113,7 +114,7 @@ async def test_principals_list_detail_and_pagination(api):
         cursor = page["next_cursor"]
         if not cursor:
             break
-    assert sorted(seen) == sorted(i["handle"] for i in items) and len(seen) == 6  # keyset pages cover all rows exactly once
+    assert sorted(seen) == sorted(i["handle"] for i in items) and len(seen) == 7  # keyset pages cover all rows exactly once
     detail = await api.client.get(f"/v1/principals/{one['id']}", headers=h)
     assert detail.status_code == 200 and detail.json()["handle"] == "agent_planning"
     assert_envelope(await api.client.get("/v1/principals", headers=h, params={"limit": 0}), 422, "validation_failed")
@@ -138,7 +139,7 @@ async def test_operations_health(api):
     body = r.json()
     assert r.status_code == 200 and body["postgres"] == "ok" and body["neo4j"] == "ok" and body["router"]["mode"] == "mock"
     assert body["router"]["reachability"] == "ok" and body["router"]["missing_aliases"] == []
-    assert body["principal_counts"] == {"user": 3, "app": 1, "agent": 2}
+    assert body["principal_counts"] == {"user": 3, "app": 1, "agent": 3}
     # the stack's Neo4j is shared with `make up` (whose demo workspace has the same deterministic id), so compare with the graph itself, not with zero
     from kg_cli.seed import workspace_id_for
     from kg_domain.principal import WorkspaceContext

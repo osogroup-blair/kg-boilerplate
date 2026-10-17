@@ -11,14 +11,20 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 from kg_common.settings import Settings, get_settings
+from kg_context.services import build_context
 from kg_db.engine import assert_role_is_safe, create_app_engine
 from kg_domain.envelope import ErrorEnvelope
+from kg_extraction.simulation import SimulationService
 from kg_governance.authn.jwt import LocalSigner
 from kg_governance.authn.resolver import Authenticator
 from kg_governance.authz.policy import unpoliced_routes
+from kg_governance.quotas import Quotas
+from kg_governance.settings import SettingsService
 from kg_graph.service import GraphService
 from kg_ingestion.services import build_ingestion
 from kg_knowledge.services import build_knowledge
+from kg_memory.deletion import build_deletion
+from kg_memory.services import build_memory
 from kg_modelgw.calllog import DbCallSink
 from kg_modelgw.factory import build_router_stack
 from kg_obs import metrics
@@ -86,7 +92,17 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         sink.start()
         signer = LocalSigner(settings.auth_jwt_secret.get_secret_value(), settings.auth_jwt_ttl_seconds)
         authenticator = Authenticator(engine, pepper=settings.auth_key_pepper.get_secret_value(), signer=signer)
-        knowledge = build_knowledge(engine, graph, router.config, service="kg-api")
+        knowledge = build_knowledge(engine, graph, router.config, service="kg-api", settings=settings)
+        memory = build_memory(settings, knowledge, router.gateway, router.config, service="kg-api")
+        ingestion = build_ingestion(settings)
+        deletion = build_deletion(settings, engine, knowledge, graph, ingestion.cipher, ingestion.hasher, memory.writer)
+        context = build_context(
+            settings, engine, knowledge, memory, router.gateway, router.config, ingestion.cipher, ingestion.hasher, service="kg-api"
+        )
+        quotas = Quotas(
+            engine, default_requests_per_minute=settings.principal_requests_per_minute, flush_seconds=settings.principal_usage_flush_seconds
+        )
+        quotas.start()
         app.state.kg = AppState(
             settings=settings,
             engine=engine,
@@ -95,7 +111,23 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
             call_sink=sink,
             graph=graph,
             knowledge=knowledge,
-            ingestion=build_ingestion(settings),
+            ingestion=ingestion,
+            memory=memory,
+            context=context,
+            quotas=quotas,
+            deletion=deletion,
+            settings_service=SettingsService(list(router.config.egress.denied_classifications)),
+            simulation=SimulationService(
+                engine,
+                graph,
+                knowledge.specs,
+                knowledge.ontology,
+                ingestion.cipher,
+                router.config,
+                settings,
+                flush_calls=sink.flush,
+                service="kg-api",
+            ),
         )
         check_route_policies(app)
         if serve_metrics and not _metrics_started.is_set():
@@ -105,6 +137,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         try:
             yield
         finally:
+            await quotas.aclose()
             await sink.aclose()
             await graph.aclose()
             await router.aclose()

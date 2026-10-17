@@ -40,6 +40,13 @@ class SpecCache:
         self._put(key, spec)
         return spec
 
+    async def scoped_types(self, conn: AsyncConnection, ws: uuid.UUID) -> frozenset[str]:
+        """The entity types the ACTIVE ontology declares `subject_scoped` (P7, ADR-037); empty when there is no ontology or none is scoped (the P2-P6 behaviour)."""
+        active = await self.active(conn, ws)
+        if active is None:
+            return frozenset()
+        return frozenset(k for k, t in active[1].entity_types.items() if t.access == "subject_scoped")
+
     async def active(self, conn: AsyncConnection, ws: uuid.UUID) -> tuple[uuid.UUID, OntologySpec] | None:
         row = (await conn.execute(text("SELECT active_version_id FROM workspace_ontology WHERE workspace_id = :ws"), {"ws": ws})).first()
         if row is None or row.active_version_id is None:

@@ -13,6 +13,7 @@ from kg_obs.logging import get_logger
 from neo4j.exceptions import ClientError
 
 from kg_graph.factory import build_graphiti
+from kg_graph.group import GroupId
 from kg_graph.scoped import ScopedGraph
 
 log = get_logger("kg.graph")
@@ -77,6 +78,10 @@ class GraphService:
                 # existing duplicates block the constraint: report it loudly (code only) instead of hiding it; the projection runbook's rebuild clears them
                 log.error("graph_uniqueness_constraint_failed", constraint=name, error_code=getattr(exc, "code", "unknown"))
                 raise
+
+    def staging(self, ctx: WorkspaceContext, run_id: str) -> ScopedGraph:
+        """The isolated namespace of one ontology simulation run (P8): built only from the workspace's context and the run id."""
+        return ScopedGraph(self._graphiti, ctx, GroupId.for_simulation(ctx, run_id))
 
     def scoped(self, ctx: WorkspaceContext) -> ScopedGraph:
         return ScopedGraph(self._graphiti, ctx)

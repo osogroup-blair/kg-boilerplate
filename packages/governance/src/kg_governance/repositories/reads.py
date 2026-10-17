@@ -31,10 +31,12 @@ async def get_workspace(conn: AsyncConnection, ctx: WorkspaceContext, workspace_
 
 
 _PRINCIPAL_SELECT = """
-    SELECT p.id, p.handle, p.display_name, p.kind, p.status, p.created_at, p.revoked_at,
+    SELECT p.id, p.handle, p.display_name, p.kind, p.status, p.created_at, p.revoked_at, p.description, p.owner_principal_id, p.trusted_source,
+           p.model_disclosure, p.allowed_profiles, p.quota_requests_per_minute, p.quota_context_tokens_per_day, p.quota_interactions_per_day,
+           p.revoke_reason, p.revoked_by, p.updated_at, p.revision,
            COALESCE((SELECT array_agg(r.role ORDER BY r.role) FROM role_assignments r
                       WHERE r.principal_id = p.id AND r.workspace_id = p.workspace_id), ARRAY[]::text[]) AS roles,
-           COALESCE((SELECT jsonb_agg(jsonb_build_object('prefix', k.prefix, 'created_at', k.created_at, 'expires_at', k.expires_at,
+           COALESCE((SELECT jsonb_agg(jsonb_build_object('prefix', k.prefix, 'id', k.id, 'name', k.name, 'created_at', k.created_at, 'expires_at', k.expires_at,
                                                          'revoked_at', k.revoked_at, 'last_used_at', k.last_used_at) ORDER BY k.created_at)
                        FROM api_keys k WHERE k.principal_id = p.id AND k.workspace_id = p.workspace_id), '[]'::jsonb) AS keys
     FROM principals p
@@ -52,6 +54,18 @@ def _principal_out(row: Row[Any]) -> PrincipalOut:
         keys=[KeyInfo.model_validate(k) for k in row.keys],
         created_at=row.created_at,
         revoked_at=row.revoked_at,
+        description=row.description,
+        owner_principal_id=row.owner_principal_id,
+        trusted_source=row.trusted_source,
+        model_disclosure=row.model_disclosure,
+        allowed_profiles=list(row.allowed_profiles),
+        quota_requests_per_minute=row.quota_requests_per_minute,
+        quota_context_tokens_per_day=row.quota_context_tokens_per_day,
+        quota_interactions_per_day=row.quota_interactions_per_day,
+        revoke_reason=row.revoke_reason,
+        revoked_by=row.revoked_by,
+        updated_at=row.updated_at,
+        revision=row.revision,
     )
 
 

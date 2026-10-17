@@ -61,7 +61,7 @@ async def test_every_applied_command_enqueues_exactly_one_projection_job_in_its_
     assert (job.status, job.payload) == ("pending", {"command_id": cid, "generation": 0})
     (pin,) = await q(api, tenant, "SELECT pipeline_version, ontology_version_id, stage FROM outbox_jobs WHERE id = :i", i=job.id)
     assert (
-        pin.pipeline_version == "p4.v1"
+        pin.pipeline_version == "p5.v1"
         and str(pin.ontology_version_id) == r.json()["ontology_version_id"]
         and pin.stage == "graph_projection"
     )

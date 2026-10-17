@@ -216,10 +216,9 @@ async def test_a_graphiti_invalidation_with_no_competing_fact_can_be_acknowledge
         )
         assert (again, created_again) == (review_id, False)  # a replay never opens a second item for the same thing
     rid = str(review_id)
+    # P8: opening a correction from it works now (it was `not_available` before the corrections existed); the item is decided and a correction request takes its place
     corr = await decide(t, rid, "open_correction", rationale="incorrect_extraction")
-    assert corr.status_code == 409 and corr.json()["error"]["code"] == "not_available"
-    ack = await decide(t, rid, "acknowledge", rationale="no_action_needed")
-    assert ack.status_code == 200 and ack.json()["status"] == "decided"
+    assert corr.status_code == 200 and corr.json()["status"] == "decided"
 
 
 async def test_a_reviewer_reads_only_the_evidence_of_the_item_and_every_read_is_audited(api, tenant, strict_mock):

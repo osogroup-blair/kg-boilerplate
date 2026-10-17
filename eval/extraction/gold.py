@@ -10,7 +10,10 @@ from typing import Any
 SCENARIOS = Path(__file__).resolve().parents[2] / "tools" / "mock_router" / "fixtures" / "scenarios"
 SARAH_STORY = {
     "entities": [("Person", "Sarah Johnson"), ("Organization", "Acme"), ("Person", "Michael"), ("Topic", "Entrepreneurship")],
-    "facts": [("WORKS_AT", "Sarah Johnson", "Acme", "2022-01-10", "Software Engineer"), ("WORKS_AT", "Sarah Johnson", "Acme", "2024-06-01", "Engineering Manager")],
+    "facts": [
+        ("WORKS_AT", "Sarah Johnson", "Acme", "2022-01-10", "Software Engineer"),
+        ("WORKS_AT", "Sarah Johnson", "Acme", "2024-06-01", "Engineering Manager"),
+    ],
 }
 
 

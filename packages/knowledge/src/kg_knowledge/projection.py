@@ -41,7 +41,19 @@ log = get_logger("kg.projection")
 MAX_ATTEMPTS = 8
 LEASE_SECONDS = 60
 PROJECTED = ("projected", "skipped_by_policy")
-LEDGER_COMMANDS = frozenset({"review.decide", "entity.merge"})  # commands whose graph work is a restore of the rows they changed
+LEDGER_COMMANDS = frozenset(  # commands whose graph work is a restore of the rows they changed (a review decision, a merge, and P8's corrections and identity split)
+    {
+        "review.decide",
+        "entity.merge",
+        "entity.split",
+        "correction.fact_reject",
+        "correction.fact_supersede",
+        "correction.fact_end",
+        "correction.fact_restore",
+        "correction.attribute",
+        "correction.rename",
+    }
+)
 _RETRYABLE_NAMES = frozenset(
     {
         "ServiceUnavailable",
@@ -148,7 +160,7 @@ def render_node(row: Row[Any], spec: OntologySpec) -> RenderedNode:
     return RenderedNode(str(row.id), row.display_name, row.type_key, attrs, row.recorded_at)
 
 
-NOT_CURRENT = frozenset({"proposed", "rejected", "disputed", "deleted"})
+NOT_CURRENT = frozenset({"proposed", "rejected", "disputed", "deleted", "deletion_pending"})
 
 
 def render_edge(row: Row[Any], source_name: str, target_name: str, spec: OntologySpec, episodes: tuple[str, ...] = ()) -> RenderedEdge:
@@ -157,7 +169,7 @@ def render_edge(row: Row[Any], source_name: str, target_name: str, spec: Ontolog
     declared = spec.relationship_types.get(row.rel_type)
     sensitive = {k for k, a in declared.attributes.items() if a.sensitive} if declared else set()
     public = {k: v for k, v in (row.attributes or {}).items() if k not in sensitive and isinstance(v, str | int | float | bool)}
-    extracted = row.source_type != "command"
+    extracted = row.source_type not in ("command", "correction")  # a correction's text comes from the ontology template, like a command's
     fact = (
         (row.fact_text or "")
         if extracted and row.fact_text
@@ -321,6 +333,10 @@ class Projector:
                 spec = await self._specs.get(conn, ctx.workspace_id, row.ontology_version_id)
             except Exception:
                 spec = None
+        if (
+            row.status == "deletion_pending"
+        ):  # frozen by a deletion request (P8): nothing is written to the graph for it any more; the purge removes what is there
+            return "skipped_by_policy"
         if spec is None:
             return await self._mark_failed(ctx, "entities", entity_id, row.revision, "ontology_unreadable", False, "entity")
         if row.projection_status in PROJECTED and row.projected_revision == row.revision:
@@ -398,6 +414,8 @@ class Projector:
             except Exception:
                 spec = None
             episodes = await self._episodes_of(conn, ctx.workspace_id, fact_id)
+        if row.status == "deletion_pending":
+            return "skipped_by_policy"
         if spec is None:
             return await self._mark_failed(ctx, "facts", fact_id, row.revision, "ontology_unreadable", False, "fact")
         if row.projection_status in PROJECTED and row.projected_revision == row.revision:
@@ -770,6 +788,12 @@ class Projector:
         ents = {uuid.UUID(x) for x in result.get("entity_ids", [])}
         facts = {uuid.UUID(x) for x in result.get("fact_ids", [])}
         report = await self.restore_scope(ctx, entity_ids=ents, fact_ids=facts)
+        split = result.get("split")
+        if split:  # an identity split: the episodes whose mentions moved now link to the split-off node (the original's node keeps every other episode)
+            graph = self._scoped(ctx)
+            for m in split.get("mentions", []):
+                if await graph.read_node(split["original"]) is not None and await graph.read_node(split["new"]) is not None:
+                    await graph.move_mentions(split["original"], split["new"], episode_uuid=m["episode_uuid"])
         return report
 
     # ---- drift check ----------------------------------------------------------------------------------------------------------------------
@@ -793,7 +817,7 @@ class Projector:
                     text(
                         "SELECT f.*, s.display_name AS s_name, t.display_name AS t_name FROM facts f "
                         "JOIN entities s ON s.workspace_id = f.workspace_id AND s.id = f.source_entity_id "
-                        "JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id WHERE f.workspace_id = :ws AND f.status <> 'deleted'"
+                        "JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id WHERE f.workspace_id = :ws AND f.status NOT IN ('deleted','deletion_pending')"
                     ),
                     {"ws": ctx.workspace_id},
                 )

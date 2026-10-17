@@ -38,6 +38,38 @@ export function ageLabel(seconds?: number | null): string {
   return `${(seconds / 3600).toFixed(1)}h`;
 }
 
+/** Reasons a curator can give for changing a memory. Audited as codes (lower_snake), never free text. */
+export const MEMORY_REASONS: Array<{ code: string; label: string }> = [
+  { code: "corrected", label: "It was wrong; corrected" },
+  { code: "clarified", label: "Clarified with newer information" },
+  { code: "no_longer_relevant", label: "No longer relevant" },
+  { code: "contradicted", label: "Contradicted by newer evidence" },
+  { code: "duplicate", label: "Duplicate of another memory" },
+  { code: "stale", label: "Stale" },
+];
+
+/** Why a record is corrected: a closed list (audited as a code). The free-text note stays with the correction and is never copied to the audit log. */
+export const CORRECTION_REASONS: Array<{ code: string; label: string }> = [
+  { code: "incorrect_extraction", label: "The extraction was wrong" },
+  { code: "source_error", label: "The source was wrong" },
+  { code: "outdated_information", label: "The information is out of date" },
+  { code: "wrong_identity", label: "It belongs to a different person or thing" },
+  { code: "duplicate_report", label: "Duplicate report" },
+  { code: "privacy_request", label: "A privacy request" },
+  { code: "policy_exception", label: "An approved exception" },
+  { code: "other", label: "Other" },
+];
+
+/** Reasons a deletion request can give (audited as codes). */
+export const DELETION_REASONS: Array<{ code: string; label: string }> = [
+  { code: "data_subject_request", label: "The data subject asked" },
+  { code: "retention_policy", label: "Retention policy" },
+  { code: "offboarding", label: "Offboarding" },
+  { code: "wrong_data", label: "It should never have been collected" },
+  { code: "security_incident", label: "A security incident" },
+  { code: "other", label: "Other" },
+];
+
 /** Reasons an operator can give for a replay / retry / cancel. They are audited as reason codes (lower_snake), never free text. */
 export const REASON_CODES: Array<{ code: string; label: string }> = [
   { code: "fault_cleared", label: "The fault was cleared" },

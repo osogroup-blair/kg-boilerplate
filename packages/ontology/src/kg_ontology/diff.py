@@ -28,11 +28,21 @@ class ImpactCount(BaseModel):
     active: int
 
 
+class AccessImpact(BaseModel):
+    """A type whose access was tightened (P7): how many active entities become subject-scoped, and how many principals lose sight of how many of them."""
+
+    type_key: str
+    entities: int
+    principals_affected: int
+    entities_hidden_from_a_principal: int  # the sum over principals of the entities each can no longer see
+
+
 class DiffResult(BaseModel):
     from_version: str | None
     to_version: str
     changes: list[Change]
     impact: list[ImpactCount] = []
+    access_impact: list[AccessImpact] = []
 
     @property
     def breaking_count(self) -> int:
@@ -157,6 +167,22 @@ def diff_specs(old: OntologySpec | None, new: OntologySpec) -> DiffResult:
                         breaking=True,
                         detail=",".join(removed_cls),
                         reason="classifications no longer allowed",
+                    )
+                )
+            ax, ay = x.get("access", "workspace"), y.get("access", "workspace")
+            if ax != ay:
+                tightened = ay == "subject_scoped"
+                out.append(
+                    Change(
+                        kind="changed",
+                        scope="entity_type",
+                        path=f"{path}.access",
+                        type_key=name,
+                        detail=f"{ax} -> {ay}",
+                        breaking=tightened,
+                        reason="access tightened: principals without a grant on a subject lose sight of it and of its facts"
+                        if tightened
+                        else None,
                     )
                 )
             if x["description"] != y["description"]:

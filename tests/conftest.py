@@ -20,6 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.p4 import strict_mock  # noqa: F401  (a fixture shared by the P4 suites)
 
+# P8: the suites write the out-of-band deletion journal; keep their lines out of the development stack's own journal (the CLI subprocesses inherit this variable).
+os.environ.setdefault(
+    "DELETION_JOURNAL_DIR", str(__import__("pathlib").Path(__file__).resolve().parents[1] / ".local" / "test-deletion-journal")
+)
+
 OWNER_URL = os.environ.get("TEST_DATABASE_URL_OWNER", "postgresql+psycopg://kg_owner:kg_owner_dev@127.0.0.1:5544/kg_test")
 APP_URL = os.environ.get("TEST_DATABASE_URL_APP", "postgresql+psycopg://kg_app:kg_app_dev@127.0.0.1:5544/kg_test")
 SCRATCH_URL = os.environ.get("TEST_SCRATCH_DATABASE_URL_OWNER", "postgresql+psycopg://kg_owner:kg_owner_dev@127.0.0.1:5544/kg_scratch")
@@ -55,6 +60,7 @@ PRODUCTION_SECRETS: dict[str, str] = {
     "content_hmac_secret": "c" * 40,
     "payload_keys": "prod1:" + base64.b64encode(b"k" * 32).decode(),
     "payload_active_kid": "prod1",
+    "deletion_journal_dir": "/var/lib/kg/deletion-journal",
 }
 
 
@@ -84,7 +90,11 @@ def test_settings() -> Settings:
 async def migrated_db() -> AsyncIterator[str]:
     """kg_test at head, from scratch (also exercises downgrade)."""
     require(OWNER_URL, "postgres")
-    await asyncio.to_thread(lambda: migrate.downgrade(OWNER_URL, "base", force_drop_extracted=True))
+    await asyncio.to_thread(
+        lambda: migrate.downgrade(
+            OWNER_URL, "base", force_drop_extracted=True, force_drop_memories=True, force_forget_privileges=True, force_drop_governance=True
+        )
+    )
     await asyncio.to_thread(migrate.upgrade, OWNER_URL, "head")
     yield OWNER_URL
 
@@ -130,7 +140,12 @@ async def api(migrated_db: str, test_settings: Settings) -> AsyncIterator[ApiSta
     require(NEO4J_URI, "neo4j")
     # a generous projection budget: the host may be loaded, and tests that want a deferral (202) cause one on purpose
     settings = make_test_settings(
-        oso_router_mock_url="http://127.0.0.1:8782/v1", oso_router_api_key_api="mock-key", projection_request_budget_seconds=60.0
+        oso_router_mock_url="http://127.0.0.1:8782/v1",
+        oso_router_api_key_api="mock-key",
+        projection_request_budget_seconds=60.0,
+        context_rate_per_minute=1_000_000,
+        context_rate_burst=100_000,  # the suites build thousands of contexts; the limiter has its own tests
+        principal_requests_per_minute=1_000_000,  # likewise for the per-principal request quota (P7); its tests set a registered quota
     )
     engine = create_app_engine(settings, pool_size=3, max_overflow=2)
     seeded = await seed_demo(engine, pepper=settings.auth_key_pepper.get_secret_value())
@@ -183,6 +198,46 @@ async def tenant(api):  # type: ignore[no-untyped-def]
     from tests.support.tenants import clear_graph, make_tenant
 
     t = await make_tenant(api)
+    yield t
+    await clear_graph(api, t.group_id)
+
+
+@pytest_asyncio.fixture()
+async def tenant_mem(api):  # type: ignore[no-untyped-def]
+    """A fresh workspace with the v1.2.0 example ontology (typed memory policy, extraction on): the P5 suites."""
+    from tests.support.tenants import MEMORY_YAML, clear_graph, make_tenant
+
+    t = await make_tenant(api, ontology=MEMORY_YAML)
+    yield t
+    await clear_graph(api, t.group_id)
+
+
+@pytest_asyncio.fixture()
+async def tenant_ctx(api):  # type: ignore[no-untyped-def]
+    """A fresh workspace with the v1.3.0 example ontology (typed memory policy AND the planning / quick_answer context profiles with expected signals): the P6 suites."""
+    from tests.support.tenants import CONTEXT_YAML, clear_graph, make_tenant
+
+    t = await make_tenant(api, ontology=CONTEXT_YAML)
+    yield t
+    await clear_graph(api, t.group_id)
+
+
+@pytest_asyncio.fixture()
+async def tenant_agents(api):  # type: ignore[no-untyped-def]
+    """A fresh workspace with the v1.4.0 example ontology (Person is subject_scoped, agents holding `publish` activate their findings): the P7 suites."""
+    from tests.support.tenants import AGENTS_YAML, clear_graph, make_tenant
+
+    t = await make_tenant(api, ontology=AGENTS_YAML)
+    yield t
+    await clear_graph(api, t.group_id)
+
+
+@pytest_asyncio.fixture()
+async def tenant_governance(api):  # type: ignore[no-untyped-def]
+    """A fresh workspace with the v1.5.0 example ontology (v1.4.0's subject ACLs plus MANAGES and the consolidation policy): the P8 suites."""
+    from tests.support.tenants import GOVERNANCE_YAML, clear_graph, make_tenant
+
+    t = await make_tenant(api, ontology=GOVERNANCE_YAML)
     yield t
     await clear_graph(api, t.group_id)
 

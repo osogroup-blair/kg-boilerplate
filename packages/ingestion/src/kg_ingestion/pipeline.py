@@ -1,7 +1,6 @@
 """The pipeline definition (blueprint Flow A) and the orchestrator that advances an interaction through it.
 
-    normalize ──► graph_ingest (P4) ──┐
-              └─► memory_propose (P5, disabled) ─┴─► finalize (inline, never a job)
+    normalize ──► graph_ingest (P4) ──► memory_propose (P5) ──► finalize (inline, never a job)
 
 `Orchestrator.advance` runs INSIDE the handler's tenant transaction, right after a stage result is written: it enqueues the stages that became ready
 (dedupe keys make that idempotent) and finalises the interaction status once every stage is terminal."""
@@ -80,11 +79,21 @@ class Pipeline:
     def roots(self) -> list[str]:
         return [s.name for s in self.stages if not s.deps]
 
+    def blocked(self, statuses: Mapping[str, str]) -> set[str]:
+        """Pending stages that can never start until something is replayed: a dependency is dead or invalid (or itself blocked). They are not "in flight"."""
+        out: set[str] = set()
+        for s in self.stages:  # stages are declared in dependency order
+            if statuses.get(s.name) == PENDING and any(statuses.get(d) in BAD or d in out for d in s.deps):
+                out.add(s.name)
+        return out
+
     def finalize(self, statuses: Mapping[str, str]) -> str:
-        """The interaction's processing status from its stage states (phase-3 plan §5.3). `accepted` is only ever set at acceptance."""
+        """The interaction's processing status from its stage states (phase-3 plan §5.3). `accepted` is only ever set at acceptance.
+        A stage blocked behind a dead dependency does not keep the event `processing` forever: it is `partial` until the dependency is replayed."""
         if any(statuses.get(r) in BAD for r in self.roots()):
             return "failed"
-        if any(v in OPEN for v in statuses.values()):
+        blocked = self.blocked(statuses)
+        if any(v in OPEN and name not in blocked for name, v in statuses.items()):
             return "processing"
         if all(v in DONE_OK for v in statuses.values()):
             return "indexed"
@@ -96,7 +105,7 @@ PIPELINE_V1 = Pipeline(
     (
         StageDef("normalize"),
         StageDef("graph_ingest", deps=("normalize",), enabled=True, model_stage=True),
-        StageDef("memory_propose", deps=("normalize",), enabled=False, model_stage=True, enabled_in="P5"),
+        StageDef("memory_propose", deps=("normalize", "graph_ingest"), enabled=True, model_stage=True),
     ),
 )
 
@@ -126,6 +135,8 @@ class Orchestrator:
         ).first()
         if head is None:
             return "unknown"
+        if head.processing_status == "deletion_pending":
+            return "deletion_pending"  # frozen by a deletion request (P8): nothing is enqueued and the status is never moved back
         rows = (
             await conn.execute(
                 text(

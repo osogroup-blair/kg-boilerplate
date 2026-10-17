@@ -1,68 +1,23 @@
-import * as Dialog from "@radix-ui/react-dialog";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "../auth/permissions";
 import { Empty, ErrorState, Loading, stateForStatus } from "../components/states";
+import { Badge, btn } from "../components/ui";
+import { fmt } from "../lib/format";
+import { PrincipalDrawer } from "./agents/PrincipalDrawer";
+import { RegisterDialog } from "./agents/RegisterDialog";
 
 type Principal = components["schemas"]["PrincipalOut"];
 
-const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
-
-function PrincipalDetail({ principalId, onClose }: { principalId: string; onClose: () => void }) {
-  const q = useQuery({ queryKey: ["principal", principalId], queryFn: () => api.GET("/v1/principals/{principal_id}", { params: { path: { principal_id: principalId } } }), retry: false });
-  let body;
-  if (q.isLoading) body = <Loading />;
-  else if (q.isError) body = <ErrorState onRetry={() => void q.refetch()} />;
-  else {
-    const res = q.data!;
-    // A foreign or unknown id is the same "Not found" state (the API answers both with an identical 404).
-    body = stateForStatus(res.response.status, "This principal", () => void q.refetch());
-    if (!body && res.data) {
-      const p = res.data;
-      body = (
-        <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
-          <dt className="text-slate-500">Handle</dt><dd className="font-mono">{p.handle}</dd>
-          <dt className="text-slate-500">Name</dt><dd>{p.display_name}</dd>
-          <dt className="text-slate-500">Kind</dt><dd>{p.kind}</dd>
-          <dt className="text-slate-500">Status</dt><dd>{p.status}</dd>
-          <dt className="text-slate-500">Roles</dt><dd>{p.roles.join(", ") || "—"}</dd>
-          <dt className="text-slate-500">Created</dt><dd>{fmt(p.created_at)}</dd>
-          <dt className="text-slate-500">Revoked</dt><dd>{fmt(p.revoked_at)}</dd>
-          <dt className="text-slate-500">API keys</dt>
-          <dd>
-            {p.keys.length === 0 ? "none" : (
-              <ul className="space-y-1">
-                {p.keys.map((k) => (
-                  <li key={k.prefix} className="font-mono text-xs">{k.prefix}… {k.revoked_at ? "(revoked)" : "(active)"} · last used {fmt(k.last_used_at)}</li>
-                ))}
-              </ul>
-            )}
-          </dd>
-        </dl>
-      );
-    }
-  }
-  return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30" />
-        <Dialog.Content aria-describedby={undefined} className="fixed right-0 top-0 h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-xl dark:bg-slate-900">
-          <div className="mb-4 flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold">Principal</Dialog.Title>
-            <Dialog.Close aria-label="Close" className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="h-4 w-4" /></Dialog.Close>
-          </div>
-          {body}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-
+/** Agents & Access (phase 7): who may do what. Workspace admins register, grant, rotate keys and revoke; nobody else sees the controls (the API refuses them anyway). */
 export function AgentsAccess() {
+  const can = useCan();
   const navigate = useNavigate();
   const { principalId } = useParams();
+  const [registering, setRegistering] = useState(false);
   const q = useInfiniteQuery({
     queryKey: ["principals"],
     initialPageParam: undefined as string | undefined,
@@ -82,18 +37,18 @@ export function AgentsAccess() {
     else
       content = (
         <>
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm" aria-label="Principals table">
             <thead className="text-slate-500">
-              <tr><th className="py-2 pr-4">Handle</th><th className="pr-4">Kind</th><th className="pr-4">Roles</th><th className="pr-4">Status</th><th className="pr-4">Key prefixes</th><th>Created</th></tr>
+              <tr><th className="py-2 pr-4">Handle</th><th className="pr-4">Kind</th><th className="pr-4">Roles</th><th className="pr-4">Status</th><th className="pr-4">Active keys</th><th>Created</th></tr>
             </thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900">
                   <td className="py-2 pr-4"><button type="button" onClick={() => navigate(`/agents/${p.id}`)} className="font-mono underline-offset-2 hover:underline">{p.handle}</button></td>
-                  <td className="pr-4">{p.kind}</td>
+                  <td className="pr-4">{p.kind}{p.trusted_source ? <> <Badge tone="blue" title="Trusted source">trusted</Badge></> : null}</td>
                   <td className="pr-4">{p.roles.join(", ")}</td>
-                  <td className="pr-4">{p.status}</td>
-                  <td className="pr-4 font-mono text-xs">{p.keys.map((k) => k.prefix).join(", ") || "—"}</td>
+                  <td className="pr-4">{p.status === "revoked" ? <Badge tone="red" title={p.revoke_reason ?? undefined}>revoked{p.revoke_reason ? ` · ${p.revoke_reason}` : ""}</Badge> : p.status}</td>
+                  <td className="pr-4 font-mono text-xs">{p.keys.filter((k) => !k.revoked_at).map((k) => k.prefix).join(", ") || "—"}</td>
                   <td className="whitespace-nowrap">{fmt(p.created_at)}</td>
                 </tr>
               ))}
@@ -106,10 +61,14 @@ export function AgentsAccess() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Agents &amp; Access</h1>
-      <p className="text-sm text-slate-500">Read-only in this phase. Registration, scopes and revocation arrive with the multi-agent phase.</p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Agents &amp; Access</h1>
+        {can.managePrincipals ? <button type="button" className={btn.primary} onClick={() => setRegistering(true)}>Register agent or app</button> : null}
+      </div>
+      <p className="text-sm text-slate-500">Each agent or app has its own identity, its own grants (read, propose, publish) and its own quotas. A principal with no grants sees workspace-wide memory and its own private memory only.</p>
       {content}
-      {principalId ? <PrincipalDetail principalId={principalId} onClose={() => navigate("/agents")} /> : null}
+      {principalId ? <PrincipalDrawer principalId={principalId} onClose={() => navigate("/agents")} /> : null}
+      {registering ? <RegisterDialog onClose={() => setRegistering(false)} /> : null}
     </div>
   );
 }

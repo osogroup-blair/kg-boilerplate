@@ -22,7 +22,16 @@ async def test_up_down_up_with_the_extracted_data_guard():
     require(SCRATCH_URL, "postgres")
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    await asyncio.to_thread(lambda: migrate.downgrade(SCRATCH_URL, "base", force_drop_extracted=True))
+    await asyncio.to_thread(
+        lambda: migrate.downgrade(
+            SCRATCH_URL,
+            "base",
+            force_drop_extracted=True,
+            force_drop_memories=True,
+            force_forget_privileges=True,
+            force_drop_governance=True,
+        )
+    )
     await asyncio.to_thread(migrate.upgrade, SCRATCH_URL, "head")
     engine = create_async_engine(SCRATCH_URL)
     ws, ver, principal = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
@@ -61,7 +70,16 @@ async def test_up_down_up_with_the_extracted_data_guard():
             assert (
                 await c.execute(text("SELECT count(*) FROM entities WHERE id = :e"), {"e": entity})
             ).scalar_one() == 1  # nothing was touched
-        await asyncio.to_thread(lambda: migrate.downgrade(SCRATCH_URL, "0003", force_drop_extracted=True))
+        await asyncio.to_thread(
+            lambda: migrate.downgrade(
+                SCRATCH_URL,
+                "0003",
+                force_drop_extracted=True,
+                force_drop_memories=True,
+                force_forget_privileges=True,
+                force_drop_governance=True,
+            )
+        )
         async with engine.begin() as c:
             assert (await c.execute(text("SELECT count(*) FROM entities WHERE id = :e"), {"e": entity})).scalar_one() == 0
             assert (
@@ -74,7 +92,16 @@ async def test_up_down_up_with_the_extracted_data_guard():
         await asyncio.to_thread(migrate.upgrade, SCRATCH_URL, "head")
     finally:
         await engine.dispose()
-        await asyncio.to_thread(lambda: migrate.downgrade(SCRATCH_URL, "base", force_drop_extracted=True))
+        await asyncio.to_thread(
+            lambda: migrate.downgrade(
+                SCRATCH_URL,
+                "base",
+                force_drop_extracted=True,
+                force_drop_memories=True,
+                force_forget_privileges=True,
+                force_drop_governance=True,
+            )
+        )
 
 
 async def test_constraints_keep_extracted_rows_honest(api, tenant, strict_mock):
@@ -145,9 +172,13 @@ async def test_the_application_role_cannot_delete_or_rewrite_what_it_must_not(ap
     await run_event(api, t, CYCLIST)
 
     async def denied(statement: str) -> None:
+        """Refused, or (a DELETE behind the P8 purge gate on a table that has no row here) a no-op: nothing ever goes."""
         async with tenant_session(api.engine, ctx_of(t)) as c:
-            with pytest.raises((ProgrammingError, DBAPIError)):
-                await c.execute(text(statement), {"ws": t.ws})
+            try:
+                res = await c.execute(text(statement), {"ws": t.ws})
+            except (ProgrammingError, DBAPIError):
+                return
+            assert statement.startswith("DELETE") and res.rowcount == 0, statement
 
     for table in (
         "fact_evidence",

@@ -50,6 +50,12 @@ class OperationsService:
         self._pipeline = pipeline
         self._orchestrator = Orchestrator(pipeline)
 
+    def _enabled(self, stage: str) -> bool:
+        try:
+            return self._pipeline.stage(stage).enabled
+        except KeyError:
+            return False
+
     # ---- replay (ING-05) --------------------------------------------------------------------------------------------------------------------
 
     async def replay_interaction(
@@ -62,8 +68,10 @@ class OperationsService:
         stage: str | None,
         reason_code: str,
         repin: bool = False,
+        upgrade_pipeline: bool = False,
     ) -> ReplayOut:
-        """`repin` (audited) moves the replayed stage to the CURRENT pipeline version and the CURRENT active ontology: how an event accepted before a stage
+        """`upgrade_pipeline` (P5, audited) repins every stage of an older event that was `skipped_disabled` when it was accepted and is enabled now (e.g. the
+        memory stage of an event accepted under p4.v1); it implies `repin`. `repin` (audited) moves the replayed stage to the CURRENT pipeline version and the CURRENT active ontology: how an event accepted before a stage
         existed, or while the workspace had no ontology, gets processed (P4). Without it a replay re-runs under the versions the stage was planned with."""
         ws = ctx.workspace_id
         head = (
@@ -85,15 +93,20 @@ class OperationsService:
             ).all()
         }
         active_version: uuid.UUID | None = None
+        repin = repin or upgrade_pipeline
         if repin:
-            stage = stage or "graph_ingest"
+            stage = stage or (None if upgrade_pipeline else "graph_ingest")
             active = (
                 await conn.execute(text("SELECT active_version_id FROM workspace_ontology WHERE workspace_id = :ws"), {"ws": ws})
             ).first()
             if active is None or active.active_version_id is None:
                 raise NoActiveOntology()
             active_version = active.active_version_id
-        if stage is not None:
+        if upgrade_pipeline:
+            targets = [s for s in stages.values() if s.status == SKIPPED_DISABLED and self._enabled(s.stage) and stage in (None, s.stage)]
+            if not targets:
+                raise NothingToReplay()
+        elif stage is not None:
             if stage not in stages:
                 raise ValidationFailed("unknown stage", details={"fields": ["stage"]})
             st = stages[stage]
@@ -133,6 +146,15 @@ class OperationsService:
                         reason_code=reason_code,
                         version_id=active_version,
                         interaction_id=interaction_id,
+                    ),
+                )
+            if upgrade_pipeline:
+                await audit.record(
+                    "interaction.pipeline_upgraded",
+                    resource_type="interaction",
+                    resource_id=interaction_id,
+                    metadata=AuditMetadata(
+                        stage=_stage_enum(st.stage), generation=generation, reason_code=reason_code, interaction_id=interaction_id
                     ),
                 )
             replayed.append((st.stage, generation))
@@ -192,6 +214,23 @@ class OperationsService:
             replay = await self.replay_interaction(conn, ctx, audit, job.subject_id, stage=job.stage, reason_code=reason_code)
             new = replay.replayed[0]
             new_job_id, generation = new.job_id, new.generation
+        elif (
+            job.subject_type == "memory"
+        ):  # P5: a dead embed / expiry job becomes a new job one generation higher (payload carries ids only)
+            new_job_id = await enqueue(
+                conn,
+                workspace_id=ws,
+                stage=job.stage,
+                subject_type="memory",
+                subject_id=job.subject_id,
+                dedupe_key=f"memory:{job.subject_id}:{job.stage}:retry{generation}",
+                payload={**{k: v for k, v in (job.payload or {}).items() if k != "generation"}, "generation": generation},
+                pipeline_version=job.pipeline_version,
+                ontology_version_id=job.ontology_version_id,
+                correlation_id=job.correlation_id,
+            )
+            if new_job_id is None:
+                raise AlreadyReplayed()
         else:
             new_job_id = await enqueue(
                 conn,

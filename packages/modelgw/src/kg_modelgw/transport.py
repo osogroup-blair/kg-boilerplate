@@ -23,6 +23,7 @@ from kg_modelgw.calllog import CallRecord, CallSink
 from kg_modelgw.config import CLASSIFICATION_ORDER, ModelConfig
 from kg_modelgw.egress import EgressContext, current_egress
 from kg_modelgw.errors import EgressDenied
+from kg_modelgw.narrowing import PolicyUnavailable, WorkspaceEgress
 
 log = get_logger("kg.modelgw.transport")
 
@@ -46,7 +47,9 @@ class RouterTransport(httpx.AsyncBaseTransport):
         hmac_secret: str,
         inner: httpx.AsyncBaseTransport | None = None,
         production: bool = False,
+        narrowing: WorkspaceEgress | None = None,
     ):
+        self._narrowing = narrowing  # P8: a workspace's own, stricter egress setting (never looser than the platform policy)
         self._host = httpx.URL(base_url).host
         self._api_key, self._service, self._config, self._sink = api_key, service, config, sink
         self._secret, self._production = hmac_secret, production
@@ -124,6 +127,13 @@ class RouterTransport(httpx.AsyncBaseTransport):
         classification = stricter(caller_cls if isinstance(caller_cls, str) else None, ctx.classification)
         if not self._config.egress_allows(classification):
             raise self._deny(ctx, classification, "policy", operation, alias)
+        if self._narrowing is not None and ctx.workspace_id:
+            try:
+                narrowed = await self._narrowing.denied(ctx.workspace_id)
+            except PolicyUnavailable:
+                raise self._deny(ctx, classification, "workspace_policy_unavailable", operation, alias) from None
+            if classification in narrowed:
+                raise self._deny(ctx, classification, "workspace_policy", operation, alias)
 
         ctx.attempt += 1
         rid = ctx.correlation_id if ctx.correlation_id and is_uuid(ctx.correlation_id) else uuid7_str()

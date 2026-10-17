@@ -1,17 +1,18 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { useCan } from "../../auth/permissions";
 import { Empty, ErrorState, Loading, PermissionDenied, stateForStatus } from "../../components/states";
-import { Badge, inputCls, ReviewTypeBadge } from "../../components/ui";
+import { Badge, inputCls, ReviewTypeBadge, SubmitterRevokedBadge } from "../../components/ui";
 import { ageLabel, fmt } from "../../lib/format";
 
-const TYPES = ["identity_match", "contradiction", "graphiti_invalidation", "policy_violation"] as const;
+const TYPES = ["identity_match", "contradiction", "graphiti_invalidation", "policy_violation", "memory_proposal", "memory_conflict", "source_compromised", "deletion_exception", "consolidation_proposal", "correction_request", "authoritative_override"] as const;
 
 export function ReviewQueuePage() {
   const can = useCan();
-  const [type, setType] = useState<string>("");
+  const [params] = useSearchParams();
+  const [type, setType] = useState<string>(params.get("type") ?? "");
   const [status, setStatus] = useState<"open" | "decided">("open");
   const list = useInfiniteQuery({
     queryKey: ["reviews", type, status],
@@ -29,7 +30,7 @@ export function ReviewQueuePage() {
     const blocked = stateForStatus(list.data!.pages[0]!.response.status, "the review queue", () => void list.refetch());
     const rows = list.data!.pages.flatMap((p) => p.data?.items ?? []);
     if (blocked) content = blocked;
-    else if (rows.length === 0) content = <Empty title={status === "open" ? "Nothing to review" : "No decided items"} hint={status === "open" ? "Identity matches, contradictions and policy exceptions land here." : undefined} />;
+    else if (rows.length === 0) content = <Empty title={status === "open" ? "Nothing to review" : "No decided items"} hint={status === "open" ? "Identity matches, contradictions, policy exceptions, memory proposals, deletion exceptions and consolidation proposals land here." : undefined} />;
     else
       content = (
         <>
@@ -38,7 +39,7 @@ export function ReviewQueuePage() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900" data-testid={`review-${r.id}`}>
-                  <td className="py-2 pr-4"><ReviewTypeBadge type={r.item_type} /></td>
+                  <td className="py-2 pr-4"><ReviewTypeBadge type={r.item_type} />{r.agent_generated ? <> <Badge tone="amber" title="Produced by an agent">agent generated</Badge></> : null}{r.submitter_revoked ? <> <SubmitterRevokedBadge /></> : null}</td>
                   <td className="pr-4"><Link className="font-mono text-xs underline-offset-2 hover:underline" to={`/reviews/${r.id}`}>{r.reason_code}</Link></td>
                   <td className="whitespace-nowrap pr-4">{fmt(r.created_at)}</td>
                   <td className="pr-4">{ageLabel((Date.now() - new Date(r.created_at).getTime()) / 1000)}</td>

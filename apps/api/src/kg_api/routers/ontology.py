@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from kg_domain.envelope import Page
+from kg_extraction.simulation import SimulateIn, SimulationOut
 from kg_governance.authz.policy import Action, requires
 from kg_knowledge.models import (
     ActivateIn,
@@ -201,3 +202,31 @@ async def activate_version(
 @requires(Action.ONTOLOGY_READ)
 async def rule_catalog(state: StateDep) -> RuleCatalogOut:
     return state.knowledge.ontology.rule_catalog()
+
+
+# ---- P8: simulation (ONT-05) --------------------------------------------------------------------------------------------------------------------
+
+
+@router.post(
+    "/versions/{version_id}/simulate",
+    response_model=SimulationOut,
+    responses={**CONFLICT, 202: {"description": "Started: poll the status URL"}},
+)
+@requires(Action.ONTOLOGY_WRITE)
+async def simulate_version(
+    version_id: uuid.UUID, body: SimulateIn, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep, audit: AuditDep
+) -> JSONResponse:
+    """Preview what a DRAFT would extract from sample interactions, before it is published. Without `confirm` this only estimates tokens and cost (nothing is sent to a
+    model). With `confirm=true` (and optionally the `simulation_id` of the preview) the run starts in an isolated staging namespace that is removed when it ends; the report
+    holds counts and type keys only. A `local_only` sample, or one whose consent is withheld, is skipped by policy."""
+    out = await state.simulation.request(db, ws, principal, version_id, body, audit)
+    return JSONResponse(
+        out.model_dump(mode="json"), status_code=202 if out.status == "running" else 200, headers={"Cache-Control": "no-store"}
+    )
+
+
+@router.get("/simulations/{simulation_id}", response_model=SimulationOut)
+@requires(Action.ONTOLOGY_READ)
+async def get_simulation(simulation_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> JSONResponse:
+    out = await state.simulation.get(db, ws.workspace_id, simulation_id)
+    return JSONResponse(out.model_dump(mode="json"), headers={"Cache-Control": "no-store"})

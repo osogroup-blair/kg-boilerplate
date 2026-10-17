@@ -24,7 +24,7 @@ from kg_ingestion.models import (
 )
 from kg_obs import context
 
-from kg_api.deps import AuditDep, DbDep, PrincipalDep, StateDep, WorkspaceDep
+from kg_api.deps import AuditDep, DbDep, PrincipalDep, StateDep, SubjectsDep, WorkspaceDep
 from kg_api.http import IdempotencyKeyHeader, require_key, run_idempotent
 
 router = APIRouter(prefix="/v1/interactions", tags=["interactions"])
@@ -57,6 +57,7 @@ async def accept_interaction(
     idempotency_key: IdempotencyKeyHeader = None,
 ) -> JSONResponse:
     key = require_key(idempotency_key)
+    await state.quotas.admit_interaction(db, principal)  # P7: interactions per UTC day (429 quota_exceeded)
     result = await state.ingestion.accept.accept(db, ws, principal, audit, key, body)
     url = f"/v1/interactions/{result.event_id}"
     out = AcceptedOut(event_id=result.event_id, status=result.status, status_url=url, request_id=context.request_id_var.get() or "")
@@ -73,6 +74,7 @@ async def list_interactions(
     principal: PrincipalDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     status: ProcessingStatus | None = None,
     kind: Literal["message", "conversation", "observation", "document", "json"] | None = None,
     source_system: Annotated[str | None, Query(max_length=64)] = None,
@@ -84,6 +86,7 @@ async def list_interactions(
     return await state.ingestion.reads.list(
         db,
         ws,
+        subjects=subjects,
         only_submitted_by=principal.principal_id if _only_own(principal.roles) else None,
         status=status,
         kind=kind,
@@ -97,9 +100,11 @@ async def list_interactions(
 
 @router.get("/{event_id}", response_model=InteractionDetail)
 @requires(Action.INTERACTION_READ)
-async def get_interaction(event_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep) -> InteractionDetail:
+async def get_interaction(
+    event_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep
+) -> InteractionDetail:
     return await state.ingestion.reads.get(
-        db, ws, event_id, only_submitted_by=principal.principal_id if _only_own(principal.roles) else None
+        db, ws, event_id, subjects=subjects, only_submitted_by=principal.principal_id if _only_own(principal.roles) else None
     )
 
 
@@ -136,7 +141,14 @@ async def replay_interaction(
 
     async def produce() -> tuple[int, ReplayOut, dict[str, str]]:
         out = await state.ingestion.operations.replay_interaction(
-            db, ws, audit, event_id, stage=body.stage, reason_code=body.reason_code, repin=body.repin
+            db,
+            ws,
+            audit,
+            event_id,
+            stage=body.stage,
+            reason_code=body.reason_code,
+            repin=body.repin,
+            upgrade_pipeline=body.upgrade_pipeline,
         )
         return 202, out, {}
 

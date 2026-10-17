@@ -12,6 +12,7 @@ from kg_db.session import tenant_session
 from kg_domain.principal import Principal, WorkspaceContext
 from kg_governance.audit import AuditMetadata, AuditReason, AuditWriter
 from kg_governance.authz.policy import is_allowed, policy_of
+from kg_governance.grants import ScopeGrants, SubjectFilter
 from kg_obs import context, metrics
 from kg_obs.logging import get_logger
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -56,6 +57,9 @@ async def guard(request: Request) -> None:
     if policy.kind == "public":
         return
     principal = await authenticate(request)
+    await get_state(request).quotas.admit_request(principal)  # P7: the principal's requests-per-minute quota (429 quota_exceeded)
+    if "x-act-as-principal" in request.headers and request.scope.get("path") != "/v1/context/build":
+        log.warning("act_as_header_ignored")  # only the context build honours it (ADR-035); anywhere else it changes nothing
     if policy.kind == "requires" and policy.action is not None and not is_allowed(principal, policy.action):
         metrics.authz_denials_total.labels(action=policy.action.value).inc()
         state = get_state(request)
@@ -106,6 +110,16 @@ async def audit_writer(conn: DbDep, principal: PrincipalDep) -> AuditWriter:
 
 
 AuditDep = Annotated[AuditWriter, Depends(audit_writer)]
+
+
+async def subject_filter(request: Request, conn: DbDep, principal: PrincipalDep) -> SubjectFilter:
+    """The caller's entity/fact filter under the active ontology (P7, ADR-037): built once per request and passed to every `kg_knowledge` read, where it is part of the SQL."""
+    state = get_state(request)
+    grants = await ScopeGrants.for_principal(conn, principal)
+    return await state.knowledge.reads.subject_filter(conn, principal.workspace_id, grants)
+
+
+SubjectsDep = Annotated[SubjectFilter, Depends(subject_filter)]
 
 
 def parse_uuid(value: str) -> uuid.UUID | None:

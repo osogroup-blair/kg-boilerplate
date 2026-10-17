@@ -6,15 +6,17 @@ import type { components } from "../../api/schema";
 import { useCan } from "../../auth/permissions";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ErrorState, Loading, PermissionDenied, stateForStatus } from "../../components/states";
-import { Badge, Banner, btn, EvidenceBadge, FactStatusBadge, ReviewTypeBadge } from "../../components/ui";
+import { AuthorityBadge, Badge, Banner, btn, ClassificationBadge, EvidenceBadge, FactStatusBadge, MemoryStatusBadge, MemoryTypeBadge, ReviewTypeBadge, SubmitterRevokedBadge } from "../../components/ui";
 import { displayValue, fmt, fmtDate, isRedacted } from "../../lib/format";
 import { ContentView } from "../interactions/InteractionDetailPage";
+import { CorrectFactDialog } from "../corrections/CorrectionDialogs";
 import { DecisionForm } from "./DecisionForm";
 
 type Detail = components["schemas"]["ReviewDetail"];
 type Entity = components["schemas"]["ReviewEntityView"];
 type Fact = components["schemas"]["FactOut"];
 type Content = components["schemas"]["ContentOut"];
+type MemoryView = components["schemas"]["ReviewMemoryView"];
 
 function EntityCard({ title, e }: { title: string; e: Entity }) {
   return (
@@ -29,6 +31,23 @@ function EntityCard({ title, e }: { title: string; e: Entity }) {
         <dt className="text-slate-500">Facts</dt><dd>{e.fact_count}</dd>
         {Object.entries(e.attributes).map(([k, v]) => <div key={k} className="contents"><dt className="text-slate-500">{k}</dt><dd>{isRedacted(v) ? <Badge tone="slate">redacted</Badge> : displayValue(v)}</dd></div>)}
       </dl>
+    </section>
+  );
+}
+
+/** A memory a review item is about. The text is shown as text; the scopes are the ones THIS reviewer may use (the API filters them). */
+function MemoryCard({ title, m }: { title: string; m: MemoryView }) {
+  return (
+    <section aria-label={title} className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800" data-testid={`memory-card-${title.toLowerCase()}`}>
+      <h3 className="text-sm font-medium text-slate-500">{title}</h3>
+      <blockquote className="whitespace-pre-wrap text-sm">{m.content}</blockquote>
+      <div className="flex flex-wrap gap-1"><MemoryTypeBadge type={m.type} /><MemoryStatusBadge status={m.status} /><EvidenceBadge status={m.evidence_status} /><AuthorityBadge authority={m.authority_class} /><ClassificationBadge classification={m.classification} /></div>
+      <dl className="grid grid-cols-[7rem_1fr] gap-y-1 text-sm">
+        <dt className="text-slate-500">Origin</dt><dd>{m.origin}</dd>
+        <dt className="text-slate-500">Scopes</dt><dd>{m.scopes.map((s) => `${s.kind}${!s.ref || s.ref === "*" ? "" : `:${s.ref.slice(0, 8)}…`}`).join(", ") || "—"}</dd>
+        <dt className="text-slate-500">Recorded</dt><dd>{fmt(m.recorded_at)}</dd>
+      </dl>
+      <Link className="text-sm underline" to={`/memories/${m.id}`}>Open memory</Link>
     </section>
   );
 }
@@ -102,6 +121,59 @@ function EvidenceReveal({ reviewId, interaction }: { reviewId: string; interacti
   );
 }
 
+const EXCEPTION_REASONS: Record<string, string> = {
+  shared_memory_mentions_subject: "A memory about someone else names the person whose data was deleted. It was kept: only a person can decide what to do with its wording.",
+  legal_hold: "A legal hold covers the target, so nothing was purged. Releasing the hold resumes the request.",
+  residual_text: "Text that names the deleted subject was found after the purge.",
+  residual_id: "A deleted id was still found after the purge.",
+  graph_residual: "The graph still holds text or an id of the deleted subject.",
+};
+
+/** A deletion that could not finish by itself. The text that names the subject is never shown here (it would put it on screen again); the memory is opened through its own page. */
+function DeletionExceptionCard({ d }: { d: Detail }) {
+  const memoryId = typeof d.detail?.memory_id === "string" ? d.detail.memory_id : null;
+  const location = typeof d.detail?.location === "string" ? d.detail.location : null;
+  return (
+    <section aria-label="Deletion exception" className="space-y-2 rounded-lg border border-red-200 p-3 dark:border-red-900" data-testid="deletion-exception">
+      <p className="text-sm">{EXCEPTION_REASONS[d.reason_code] ?? "A deletion needs a decision before it can finish."}</p>
+      <dl className="grid grid-cols-[9rem_1fr] gap-y-1 text-sm">
+        <dt className="text-slate-500">Deletion request</dt><dd>{d.deletion_request_id ? <Link className="underline" to={`/deletions/${d.deletion_request_id}`}>{d.deletion_request_id.slice(0, 8)}…</Link> : "—"}</dd>
+        {location ? <><dt className="text-slate-500">Where</dt><dd className="font-mono text-xs">{location}</dd></> : null}
+        {memoryId ? <><dt className="text-slate-500">Memory</dt><dd><Link className="underline" to={`/memories/${memoryId}`}>open the memory</Link></dd></> : null}
+      </dl>
+      <p className="text-xs text-slate-500"><strong>Redact</strong> replaces the wording and removes the original for good. <strong>Delete</strong> removes the whole item. <strong>Retain</strong> keeps it under a recorded reason. <strong>Check again</strong> re-runs the verification.</p>
+    </section>
+  );
+}
+
+/** A synthesised memory next to the memories it would fold in: approving supersedes them (their evidence is kept by reference), rejecting changes nothing. */
+function ConsolidationCard({ d }: { d: Detail }) {
+  const proposal = d.memories.find((m) => m.role === "candidate");
+  const sources = d.memories.filter((m) => m.role === "source");
+  return (
+    <>
+      <p className="text-sm">The consolidation job proposes one statement that sums up several memories. Nothing took effect: the sources stay active until you approve.</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {proposal ? <MemoryCard title="Proposal" m={proposal} /> : <Banner tone="amber" role="status">The proposed memory is not visible to you.</Banner>}
+        <section aria-label="Sources" className="space-y-2" data-testid="consolidation-sources">
+          <h3 className="text-sm font-medium text-slate-500">Would be folded in ({sources.length})</h3>
+          {sources.map((m, i) => <MemoryCard key={m.id} title={`Source ${i + 1}`} m={m} />)}
+        </section>
+      </div>
+    </>
+  );
+}
+
+function CorrectionButton({ fact }: { fact: Fact }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className={btn.secondary} onClick={() => setOpen(true)}>Correct this fact…</button>
+      {open ? <CorrectFactDialog fact={fact} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
 function Body({ d }: { d: Detail }) {
   const existing = d.facts.find((f) => f.id === d.competing_fact_id);
   const claim = d.facts.find((f) => f.id === d.fact_id);
@@ -127,6 +199,52 @@ function Body({ d }: { d: Detail }) {
         <p className="text-sm">A conversation made a claim that conflicts with what the platform holds. The existing fact stays current; the claim waits here.</p>
         <div className="grid gap-4 md:grid-cols-2">{existing ? <FactCard title="Existing" f={existing} /> : null}{claim ? <FactCard title="Claim" f={claim} /> : null}</div>
         <Timeline facts={[existing, claim].filter((f): f is Fact => !!f)} />
+      </>
+    );
+  }
+  if (d.item_type === "memory_proposal" || d.item_type === "memory_conflict") {
+    const candidate = d.memories.find((m) => m.role === "candidate");
+    const competing = d.memories.find((m) => m.role === "competing");
+    return (
+      <>
+        <p className="text-sm">
+          {d.item_type === "memory_proposal"
+            ? "A memory waits for approval before agents are told it. It was proposed by an agent, an app or the extraction stage, or it is procedural (a way of behaving), which is never activated without a person."
+            : competing
+              ? "A new memory disagrees with one the platform holds at higher authority. The existing memory stays current until you decide."
+              : "A curator disputed this memory. It is not served while the dispute is open."}
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">{competing ? <MemoryCard title="Existing" m={competing} /> : null}{candidate ? <MemoryCard title={competing ? "Claim" : "Memory"} m={candidate} /> : null}</div>
+        {d.memories.length === 0 ? <Banner tone="amber" role="status">The memory is not visible to you, so it cannot be decided from here.</Banner> : null}
+      </>
+    );
+  }
+  if (d.item_type === "source_compromised") {
+    const memory = d.memories.find((m) => m.role === "candidate");
+    return (
+      <>
+        <Banner tone="red" role="alert">The principal that submitted the source of this was revoked as <strong>compromised</strong>. It is disputed, and contexts show it only as a caution, until you decide.</Banner>
+        <div className="grid gap-4 md:grid-cols-2">{memory ? <MemoryCard title="Memory" m={memory} /> : null}{claim ? <FactCard title="Fact" f={claim} /> : null}</div>
+        <p className="text-sm text-slate-500"><strong>Restore</strong> puts it back as it was. <strong>Confirm removal</strong> refuses it for good (the record is kept, not served).</p>
+      </>
+    );
+  }
+  if (d.item_type === "deletion_exception") return <DeletionExceptionCard d={d} />;
+  if (d.item_type === "consolidation_proposal") return <ConsolidationCard d={d} />;
+  if (d.item_type === "authoritative_override") {
+    return (
+      <>
+        <Banner tone="red" role="alert">An administrator or reviewer corrected a fact that an <strong>authoritative system</strong> asserted. The correction stands; this item exists so the source's owner is told. Acknowledge it once they have been.</Banner>
+        <div className="grid gap-4 md:grid-cols-2">{claim ? <FactCard title="Corrected fact" f={claim} /> : null}{existing ? <FactCard title="Previous fact" f={existing} /> : null}</div>
+      </>
+    );
+  }
+  if (d.item_type === "correction_request") {
+    return (
+      <>
+        <p className="text-sm">Someone asked for this fact to be corrected. Deciding records the request's outcome; the correction itself is its own audited command, made from the fact or from here.</p>
+        <div className="grid gap-4 md:grid-cols-2">{claim ? <FactCard title="Fact" f={claim} /> : null}</div>
+        {claim && claim.status !== "rejected" && d.status === "open" ? <CorrectionButton fact={claim} /> : null}
       </>
     );
   }
@@ -171,6 +289,8 @@ export function ReviewDetailPage() {
       <Link to="/reviews" className={btn.link}>← Review queue</Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">Review</h1><ReviewTypeBadge type={d.item_type} />
+        {d.agent_generated ? <Badge tone="amber" title="Produced by an agent">agent generated</Badge> : null}
+        {d.submitter_revoked ? <SubmitterRevokedBadge /> : null}
         {open ? <Badge tone="amber">open</Badge> : <Badge tone="green">decided: {d.decision?.replace(/_/g, " ")}</Badge>}
         <span className="font-mono text-xs text-slate-500">{d.id}</span>
       </div>

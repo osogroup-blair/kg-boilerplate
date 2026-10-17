@@ -10,7 +10,7 @@ from kg_governance.authz.policy import Action, is_allowed, requires
 from kg_knowledge.models import EvidenceOut, FactOut, RelationshipAssertIn, RelationshipEndIn
 
 from kg_api.commands_runner import run_command
-from kg_api.deps import DbDep, PrincipalDep, StateDep, WorkspaceDep
+from kg_api.deps import DbDep, PrincipalDep, StateDep, SubjectsDep, WorkspaceDep
 from kg_api.http import IdempotencyKeyHeader, require_key
 from kg_api.routers.entities import COMMAND_RESPONSES
 
@@ -42,13 +42,19 @@ async def end_relationship(
 
 @router.get("/{fact_id}", response_model=FactOut)
 @requires(Action.ENTITY_READ)
-async def get_relationship(fact_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep) -> FactOut:
-    return await state.knowledge.reads.get_fact(db, ws, fact_id, can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE))
+async def get_relationship(
+    fact_id: uuid.UUID, state: StateDep, principal: PrincipalDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep
+) -> FactOut:
+    return await state.knowledge.reads.get_fact(
+        db, ws, fact_id, can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE), subjects=subjects
+    )
 
 
 @router.get("/{fact_id}/evidence", response_model=list[EvidenceOut])
 @requires(Action.ENTITY_READ)
-async def relationship_evidence(fact_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[EvidenceOut]:
+async def relationship_evidence(
+    fact_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep
+) -> list[EvidenceOut]:
     """Why does the system hold this fact? (KGR-05) The commands and interaction episodes behind it, as metadata. The content of an interaction is read
     through the audited evidence endpoints, never here."""
-    return await state.knowledge.graph_reads.fact_evidence(db, ws, fact_id)
+    return await state.knowledge.graph_reads.fact_evidence(db, ws, fact_id, subjects=subjects)

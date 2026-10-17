@@ -123,7 +123,7 @@ async def test_replay_with_repin_processes_an_event_accepted_before_the_stage_ex
         i=uuid.UUID(event),
     )
     active = (await t.get("/v1/ontologies/active")).json()["version"]["id"]
-    assert (pin.pipeline_version, pin.o) == ("p4.v1", active)
+    assert (pin.pipeline_version, pin.o) == ("p5.v1", active)
     assert (await t.req("POST", f"/v1/interactions/{event}/replay", "reader", json={"reason_code": "x", "repin": True})).status_code == 403
 
 

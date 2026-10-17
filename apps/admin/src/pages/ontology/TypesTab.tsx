@@ -67,6 +67,13 @@ export function TypesTab() {
                   onBlur={(e) => setSpec((s) => updateEntityType(s, selected, { identity: { ...type.identity, aliases_from: list(e.target.value) } }))} />
               </Field>
             </div>
+            <Field label="Access" hint="Subject-scoped: this type's entities, and every fact touching one, are visible only to principals granted that subject (admins and reviewers see all). Tightening is a breaking change.">
+              <select aria-label="Entity access" className={inputCls} disabled={readOnly} value={type.access ?? "workspace"}
+                onChange={(e) => setSpec((s) => updateEntityType(s, selected, { access: e.target.value === "subject_scoped" ? "subject_scoped" : "workspace" }))}>
+                <option value="workspace">workspace (every principal sees it)</option>
+                <option value="subject_scoped">subject_scoped (only with a grant on the subject)</option>
+              </select>
+            </Field>
             <fieldset className="space-y-1">
               <legend className="text-sm text-slate-600 dark:text-slate-300">Allowed classifications</legend>
               <div className="flex flex-wrap gap-3">

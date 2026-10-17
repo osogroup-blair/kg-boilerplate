@@ -18,7 +18,7 @@ from kg_jobs.policy import policy_for
 
 _KEY = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 _TOKEN = re.compile(r"^[A-Za-z0-9_.:@=-]{1,64}$")  # UUIDs, enum names and short ids fit; sentences do not (no spaces)
-SUBJECT_TYPES = ("interaction", "command")
+SUBJECT_TYPES = ("interaction", "command", "memory")
 
 
 def validate_payload(payload: dict[str, Any]) -> dict[str, Any]:

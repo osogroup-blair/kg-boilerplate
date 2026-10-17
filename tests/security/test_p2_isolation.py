@@ -18,8 +18,15 @@ BODIES: dict[str, Any] = {
     "publish_version": {},
     "update_entity": {},
     "end_relationship": {"valid_to": "2025-01-01"},
+    "correct_relationship": {"kind": "reject", "reason_code": "incorrect_extraction"},
+    "correct_entity": {"kind": "rename", "reason_code": "incorrect_extraction", "name": "Nobody"},
 }
-HEADERS = {"update_entity": {"If-Match": 'W/"rev-1"'}, "replace_draft": {"If-Match": 'W/"rev-1"'}}
+HEADERS = {
+    "update_entity": {"If-Match": 'W/"rev-1"'},
+    "replace_draft": {"If-Match": 'W/"rev-1"'},
+    "correct_relationship": {"If-Match": 'W/"rev-1"'},
+    "correct_entity": {"If-Match": 'W/"rev-1"'},
+}
 # routes with no id in the path: covered by list/create tests; each must still be named here so a new one cannot slip in unclassified
 NO_ID_ROUTES = {
     ("GET", "/v1/ontologies/versions"),
@@ -78,6 +85,10 @@ async def test_foreign_ids_are_indistinguishable_from_random_ids_on_every_route(
             params = [p.name for p in route.dependant.path_params]  # type: ignore[attr-defined]
             if not params:
                 continue
+            if path.endswith("/corrections/preview"):
+                continue  # takes the correction as query parameters: its foreign-id check is in tests/integration/test_p8_corrections.py
+            if params[0] == "simulation_id":
+                continue  # a simulation belongs to its workspace; the foreign-id check is in tests/integration/test_p8_simulation.py
             kind = id_kind(params[0])
             name = route.name
             body = BODIES.get(name, {} if method in ("POST", "PUT", "PATCH") else None)

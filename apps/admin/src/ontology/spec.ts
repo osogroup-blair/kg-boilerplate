@@ -36,6 +36,8 @@ export interface EntityType {
   description?: string;
   identity?: { key?: string; external_id_systems?: string[]; aliases_from?: string[] };
   allowed_classifications?: string[];
+  /** P7 (ADR-037): `subject_scoped` entities, and every fact touching one, are visible only to principals granted that subject. Default: workspace. */
+  access?: "workspace" | "subject_scoped";
   attributes: Record<string, Attribute>;
   rules: Rule[];
 }

@@ -35,11 +35,30 @@ from eval.extraction.gold import load  # noqa: E402
 REPORTS = ROOT / "eval" / "reports"
 MOCK = "http://127.0.0.1:8782"
 # proposed baselines (plan §10), to be confirmed with the first live report in hand; the first three are strict
-THRESHOLDS = {"missed_reverts": 0, "cross_workspace_links": 0, "unquarantined_unparseable": 0, "fact_recall": 0.8, "fact_precision": 0.8, "identity_correct": 1.0}
+THRESHOLDS = {
+    "missed_reverts": 0,
+    "cross_workspace_links": 0,
+    "unquarantined_unparseable": 0,
+    "fact_recall": 0.8,
+    "fact_precision": 0.8,
+    "identity_correct": 1.0,
+}
 PAIRS = {
-    "related": [("Sarah Johnson", "S. Johnson"), ("Sarah Johnson", "Sarah J."), ("Michael", "Mike"), ("Acme", "Acme Corp"), ("Entrepreneurship", "Entrepreneur")],
+    "related": [
+        ("Sarah Johnson", "S. Johnson"),
+        ("Sarah Johnson", "Sarah J."),
+        ("Michael", "Mike"),
+        ("Acme", "Acme Corp"),
+        ("Entrepreneurship", "Entrepreneur"),
+    ],
     "same_name": [("Sarah Johnson", "Sarah Johnson")],
-    "unrelated": [("Sarah Johnson", "Michael"), ("Acme", "Entrepreneurship"), ("Sarah Johnson", "Acme"), ("Michael", "Velo Club"), ("Tom", "NewCo")],
+    "unrelated": [
+        ("Sarah Johnson", "Michael"),
+        ("Acme", "Entrepreneurship"),
+        ("Sarah Johnson", "Acme"),
+        ("Michael", "Velo Club"),
+        ("Tom", "NewCo"),
+    ],
 }
 
 
@@ -54,11 +73,21 @@ async def snapshot(sql, t: Any) -> dict[str, Any]:  # type: ignore[no-untyped-de
         "SELECT s.display_name AS source, f.rel_type, tg.display_name AS target, f.status, f.evidence_status, f.valid_from, f.source_type, f.authority_class, f.valid_to "
         "FROM facts f JOIN entities s ON s.id = f.source_entity_id JOIN entities tg ON tg.id = f.target_entity_id WHERE f.workspace_id = :ws",
     )
-    entities = await sql(t, "SELECT id::text AS id, display_name AS name, type_key AS type, status, origin, aliases FROM entities WHERE workspace_id = :ws")
+    entities = await sql(
+        t, "SELECT id::text AS id, display_name AS name, type_key AS type, status, origin, aliases FROM entities WHERE workspace_id = :ws"
+    )
     return {"facts": facts, "entities": entities}
 
 
-def score_scenario(gold: dict[str, Any], before: dict[str, Any], after: dict[str, Any], detail: dict[str, Any], reviews: list[Any], drift: list[Any], seconds: float) -> dict[str, Any]:
+def score_scenario(
+    gold: dict[str, Any],
+    before: dict[str, Any],
+    after: dict[str, Any],
+    detail: dict[str, Any],
+    reviews: list[Any],
+    drift: list[Any],
+    seconds: float,
+) -> dict[str, Any]:
     exp = gold["expect"]
     stage = next(s for s in detail["stages"] if s["stage"] == "graph_ingest")
     res = stage.get("result") or {}
@@ -77,21 +106,40 @@ def score_scenario(gold: dict[str, Any], before: dict[str, Any], after: dict[str
         any(e.name == w["name"] and e.type == w["type"] and e.status == w["status"] and e.origin == "extracted" for e in after["entities"])
         for w in exp["entities"]
     ]
-    extra_entities = [e for e in after["entities"] if e.origin == "extracted" and e.name not in {w["name"] for w in exp["entities"]} and e.status != "candidate"]
+    extra_entities = [
+        e
+        for e in after["entities"]
+        if e.origin == "extracted" and e.name not in {w["name"] for w in exp["entities"]} and e.status != "candidate"
+    ]
     ident = []
     for want_i in exp["identity"]:
-        ident.append(any(r.item_type == "identity_match" and r.candidate == want_i["candidate"] and r.subject == want_i["against"] for r in reviews))
+        ident.append(
+            any(r.item_type == "identity_match" and r.candidate == want_i["candidate"] and r.subject == want_i["against"] for r in reviews)
+        )
     no_merge = True
     if exp.get("no_auto_merge"):
-        no_merge = sum(1 for e in after["entities"] if e.name == "Sarah Johnson" and e.status in ("active", "candidate")) == 2 and not any(e.status == "merged" for e in after["entities"])
+        no_merge = sum(1 for e in after["entities"] if e.name == "Sarah Johnson" and e.status in ("active", "candidate")) == 2 and not any(
+            e.status == "merged" for e in after["entities"]
+        )
     counts: dict[str, int] = {}
     for r in reviews:
         counts[r.item_type] = counts.get(r.item_type, 0) + 1
     unchanged_command_facts = all(
-        any(a.source == b.source and a.rel_type == b.rel_type and a.target == b.target and a.status == b.status and a.valid_to == b.valid_to and a.valid_from == b.valid_from for a in after["facts"])
+        any(
+            a.source == b.source
+            and a.rel_type == b.rel_type
+            and a.target == b.target
+            and a.status == b.status
+            and a.valid_to == b.valid_to
+            and a.valid_from == b.valid_from
+            for a in after["facts"]
+        )
         for b in before["facts"]
     )
-    alias_ok = all(all(a in next((e.aliases for e in after["entities"] if e.name == n), []) for a in aliases) for n, aliases in exp.get("aliases", {}).items())
+    alias_ok = all(
+        all(a in next((e.aliases for e in after["entities"] if e.name == n), []) for a in aliases)
+        for n, aliases in exp.get("aliases", {}).items()
+    )
     stage_ok = stage["status"] == exp["stage"] and (exp.get("error_code") is None or stage.get("last_error_code") == exp["error_code"])
     missed = 0 if (unchanged_command_facts and not drift) else 1
     return {
@@ -125,13 +173,25 @@ async def embedding_distribution(api: Any) -> dict[str, Any]:
     out: dict[str, Any] = {}
     names = sorted({n for pairs in PAIRS.values() for pair in pairs for n in pair})
     res = await gateway.embed(
-        "graph_projection", names, kind="query", classification="internal", correlation=Correlation(str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4()), "kg-worker")
+        "graph_projection",
+        names,
+        kind="query",
+        classification="internal",
+        correlation=Correlation(str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4()), "kg-worker"),
     )
     vec = dict(zip(names, res.vectors, strict=True))
     for group, pairs in PAIRS.items():
         scores = [round(cosine(vec[a], vec[b]), 4) for a, b in pairs]
-        out[group] = {"pairs": [list(p) for p in pairs], "cosine": scores, "min": min(scores), "max": max(scores), "mean": round(statistics.mean(scores), 4)}
-    out["suggested_floor"] = round((out["related"]["min"] + out["unrelated"]["max"]) / 2, 4) if out["related"]["min"] > out["unrelated"]["max"] else None
+        out[group] = {
+            "pairs": [list(p) for p in pairs],
+            "cosine": scores,
+            "min": min(scores),
+            "max": max(scores),
+            "mean": round(statistics.mean(scores), 4),
+        }
+    out["suggested_floor"] = (
+        round((out["related"]["min"] + out["unrelated"]["max"]) / 2, 4) if out["related"]["min"] > out["unrelated"]["max"] else None
+    )
     return out
 
 
@@ -159,7 +219,10 @@ def summarise(scenarios: list[dict[str, Any]], embeddings: dict[str, Any]) -> di
         "unquarantined_unparseable": 0 if (bad is None or bad["stage_ok"]) else 1,
         "chat_calls_per_episode": round(statistics.mean(s["chat_calls"] for s in scenarios), 2),
         "tokens_per_episode": round(statistics.mean(s["prompt_tokens"] + s["completion_tokens"] for s in scenarios), 1),
-        "latency_seconds": {"p50": round(statistics.median(s["seconds"] for s in scenarios), 2), "p95": round(sorted(s["seconds"] for s in scenarios)[max(0, int(len(scenarios) * 0.95) - 1)], 2)},
+        "latency_seconds": {
+            "p50": round(statistics.median(s["seconds"] for s in scenarios), 2),
+            "p95": round(sorted(s["seconds"] for s in scenarios)[max(0, int(len(scenarios) * 0.95) - 1)], 2),
+        },
         "embedding_distribution": embeddings,
     }
 
@@ -241,7 +304,11 @@ async def run(mode: str, only: set[str] | None) -> int:
     await asyncio.to_thread(migrate.upgrade, OWNER_URL, "head")
     overrides: dict[str, Any] = {"projection_request_budget_seconds": 60.0}
     if live:
-        overrides.update(oso_router_mode="live", oso_router_api_key_api=os.environ["OSO_ROUTER_API_KEY"], oso_router_api_key_worker=os.environ["OSO_ROUTER_API_KEY"])
+        overrides.update(
+            oso_router_mode="live",
+            oso_router_api_key_api=os.environ["OSO_ROUTER_API_KEY"],
+            oso_router_api_key_worker=os.environ["OSO_ROUTER_API_KEY"],
+        )
     else:
         overrides.update(oso_router_mock_url=f"{MOCK}/v1", oso_router_api_key_api="mock-key", oso_router_api_key_worker="mock-key")
         async with httpx.AsyncClient() as c:
@@ -262,10 +329,17 @@ async def run(mode: str, only: set[str] | None) -> int:
                     t = await make_tenant(api)
                     try:
                         ids = await sarah_story(t)
-                        names = {"Sarah Johnson": ids["sarah"], "Michael": ids["michael"], "Entrepreneurship": ids["topic"], "Acme": ids["acme"]}
+                        names = {
+                            "Sarah Johnson": ids["sarah"],
+                            "Michael": ids["michael"],
+                            "Entrepreneurship": ids["topic"],
+                            "Acme": ids["acme"],
+                        }
                         before = await snapshot(p4_sql_wrap(p4_sql, api), t)
                         started = time.perf_counter()
-                        detail = await run_event(api, t, gold["content"], subjects=[names[n] for n in gold["subjects"]], occurred_at=gold["occurred_at"])
+                        detail = await run_event(
+                            api, t, gold["content"], subjects=[names[n] for n in gold["subjects"]], occurred_at=gold["occurred_at"]
+                        )
                         seconds = time.perf_counter() - started
                         after = await snapshot(p4_sql_wrap(p4_sql, api), t)
                         reviews = await p4_sql(
@@ -305,7 +379,11 @@ def p4_sql_wrap(sql, api):  # type: ignore[no-untyped-def]
 
 
 def _all_ok(s: dict[str, Any]) -> bool:
-    return all(s[k] for k in ("stage_ok", "entities_ok", "identity_ok", "reviews_ok", "reverts_ok", "aliases_ok", "unchanged_ok")) and not s["facts"]["fp"] and not s["facts"]["fn"]
+    return (
+        all(s[k] for k in ("stage_ok", "entities_ok", "identity_ok", "reviews_ok", "reverts_ok", "aliases_ok", "unchanged_ok"))
+        and not s["facts"]["fp"]
+        and not s["facts"]["fn"]
+    )
 
 
 def main() -> None:

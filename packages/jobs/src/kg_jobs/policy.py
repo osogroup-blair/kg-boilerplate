@@ -33,6 +33,18 @@ POLICIES: dict[str, RetryPolicy] = {
     "normalize": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0),
     "graph_projection": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=600.0),
     "graph_ingest": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=300.0),
+    # P5: the memory stage is a model call like graph_ingest (an unparseable answer is quarantined by the handler's own two-attempt rule); the embed job
+    # retries a router outage for a good while, with a short cap so a recovered router is used soon; the expiry job only ever waits for a clock.
+    "memory_propose": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=300.0),
+    "memory_embed": RetryPolicy(max_attempts=8, base_seconds=1.0, cap_seconds=30.0),
+    "memory_expire": RetryPolicy(max_attempts=6, base_seconds=1.0, cap_seconds=30.0),
+    # P8: consolidation is a model call that a person reviews anyway; a deletion step is idempotent and must get through, so it retries for a good while
+    "memory_consolidate": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=300.0),
+    "ontology_simulation": RetryPolicy(max_attempts=3, base_seconds=5.0, cap_seconds=120.0),
+    "simulation_cleanup": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0),
+    "deletion_plan": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),
+    "deletion_purge": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),
+    "deletion_verify": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),
 }
 DEFAULT_POLICY = RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0)
 

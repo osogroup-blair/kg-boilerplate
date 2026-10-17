@@ -104,6 +104,7 @@ def test_the_development_keyring_is_valid_and_production_refuses_it():
         "content_hmac_secret": "c" * 40,
         "payload_keys": f"prod1:{key()}",
         "payload_active_kid": "prod1",
+        "deletion_journal_dir": "/var/lib/kg/deletion-journal",
     }
     Settings(_env_file=None, **prod)  # type: ignore[arg-type]  # a proper production configuration passes
     for override, message in [
@@ -227,7 +228,11 @@ def expected(norm: str, a: str, b: str) -> str:
     if norm in (DEAD, INVALID):
         return "failed"
     statuses = (norm, a, b)
-    if any(s in (PENDING, RUNNING, FAILED) for s in statuses):
+    b_blocked = b == PENDING and a in (
+        DEAD,
+        INVALID,
+    )  # memory_propose waits for graph_ingest: behind a dead one it is blocked, not in flight
+    if any(s in (PENDING, RUNNING, FAILED) for s in (norm, a)) or (b in (PENDING, RUNNING, FAILED) and not b_blocked):
         return "processing"
     if all(s in (SUCCEEDED, SKIPPED_POLICY, SKIPPED_DISABLED) for s in statuses):
         return "indexed"
@@ -239,16 +244,24 @@ def test_finalisation_table_for_every_combination_of_stage_outcomes(norm, a, b):
     assert PIPELINE_V1.finalize({"normalize": norm, "graph_ingest": a, "memory_propose": b}) == expected(norm, a, b)
 
 
-def test_the_p4_plan_enables_graph_ingest_and_still_lists_the_disabled_stage():
+def test_the_p5_plan_enables_memory_propose_after_graph_ingest():
     plan = PIPELINE_V1.initial_statuses(consent_external=True)
-    assert plan == {"normalize": PENDING, "graph_ingest": PENDING, "memory_propose": SKIPPED_DISABLED}
+    assert plan == {"normalize": PENDING, "graph_ingest": PENDING, "memory_propose": PENDING}
     assert (
-        PIPELINE_V1.version == "p4.v1"
+        PIPELINE_V1.version == "p5.v1"
         and PIPELINE_V1.stage("graph_ingest").model_stage
-        and PIPELINE_V1.stage("graph_ingest").enabled_in is None
+        and PIPELINE_V1.stage("memory_propose").model_stage
+        and PIPELINE_V1.stage("memory_propose").deps == ("normalize", "graph_ingest")
     )
     done = {**plan, "normalize": SUCCEEDED}
-    assert PIPELINE_V1.ready(done) == ["graph_ingest"] and PIPELINE_V1.finalize(done) == "processing"  # the model stage is still to run
+    assert (
+        PIPELINE_V1.ready(done) == ["graph_ingest"] and PIPELINE_V1.finalize(done) == "processing"
+    )  # memory_propose waits for the graph stage
+    graph_done = {**done, "graph_ingest": SUCCEEDED}
+    assert PIPELINE_V1.ready(graph_done) == ["memory_propose"]
+    for terminal in (SKIPPED_POLICY, SKIPPED_DISABLED):  # a graph stage that did not run still lets the memory stage run (DONE_OK)
+        assert PIPELINE_V1.ready({**done, "graph_ingest": terminal}) == ["memory_propose"]
+    assert PIPELINE_V1.ready({**done, "graph_ingest": DEAD}) == []  # a dead graph stage blocks it: no facts to link, replay first
 
 
 def test_a_source_only_event_is_valid_evd04():

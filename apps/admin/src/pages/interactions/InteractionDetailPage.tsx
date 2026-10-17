@@ -19,6 +19,7 @@ type StageRow = components["schemas"]["InteractionDetail"]["stages"][number];
 export function replayableStages(stages: StageRow[]): Array<{ stage: string; repin: boolean }> {
   return stages.flatMap((s): Array<{ stage: string; repin: boolean }> => {
     if (REPLAYABLE.has(s.status)) return [{ stage: s.stage, repin: false }];
+    if (s.stage === "memory_propose" && s.status === "skipped_disabled" && s.enabled) return [{ stage: s.stage, repin: true }]; // accepted before the memory stage existed
     if (s.stage === "graph_ingest" && (s.status === "skipped_disabled" || (s.status === "skipped_by_policy" && s.last_error_code === "no_active_ontology"))) return [{ stage: s.stage, repin: true }];
     return [];
   });
@@ -42,6 +43,29 @@ export function GraphIngestSummary({ stage }: { stage: StageRow }) {
       </dl>
       {list("entity_ids").length > 0 ? <p className="text-sm">New entities: {list("entity_ids").map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/graph?entity=${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
       {list("review_ids").length > 0 ? <p className="text-sm">Review items: {list("review_ids").map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/reviews/${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
+    </section>
+  );
+}
+
+/** What the memory stage did (P5): the memories it made by status, why candidates were dropped, what it cost. Ids, counts and codes only. */
+export function MemoryProposeSummary({ stage }: { stage: StageRow }) {
+  const r = (stage.result ?? {}) as Record<string, unknown>;
+  if (stage.stage !== "memory_propose" || r.prompt_version === undefined) return null;
+  const statuses = (r.statuses ?? {}) as Record<string, number>;
+  const drops = (r.drops ?? {}) as Record<string, number>;
+  const ids = (r.memory_ids as string[] | undefined) ?? [];
+  const reviews = (r.review_ids as string[] | undefined) ?? [];
+  return (
+    <section aria-labelledby="mp-h" className="space-y-2" data-testid="memory-propose-summary">
+      <h2 id="mp-h" className="font-medium">Memories</h2>
+      <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm">
+        <dt className="text-slate-500">Candidates</dt><dd>{String(r.candidates ?? 0)} proposed by the model ({String(r.prompt_version)}) · {String(r.kept ?? 0)} kept</dd>
+        <dt className="text-slate-500">Made</dt><dd>{Object.keys(statuses).length === 0 ? "none" : Object.entries(statuses).map(([k, v]) => `${v} ${k}`).join(" · ")}</dd>
+        <dt className="text-slate-500">Dropped</dt><dd>{Object.keys(drops).length === 0 ? "nothing" : Object.entries(drops).map(([k, v]) => `${v} ${k.replace(/_/g, " ")}`).join(" · ")}</dd>
+        <dt className="text-slate-500">Model calls</dt><dd>{String(r.chat_calls ?? 0)} chat · {String(r.prompt_tokens ?? 0)} + {String(r.completion_tokens ?? 0)} tokens</dd>
+      </dl>
+      {ids.length > 0 ? <p className="text-sm">Memories: {ids.map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/memories/${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
+      {reviews.length > 0 ? <p className="text-sm">Review items: {reviews.map((id) => <Link key={id} className="mr-2 font-mono text-xs underline" to={`/reviews/${id}`}>{id.slice(0, 8)}…</Link>)}</p> : null}
     </section>
   );
 }
@@ -112,7 +136,7 @@ function ReplayButton({ eventId, stages }: { eventId: string; stages: Array<{ st
       {open ? (
         <ReasonDialog title="Replay" confirmLabel="Replay" onClose={() => setOpen(false)}
           onConfirm={async (reason) => {
-            const res = await api.POST("/v1/interactions/{event_id}/replay", { params: { path: { event_id: eventId }, header: { "Idempotency-Key": newKey() } }, body: { reason_code: reason, stage: stage || null, repin: stages.find((x) => x.stage === stage)?.repin ?? false } });
+            const res = await api.POST("/v1/interactions/{event_id}/replay", { params: { path: { event_id: eventId }, header: { "Idempotency-Key": newKey() } }, body: { reason_code: reason, stage: stage || null, repin: stages.find((x) => x.stage === stage)?.repin ?? false, upgrade_pipeline: false } });
             if (res.response.status !== 202) return (res.error as { error?: { code?: string } } | undefined)?.error?.code ?? "replay_failed";
             setDone("Replay queued: a new generation of the stage will run.");
             await qc.invalidateQueries({ queryKey: ["interaction", eventId] });
@@ -182,6 +206,7 @@ export function InteractionDetailPage() {
         </div>
         <StageTimeline stages={i.stages} />
         {i.stages.map((s) => <GraphIngestSummary key={s.stage} stage={s} />)}
+        {i.stages.map((s) => <MemoryProposeSummary key={s.stage} stage={s} />)}
         {i.processing_status === "failed" ? <Banner tone="red" role="status">Normalisation failed, so nothing was derived from this event. Fix the cause and replay it.</Banner> : null}
         {i.processing_status === "partial" ? <Banner tone="amber" role="status">Some derivative stages did not complete. The source is safe; replay the dead stages when ready.</Banner> : null}
       </section>

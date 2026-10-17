@@ -32,7 +32,7 @@ async def test_seed_is_idempotent_and_mints_keys_only_once(api):
     again = await seed_demo(api.engine, pepper=api.settings.auth_key_pepper.get_secret_value())
     assert again.created_workspaces == 0 and again.created_principals == 0 and again.new_keys == {}
     assert await counts(api) == before
-    assert before["demo"][0] == 6 and before["other_demo"][0] == 2
+    assert before["demo"][0] == 7 and before["other_demo"][0] == 2
     assert workspace_id_for("demo") == workspace_id_for("demo") != workspace_id_for("other_demo")
 
 

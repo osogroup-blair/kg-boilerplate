@@ -22,9 +22,27 @@ def upgrade(url: str, revision: str = "head") -> None:
     command.upgrade(_config(url), revision)
 
 
-def downgrade(url: str, revision: str = "base", *, force_drop_extracted: bool = False) -> None:
-    """`force_drop_extracted` lets 0004's downgrade delete extracted entities, facts and episodes (it refuses otherwise)."""
-    command.downgrade(_config(url, force_drop_extracted=force_drop_extracted), revision)
+def downgrade(
+    url: str,
+    revision: str = "base",
+    *,
+    force_drop_extracted: bool = False,
+    force_drop_memories: bool = False,
+    force_forget_privileges: bool = False,
+    force_drop_governance: bool = False,
+) -> None:
+    """`force_drop_extracted` lets 0004's downgrade delete extracted entities, facts and episodes, `force_drop_memories` lets 0005's delete curated memories, and
+    `force_forget_privileges` lets 0007's drop grants that carry `publish`, and `force_drop_governance` lets 0008's keep rows made by corrections as ordinary rows (each refuses otherwise)."""
+    command.downgrade(
+        _config(
+            url,
+            force_drop_extracted=force_drop_extracted,
+            force_drop_memories=force_drop_memories,
+            force_forget_privileges=force_forget_privileges,
+            force_drop_governance=force_drop_governance,
+        ),
+        revision,
+    )
 
 
 def current(url: str) -> None:

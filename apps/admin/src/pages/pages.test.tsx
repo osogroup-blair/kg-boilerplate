@@ -98,7 +98,7 @@ describe("Agents & Access", () => {
     });
     const first = renderApp(<App />, { route: "/agents/a1" });
     expect(await screen.findByText("Planning Agent")).toBeInTheDocument();
-    expect(screen.getByText(/8t3JleBW… \(active\)/)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "keys" })).toBeInTheDocument(); // the key prefixes live on the Keys tab since P7; the overview never shows one
     first.unmount();
     renderApp(<App />, { route: "/agents/foreign-or-random" });
     await waitFor(() => expect(screen.getByText(/This principal does not exist/)).toBeInTheDocument());
@@ -109,7 +109,7 @@ describe("Agents & Access", () => {
     renderApp(<App />);
     await screen.findByTestId("workspace-name");
     const links = screen.getAllByRole("link").map((l) => l.textContent);
-    expect(links).toEqual(["Dashboard", "Ontology", "Entities", "Graph Explorer", "Review Queue", "Commands", "Interactions & Episodes", "Operations", "Agents & Access"]);
+    expect(links).toEqual(["Dashboard", "Ontology", "Entities", "Graph Explorer", "Memories", "Context Lab", "Review Queue", "Commands", "Interactions & Episodes", "Operations", "Agents & Access", "Deletions", "Privacy audit", "Settings"]);
     vi.unstubAllGlobals();
   });
 });

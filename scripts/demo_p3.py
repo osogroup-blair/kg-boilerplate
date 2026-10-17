@@ -196,10 +196,14 @@ async def main() -> int:
                 ev["processing_status"] == "indexed"
                 and n["status"] == "succeeded"
                 and gi["status"] in ("succeeded", "skipped_by_policy")
-                and mp["status"] == "skipped_disabled"  # graph_ingest is enabled since P4
+                and mp["status"]
+                in (
+                    "skipped_disabled",
+                    "skipped_by_policy",
+                )  # graph_ingest is enabled since P4; memory extraction is off for this demo (P5: by ontology policy)
                 and n["derivatives"]
                 and ev["classification"] == "confidential"
-                and ev["pipeline_version"] == "p4.v1"
+                and ev["pipeline_version"] in ("p4.v1", "p5.v1")
             )
             subj = {(s["role"], s["resolved"]) for s in ev["subjects"]}
             return ok and ("subject", True) in subj and ("subject", False) in subj, (
@@ -207,7 +211,7 @@ async def main() -> int:
                 f"Sarah resolved, hr:P-2002 unresolved; pinned {ev['pipeline_version']}"
             )
 
-        await step("3 status and stages", "indexed; normalize succeeded; graph_ingest ran (P4); memory_propose disabled; derivative id", s3)
+        await step("3 status and stages", "indexed; normalize succeeded; graph_ingest ran (P4); memory_propose skipped; derivative id", s3)
 
         # ---- 4: EVD-06 ----------------------------------------------------------------------------------------------------------------
         async def s4() -> tuple[bool, str]:

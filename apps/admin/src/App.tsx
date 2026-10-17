@@ -4,7 +4,13 @@ import { Layout } from "./components/Layout";
 import { Loading } from "./components/states";
 import { AgentsAccess } from "./pages/AgentsAccess";
 import { CommandsPage } from "./pages/commands/CommandsPage";
+import { ContextLabPage } from "./pages/context/ContextLabPage";
+import { ContextTracePage } from "./pages/context/ContextTracePage";
 import { Dashboard } from "./pages/Dashboard";
+import { DeletionDetailPage } from "./pages/deletions/DeletionDetailPage";
+import { DeletionsPage } from "./pages/deletions/DeletionsPage";
+import { PrivacyAuditPage } from "./pages/governance/PrivacyAuditPage";
+import { SettingsPage } from "./pages/governance/SettingsPage";
 import { InteractionDetailPage } from "./pages/interactions/InteractionDetailPage";
 import { InteractionsPage } from "./pages/interactions/InteractionsPage";
 import { DirectoryPage } from "./pages/entities/DirectoryPage";
@@ -20,6 +26,8 @@ import { VersionsPage } from "./pages/ontology/VersionsPage";
 import { YamlTab } from "./pages/ontology/YamlTab";
 import { Login } from "./pages/Login";
 import { GraphExplorerPage } from "./pages/graph/GraphExplorerPage";
+import { MemoriesPage } from "./pages/memories/MemoriesPage";
+import { MemoryDetailPage } from "./pages/memories/MemoryDetailPage";
 import { ReviewDetailPage } from "./pages/reviews/ReviewDetailPage";
 import { ReviewQueuePage } from "./pages/reviews/ReviewQueuePage";
 
@@ -47,12 +55,20 @@ export function App() {
         <Route path="entities" element={<DirectoryPage />} />
         <Route path="entities/:entityId" element={<EntityDetailPage />} />
         <Route path="graph" element={<GraphExplorerPage />} />
+        <Route path="memories" element={<MemoriesPage />} />
+        <Route path="memories/:memoryId" element={<MemoryDetailPage />} />
+        <Route path="context" element={<ContextLabPage />} />
+        <Route path="context/:contextId" element={<ContextTracePage />} />
         <Route path="reviews" element={<ReviewQueuePage />} />
         <Route path="reviews/:reviewId" element={<ReviewDetailPage />} />
         <Route path="commands" element={<CommandsPage />} />
         <Route path="commands/:commandId" element={<CommandsPage />} />
         <Route path="interactions" element={<InteractionsPage />} />
         <Route path="interactions/:eventId" element={<InteractionDetailPage />} />
+        <Route path="deletions" element={<DeletionsPage />} />
+        <Route path="deletions/:requestId" element={<DeletionDetailPage />} />
+        <Route path="privacy" element={<PrivacyAuditPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="operations" element={<OperationsPage />} />
         <Route path="operations/jobs/:jobId" element={<JobDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

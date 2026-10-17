@@ -83,6 +83,12 @@ class IdempotencyMismatch(Conflict):
     code, default_message = "idempotency_mismatch", "Idempotency-Key was already used with a different request"
 
 
+class SubjectSuppressed(Conflict):
+    """The identifier of a subject who asked to be forgotten (P8, ADR-045): it is not recorded again until an admin lifts the suppression."""
+
+    code, default_message = "subject_suppressed", "This identifier was deleted at a subject's request and cannot be recorded again"
+
+
 class IdempotencyKeyRequired(PlatformError):
     code, http_status, default_message = "idempotency_key_required", 400, "Idempotency-Key header is required"
 

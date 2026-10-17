@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import enum
 import uuid
-from typing import Literal
+from typing import Any, Literal, Protocol
 
 from kg_common.ids import uuid7
 from kg_domain.principal import Principal
@@ -25,6 +25,32 @@ class CommandType(enum.StrEnum):
     RELATIONSHIP_END = "relationship.end"
     REVIEW_DECIDE = "review.decide"
     ENTITY_MERGE = "entity.merge"
+    MEMORY_SAVE = "memory.save"
+    MEMORY_PROPOSE = "memory.propose"
+    MEMORY_EXTRACT = "memory.extract"
+    MEMORY_SUPERSEDE = "memory.supersede"
+    MEMORY_EXPIRE = "memory.expire"
+    MEMORY_DISPUTE = "memory.dispute"
+    MEMORY_PUBLISH = "memory.publish"
+    MEMORY_REVIEW = "memory.review"
+    PRINCIPAL_REGISTER = "principal.register"
+    PRINCIPAL_UPDATE = "principal.update"
+    PRINCIPAL_REVOKE = "principal.revoke"
+    KEY_CREATE = "key.create"
+    KEY_REVOKE = "key.revoke"
+    GRANT_ADD = "grant.add"
+    GRANT_REMOVE = "grant.remove"
+    CORRECTION_FACT_REJECT = "correction.fact_reject"
+    CORRECTION_FACT_SUPERSEDE = "correction.fact_supersede"
+    CORRECTION_FACT_END = "correction.fact_end"
+    CORRECTION_FACT_RESTORE = "correction.fact_restore"
+    CORRECTION_ATTRIBUTE = "correction.attribute"
+    CORRECTION_RENAME = "correction.rename"
+    CORRECTION_MEMORY = "correction.memory"
+    ENTITY_SPLIT = "entity.split"
+    MEMORY_CONSOLIDATE = "memory.consolidate"
+    SETTINGS_UPDATE = "settings.update"
+    DELETION_REQUEST = "deletion.request"
 
 
 class EventKind(enum.StrEnum):
@@ -77,9 +103,55 @@ class AuditMetadata(BaseModel):
     count_entities: int | None = None
     count_facts: int | None = None
     count_reverts: int | None = None
+    # P5 (curated memory). Closed fields: ids, counts and enums, never content, summaries, queries or purposes.
+    memory_id: uuid.UUID | None = None
+    memory_type: Literal["working", "episodic", "semantic", "procedural"] | None = None
+    memory_status: Literal["proposed", "active", "superseded", "disputed", "expired", "rejected", "deleted"] | None = None
+    scope_kind: Literal["workspace", "subject", "project", "agent", "session", "classification"] | None = None
+    count_memories: int | None = None
+    drop_reason: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    principal_id: uuid.UUID | None = None
+    # P6 (context). Ids and an enum-like profile name: never a task, a query or any rendered text.
+    context_id: uuid.UUID | None = None
+    profile: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    target_principal_id: uuid.UUID | None = None
+    # P7 (agents, grants, revocation, quotas). Enums and ids only: never a handle, a note or a quota value.
+    principal_kind: Literal["agent", "app"] | None = None
+    revoke_reason: Literal["retired", "compromised"] | None = None
+    privileges: list[Literal["read", "propose", "publish"]] | None = None
+    quota: Literal["requests_per_minute", "context_tokens_per_day", "interactions_per_day"] | None = None
+    # P8 (corrections, consolidation, deletion, settings, simulation). Enums, ids and counts only: never a reason text, a name, a value or a residual.
+    correction_kind: str | None = Field(default=None, pattern=r"^[a-z][a-z_.]{0,63}$")
+    request_id: uuid.UUID | None = None
+    deletion_kind: Literal["subject", "interaction", "memory", "principal_data", "workspace", "retention"] | None = None
+    deletion_status: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
+    store: Literal["postgres", "vector", "graph", "trace", "job", "idempotency"] | None = None
+    count_deleted: int | None = None
+    count_redacted: int | None = None
+    count_retained: int | None = None
+    count_residuals: int | None = None
+    settings_version: int | None = None
+    consolidation_mode: Literal["reinforce", "synthesize"] | None = None
+    simulation_id: uuid.UUID | None = None
+    override_authority: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
 
 
 Outcome = Literal["allowed", "denied", "error"]
+
+
+class AuditSink(Protocol):
+    """What a service needs from an audit writer: the request's `AuditWriter` or the worker's `SystemAudit`."""
+
+    async def record(
+        self,
+        action: str,
+        *,
+        outcome: Any = ...,
+        resource_type: str | None = ...,
+        resource_id: Any = ...,
+        metadata: AuditMetadata | None = ...,
+    ) -> uuid.UUID: ...
+
 
 _INSERT = text("""
     INSERT INTO audit_log (id, workspace_id, actor_principal_id, action, resource_type, resource_id, outcome, request_id, correlation_id, metadata)

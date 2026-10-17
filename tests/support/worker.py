@@ -10,15 +10,37 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from kg_extraction.handler import GraphIngestJob
+from kg_extraction.simulation import SimulationCleanupJob, SimulationJob
 from kg_ingestion.normalize import NormalizeHandler
 from kg_jobs.client import OpsClient
 from kg_jobs.dispatcher import Dispatcher
 from kg_knowledge.jobs import GraphProjectionHandler
+from kg_memory.consolidate import MemoryConsolidateJob
+from kg_memory.deletion_jobs import DeletionStageJob
+from kg_memory.extract import MemoryProposeJob
+from kg_memory.jobs import MemoryEmbedJob, MemoryExpireJob
 
 
 @asynccontextmanager
 async def running_worker(
-    api: Any, *, stages: tuple[str, ...] = ("normalize", "graph_ingest", "graph_projection"), lease_seconds: int = 10, concurrency: int = 4
+    api: Any,
+    *,
+    stages: tuple[str, ...] = (
+        "normalize",
+        "graph_ingest",
+        "graph_projection",
+        "memory_propose",
+        "memory_embed",
+        "memory_expire",
+        "memory_consolidate",
+        "deletion_plan",
+        "deletion_purge",
+        "deletion_verify",
+        "ontology_simulation",
+        "simulation_cleanup",
+    ),
+    lease_seconds: int = 10,
+    concurrency: int = 4,
 ) -> AsyncIterator[Dispatcher]:
     st = api.app.state.kg
     handlers: dict[str, Any] = {
@@ -36,6 +58,26 @@ async def running_worker(
             st.settings,
             flush_calls=st.call_sink.flush,
         ),
+        "memory_propose": MemoryProposeJob(
+            st.engine,
+            st.ingestion.cipher,
+            st.router.gateway,
+            st.memory.writer,
+            st.knowledge.specs,
+            st.router.config,
+            st.settings,
+            flush_calls=st.call_sink.flush,
+        ),
+        "memory_embed": MemoryEmbedJob(st.engine, st.router.gateway, st.router.config, st.settings, service="kg-api"),
+        "memory_expire": MemoryExpireJob(st.engine),
+        "memory_consolidate": MemoryConsolidateJob(
+            st.engine, st.router.gateway, st.memory.writer, st.knowledge.specs, st.router.config, st.settings, service="kg-api"
+        ),
+        "ontology_simulation": SimulationJob(st.simulation),
+        "simulation_cleanup": SimulationCleanupJob(st.simulation),
+        "deletion_plan": DeletionStageJob(st.engine, st.deletion.service, "deletion_plan"),
+        "deletion_purge": DeletionStageJob(st.engine, st.deletion.service, "deletion_purge"),
+        "deletion_verify": DeletionStageJob(st.engine, st.deletion.service, "deletion_verify"),
     }
     dispatcher = Dispatcher(
         OpsClient(st.engine),

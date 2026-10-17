@@ -7,6 +7,7 @@ import { Badge, Banner, VersionStateBadge, btn } from "../../components/ui";
 import { ErrorState, Loading, stateForStatus } from "../../components/states";
 import { newKey, shortHash } from "../../lib/format";
 import { errorCode, useVersion, type VersionOut } from "../../ontology/queries";
+import { SimulateDialog } from "./SimulateDialog";
 import { normaliseDoc, sameSpec, type Issue, type Spec } from "../../ontology/spec";
 
 export interface VersionCtx {
@@ -44,6 +45,7 @@ export function VersionLayout() {
   const [spec, setSpecState] = useState<Spec | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState(false);
   const loadedKey = server ? `${server.id}:${server.revision}` : null;
 
   // a new server revision (first load, save, reload) replaces the working copy
@@ -117,6 +119,7 @@ export function VersionLayout() {
         {!readOnly ? (
           <div className="flex items-center gap-2">
             {dirty ? <Badge tone="amber">Unsaved changes</Badge> : null}
+            {can.simulateOntology && server.state === "draft" ? <button type="button" className={btn.secondary} disabled={dirty} title={dirty ? "Save the draft first" : undefined} onClick={() => setSimulating(true)}>Simulate…</button> : null}
             <button type="button" className={btn.primary} disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</button>
           </div>
         ) : null}
@@ -134,6 +137,7 @@ export function VersionLayout() {
         <NavLink to={`${base}/yaml`} className={TAB}>YAML</NavLink>
       </nav>
       <Outlet context={ctx} />
+      {simulating ? <SimulateDialog versionId={server.id} onClose={() => setSimulating(false)} /> : null}
     </div>
   );
 }

@@ -8,8 +8,9 @@ correction (P8), and the endpoint says so (`409 requires_correction`).
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import uuid
-from typing import Any
+from typing import Any, Protocol
 
 from kg_common.errors import Conflict, IdempotencyMismatch, NotFound, PreconditionFailed, PreconditionRequired, ValidationFailed
 from kg_common.ids import uuid7
@@ -18,6 +19,7 @@ from kg_common.versions import PIPELINE_VERSION
 from kg_domain.envelope import Page
 from kg_domain.principal import WorkspaceContext
 from kg_governance.audit import AuditMetadata, CommandType
+from kg_governance.grants import SubjectFilter
 from kg_jobs.outbox import enqueue
 from kg_obs import metrics
 from kg_ontology.conflicts import Invalidation
@@ -45,6 +47,8 @@ from kg_knowledge.models import (
 )
 from kg_knowledge.reads import Reads
 from kg_knowledge.specs import SpecCache
+
+NO_GRAPH_TYPES = ("deletion_exception", "consolidation_proposal", "authoritative_override", "correction_request")
 
 
 class RequiresCorrection(Conflict):
@@ -86,16 +90,56 @@ def _out(r: Row[Any]) -> ReviewOut:
         fact_id=r.fact_id,
         competing_fact_id=r.competing_fact_id,
         interaction_id=r.interaction_id,
+        memory_id=r.memory_id,
+        competing_memory_id=r.competing_memory_id,
         decision=r.decision,
         rationale_code=r.rationale_code,
         decided_by=r.decided_by,
         decided_at=r.decided_at,
+        submitter_revoked=bool(getattr(r, "submitter_revoked", False)),
+        agent_generated=bool(getattr(r, "agent_generated", False)),
     )
+
+
+_REVIEW_SELECT = (  # the item plus two badges derived from the memory it is about (P7)
+    "SELECT r.*, COALESCE((SELECT p.status = 'revoked' FROM curated_memories m JOIN principals p ON p.workspace_id = m.workspace_id AND p.id = m.created_by "
+    "WHERE m.workspace_id = r.workspace_id AND m.id = r.memory_id), false) AS submitter_revoked, "
+    "COALESCE((SELECT m.authority_class = 'agent_generated' FROM curated_memories m WHERE m.workspace_id = r.workspace_id AND m.id = r.memory_id), false) AS agent_generated "
+    "FROM review_items r"
+)
+
+
+# P8: an item about a record whose deletion has been accepted is unreadable from that moment (404, like the record); the deletion's own exception items stay visible, they are
+# how a person finishes the deletion
+_NOT_FROZEN = (
+    "(r.item_type = 'deletion_exception' OR ("
+    "NOT EXISTS (SELECT 1 FROM entities z WHERE z.workspace_id = r.workspace_id AND z.status = 'deletion_pending' AND z.id IN (r.subject_entity_id, r.candidate_entity_id)) "
+    "AND NOT EXISTS (SELECT 1 FROM facts z WHERE z.workspace_id = r.workspace_id AND z.status = 'deletion_pending' AND z.id IN (r.fact_id, r.competing_fact_id)) "
+    "AND NOT EXISTS (SELECT 1 FROM curated_memories z WHERE z.workspace_id = r.workspace_id AND z.status = 'deletion_pending' AND z.id = r.memory_id)))"
+)
+
+
+# what a deletion exception may show a reviewer: where the leftover is and which memory it is (an id), never the text that names the subject
+_SAFE_DETAIL = frozenset({"reason", "location", "memory_id", "holds", "request_id"})
+
+
+class ReviewHandler(Protocol):
+    """A review type decided by another package (kg_knowledge cannot import it): kg_memory registers the memory ones (P5, ADR-029)."""
+
+    async def decide(self, cc: CommandContext, review: Row[Any], body: DecisionIn, *, key: str) -> dict[str, Any]:
+        """Applies the decision inside the caller's transaction and returns its effects: `{"memory_ids": [...]}` (and entity / fact ids when relevant)."""
+        ...
 
 
 class ReviewService:
     def __init__(self, specs: SpecCache, extracted: ExtractedKnowledge, pipeline: CommandPipeline, reads: Reads):
         self._specs, self._extracted, self._pipeline, self._reads = specs, extracted, pipeline, reads
+        self._external: dict[str, ReviewHandler] = {}
+
+    def register_handler(self, item_type: str, handler: ReviewHandler) -> None:
+        if item_type in self._external:
+            raise ValueError(f"duplicate review handler for {item_type}")
+        self._external[item_type] = handler
 
     # ---- reads ----------------------------------------------------------------------------------------------------------------------------
 
@@ -110,18 +154,18 @@ class ReviewService:
         cursor: str | None,
     ) -> Page[ReviewOut]:
         size, before = clamp_limit(limit), decode_cursor(cursor)
-        where, params = ["workspace_id = :ws"], {"ws": ctx.workspace_id, "n": size + 1}
+        where, params = ["r.workspace_id = :ws", _NOT_FROZEN], {"ws": ctx.workspace_id, "n": size + 1}
         if item_type:
-            where.append("item_type = :t")
+            where.append("r.item_type = :t")
             params["t"] = item_type
         if status == "open":
-            where.append("status = 'open'")
+            where.append("r.status = 'open'")
         elif status == "decided":
-            where.append("status <> 'open'")
+            where.append("r.status <> 'open'")
         if before:
-            where.append("(created_at, id) < (:c_at, :c_id)")
+            where.append("(r.created_at, r.id) < (:c_at, :c_id)")
             params["c_at"], params["c_id"] = before[0], before[1]
-        sql = f"SELECT * FROM review_items WHERE {' AND '.join(where)} ORDER BY created_at DESC, id DESC LIMIT :n"  # noqa: S608 (constant fragments)
+        sql = f"{_REVIEW_SELECT} WHERE {' AND '.join(where)} ORDER BY r.created_at DESC, r.id DESC LIMIT :n"  # noqa: S608 (constant fragments)
         rows = (await conn.execute(text(sql), params)).all()
         page, more = rows[:size], len(rows) > size
         return Page[ReviewOut](items=[_out(r) for r in page], next_cursor=encode_cursor(page[-1].created_at, page[-1].id) if more else None)
@@ -129,7 +173,7 @@ class ReviewService:
     async def _row(self, conn: AsyncConnection, ws: uuid.UUID, review_id: uuid.UUID, *, lock: bool = False) -> Row[Any]:
         row = (
             await conn.execute(
-                text(f"SELECT * FROM review_items WHERE workspace_id = :ws AND id = :id{' FOR UPDATE' if lock else ''}"),  # noqa: S608
+                text(f"{_REVIEW_SELECT} WHERE r.workspace_id = :ws AND r.id = :id AND {_NOT_FROZEN}{' FOR UPDATE OF r' if lock else ''}"),  # noqa: S608
                 {"ws": ws, "id": review_id},
             )
         ).first()
@@ -184,7 +228,8 @@ class ReviewService:
                     "SELECT i.id, i.source_system, i.source_ref, i.occurred_at, i.recorded_at, refs.episode_uuid FROM interactions i "
                     "JOIN (SELECT :i AS interaction_id, NULL::text AS episode_uuid WHERE CAST(:i AS uuid) IS NOT NULL "
                     "UNION SELECT interaction_id, episode_uuid FROM fact_evidence WHERE workspace_id = :ws AND fact_id = ANY(:facts) AND interaction_id IS NOT NULL "
-                    "UNION SELECT interaction_id, episode_uuid FROM entity_mentions WHERE workspace_id = :ws AND entity_id = :cand) refs "
+                    "UNION SELECT interaction_id, episode_uuid FROM entity_mentions WHERE workspace_id = :ws AND entity_id = :cand "
+                    "UNION SELECT interaction_id, episode_uuid FROM memory_evidence WHERE workspace_id = :ws AND memory_id = ANY(:mems) AND interaction_id IS NOT NULL) refs "
                     "ON refs.interaction_id = i.id WHERE i.workspace_id = :ws ORDER BY i.recorded_at, i.id"
                 ),
                 {
@@ -192,6 +237,7 @@ class ReviewService:
                     "i": r.interaction_id,
                     "facts": [f for f in (r.fact_id, r.competing_fact_id) if f is not None],
                     "cand": r.candidate_entity_id,
+                    "mems": [m for m in (r.memory_id, r.competing_memory_id) if m is not None],
                 },
             )
         ).all()
@@ -218,7 +264,10 @@ class ReviewService:
         facts = []
         for fid in (r.competing_fact_id, r.fact_id):  # the existing fact first, then the claim: side by side, in that order
             if fid is not None:
-                facts.append(await self._reads.get_fact(conn, ctx, fid, can_see_sensitive=can_see_sensitive))
+                # reviews are admin / reviewer only: a full view by role
+                facts.append(
+                    await self._reads.get_fact(conn, ctx, fid, can_see_sensitive=can_see_sensitive, subjects=SubjectFilter.unrestricted())
+                )
         violations: list[dict[str, Any]] = []
         if r.command_id is not None:
             cmd = (
@@ -243,6 +292,8 @@ class ReviewService:
             candidates=candidates,
             interactions=await self.interactions_for(conn, ws, review_id),
             violations=violations,
+            deletion_request_id=getattr(r, "deletion_request_id", None),
+            detail={k: v for k, v in detail.items() if k in _SAFE_DETAIL} if r.item_type == "deletion_exception" else {},
         )
 
     # ---- decide ---------------------------------------------------------------------------------------------------------------------------
@@ -253,6 +304,8 @@ class ReviewService:
         """Returns (result, replayed). Everything below runs in the caller's tenant transaction: a refusal raises and nothing is written."""
         conn, ws = cc.conn, cc.ctx.workspace_id
         payload: dict[str, object] = {"review_id": str(review_id), "decision": body.decision, "rationale_code": body.rationale_code}
+        if body.edited_content is not None:  # the ledger keeps a hash of the edit, never the text
+            payload["edited_content_sha256"] = hashlib.sha256(body.edited_content.encode()).hexdigest()
         digest = request_hash("review.decide", payload)
         await lock_key(conn, ws, "cmd", key)
         prior = (
@@ -274,15 +327,23 @@ class ReviewService:
         if body.decision not in ALLOWED_DECISIONS[review.item_type]:
             raise ValidationFailed("this decision does not apply to this kind of review item", details={"fields": ["decision"]})
 
-        handler = {
-            "identity_match": self._identity,
-            "contradiction": self._contradiction,
-            "graphiti_invalidation": self._invalidation,
-            "policy_violation": self._policy,
-        }[review.item_type]
-        effects = await handler(cc, review, body)
+        if review.item_type in self._external:
+            effects = await self._external[review.item_type].decide(cc, review, body, key=key)
+        else:
+            handler = {
+                "identity_match": self._identity,
+                "contradiction": self._contradiction,
+                "graphiti_invalidation": self._invalidation,
+                "policy_violation": self._policy,
+                "authoritative_override": self._acknowledge,
+                "correction_request": self._correction_request,
+            }[review.item_type]
+            effects = await handler(cc, review, body)
         entity_ids = sorted({*effects.get("entity_ids", [])}, key=str)
         fact_ids = sorted({*effects.get("fact_ids", [])}, key=str)
+        memory_ids = sorted({*effects.get("memory_ids", [])}, key=str)
+        # a decision that changes no graph row has nothing to project: memory items, and the P8 kinds that are about memory text, deletion, overrides or requests
+        is_memory = review.item_type.startswith("memory_") or review.item_type in NO_GRAPH_TYPES
 
         stays_open = body.decision == "needs_more_evidence"
         ontology_version = await self._ontology_version(conn, ws, review)
@@ -293,9 +354,10 @@ class ReviewService:
             status="open" if stays_open else "decided",
             command_id=command_id,
             revision=review.revision + 1,
-            projection_status="pending",
+            projection_status="not_applicable" if is_memory else "pending",  # a memory decision touches no graph row: nothing to project
             entity_ids=entity_ids,
             fact_ids=fact_ids,
+            memory_ids=memory_ids,
             applied_command_id=effects.get("applied_command_id"),
         )
         await ledger_command(
@@ -311,6 +373,7 @@ class ReviewService:
             source_system="review",
             source_ref=str(review_id),
             command_id=command_id,
+            projection="not_applicable" if is_memory else "pending",
         )
         if stays_open:
             await conn.execute(
@@ -345,9 +408,13 @@ class ReviewService:
                 rationale_code=body.rationale_code,
                 count_entities=len(entity_ids),
                 count_facts=len(fact_ids),
+                count_memories=len(memory_ids),
+                memory_id=review.memory_id,
             ),
         )
         metrics.review_decisions_total.labels(item_type=review.item_type, decision=body.decision).inc()
+        if is_memory:
+            return out, False
         await enqueue(
             conn,
             workspace_id=ws,
@@ -362,7 +429,35 @@ class ReviewService:
         )
         return out, False
 
-    async def _ontology_version(self, conn: AsyncConnection, ws: uuid.UUID, review: Row[Any]) -> uuid.UUID:
+    async def _ontology_version(self, conn: AsyncConnection, ws: uuid.UUID, review: Row[Any]) -> uuid.UUID | None:
+        if (
+            review.item_type == "deletion_exception"
+        ):  # about a request, not a row: the ledger entry takes the active version (or the latest one)
+            row = (
+                await conn.execute(
+                    text(
+                        "SELECT COALESCE((SELECT active_version_id FROM workspace_ontology WHERE workspace_id = :ws), "
+                        "(SELECT id FROM ontology_versions WHERE workspace_id = :ws ORDER BY created_at DESC LIMIT 1)) AS v"
+                    ),
+                    {"ws": ws},
+                )
+            ).first()
+            if row is None or row.v is None:
+                raise NotFound()
+            return uuid.UUID(str(row.v))
+        if (
+            review.memory_id is not None
+        ):  # a memory review has no graph row to take a version from: its own command's (possibly none) stands
+            row = (
+                await conn.execute(
+                    text(
+                        "SELECT c.ontology_version_id FROM curated_memories m JOIN commands c ON c.workspace_id = m.workspace_id AND c.id = m.command_id "
+                        "WHERE m.workspace_id = :ws AND m.id = :id"
+                    ),
+                    {"ws": ws, "id": review.memory_id},
+                )
+            ).first()
+            return None if row is None or row.ontology_version_id is None else uuid.UUID(str(row.ontology_version_id))
         for table, col in (
             ("facts", review.fact_id),
             ("entities", review.candidate_entity_id),
@@ -485,8 +580,30 @@ class ReviewService:
 
     async def _invalidation(self, cc: CommandContext, review: Row[Any], body: DecisionIn) -> dict[str, Any]:
         if body.decision == "open_correction":
-            raise NotAvailable("Corrections of verified facts arrive in a later phase")
+            # P8: Graphiti invalidated a verified fact. The decision does not rewrite anything itself; it opens a correction request that a reviewer carries out with the
+            # correction API (which shows the impact first). The invalidation item is closed by this decision.
+            await self._extracted.open_review(
+                cc.conn,
+                cc.ctx.workspace_id,
+                item_type="correction_request",
+                rule_kind="correction",
+                reason_code="graphiti_invalidation",
+                audit=cc.audit,
+                fact_id=review.fact_id,
+                detail={"from_review": str(review.id)},
+            )
         return {"fact_ids": [review.fact_id]}
+
+    # ---- authoritative_override / correction_request (P8) ---------------------------------------------------------------------------------
+
+    async def _acknowledge(self, cc: CommandContext, review: Row[Any], body: DecisionIn) -> dict[str, Any]:
+        """The owner of the source system has been told that a person displaced its fact. Nothing else changes."""
+        return {"fact_ids": [review.fact_id] if review.fact_id else []}
+
+    async def _correction_request(self, cc: CommandContext, review: Row[Any], body: DecisionIn) -> dict[str, Any]:
+        """`apply_correction` records that the reviewer will make (or has made) the correction through the correction API; `dismiss` withdraws the request. The item is the
+        paper trail: the correction itself is its own audited command."""
+        return {"fact_ids": [review.fact_id] if review.fact_id else []}
 
     # ---- policy_violation -----------------------------------------------------------------------------------------------------------------
 

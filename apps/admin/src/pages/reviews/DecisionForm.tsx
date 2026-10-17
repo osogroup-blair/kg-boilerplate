@@ -31,6 +31,16 @@ export const DECISION_LABELS: Record<string, string> = {
   open_correction: "Open a correction",
   approve: "Approve",
   reject: "Reject",
+  approve_with_edit: "Approve with my wording",
+  supersede_existing: "Replace the existing memory with this one",
+  restore: "Restore it (the source was not the problem)",
+  confirm_removal: "Confirm removal (it stays out)",
+  redact_text: "Redact the text (replace it with my wording)",
+  delete_item: "Delete the item",
+  retain_with_reason: "Retain it (a hold or an approved exception)",
+  retry_verification: "Check again",
+  apply_correction: "Apply the correction",
+  dismiss: "Dismiss (no correction needed)",
 };
 
 /** A decision needs a decision and a rationale code; the free text is optional and stays on the item. The submit button says so by staying disabled. */
@@ -39,6 +49,7 @@ export function DecisionForm({ reviewId, allowed, revision, onDecided }: { revie
   const [decision, setDecision] = useState("");
   const [rationale, setRationale] = useState("");
   const [text, setText] = useState("");
+  const [edited, setEdited] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit() {
@@ -46,7 +57,7 @@ export function DecisionForm({ reviewId, allowed, revision, onDecided }: { revie
     setError(null);
     const res = await api.POST("/v1/reviews/{review_id}/decision", {
       params: { path: { review_id: reviewId }, header: { "Idempotency-Key": newKey(), "If-Match": revision } },
-      body: { decision: decision as never, rationale_code: rationale as never, rationale_text: text.trim() || null },
+      body: { decision: decision as never, rationale_code: rationale as never, rationale_text: text.trim() || null, edited_content: decision === "approve_with_edit" || decision === "redact_text" ? edited.trim() : null },
     });
     setBusy(false);
     if (res.response.ok) {
@@ -60,6 +71,9 @@ export function DecisionForm({ reviewId, allowed, revision, onDecided }: { revie
       code === "requires_correction" ? "This would displace a recorded, verified fact. That is a correction, not a review decision." :
       code === "precondition_failed" ? "The item changed since you opened it. Reload and decide again." :
       code === "already_decided" ? "Someone already decided this item." :
+      code === "insufficient_authority" ? "The existing memory has higher authority than you hold, so you cannot replace it." :
+      code === "invalid_transition" ? "The memory is no longer in a state this decision applies to." :
+      code === "duplicate_memory" ? "An identical live memory already exists." :
       code === "not_available" ? "That decision is not available yet." : code,
     );
   }
@@ -72,6 +86,11 @@ export function DecisionForm({ reviewId, allowed, revision, onDecided }: { revie
           <label key={d} className="flex items-center gap-2 text-sm"><input type="radio" name="decision" value={d} checked={decision === d} onChange={() => setDecision(d)} /> {DECISION_LABELS[d] ?? d}</label>
         ))}
       </fieldset>
+      {decision === "approve_with_edit" || decision === "redact_text" ? (
+        <Field label="Your wording" hint={decision === "redact_text" ? "Replaces the memory's text. The original is deleted for good." : "Becomes a new active memory that replaces the proposal. The proposal is kept, with its evidence."}>
+          <textarea aria-label="Your wording" className={`${inputCls} w-full`} rows={3} maxLength={2000} value={edited} onChange={(e) => setEdited(e.target.value)} />
+        </Field>
+      ) : null}
       <Field label="Rationale" hint="Required. Recorded in the audit log as a code.">
         <select aria-label="Rationale" className={`${inputCls} w-full`} value={rationale} onChange={(e) => setRationale(e.target.value)}>
           <option value="" disabled>Choose a rationale…</option>
@@ -82,7 +101,7 @@ export function DecisionForm({ reviewId, allowed, revision, onDecided }: { revie
         <textarea aria-label="Notes" className={`${inputCls} w-full`} rows={2} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} />
       </Field>
       {error ? <Banner tone="red" role="alert">{error}</Banner> : null}
-      <button type="submit" className={btn.primary} disabled={!decision || !rationale || busy}>{busy ? "Deciding…" : "Record decision"}</button>
+      <button type="submit" className={btn.primary} disabled={!decision || !rationale || busy || ((decision === "approve_with_edit" || decision === "redact_text") && !edited.trim())}>{busy ? "Deciding…" : "Record decision"}</button>
     </form>
   );
 }

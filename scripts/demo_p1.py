@@ -104,7 +104,7 @@ async def main() -> int:
         async def s6(c: httpx.AsyncClient) -> tuple[bool, str]:
             r = await c.get("/v1/principals", headers=bearer(keys["demo/admin@demo"]))
             n = len(r.json()["items"]) if r.status_code == 200 else -1
-            return n == 6, f"{r.status_code} {n} principals"
+            return n == 7, f"{r.status_code} {n} principals"
 
         async def s7(c: httpx.AsyncClient) -> tuple[bool, str]:
             key, prefix = await make_throwaway_key(settings)
@@ -131,7 +131,7 @@ async def main() -> int:
         await step("3 other_demo agent: demo workspace id", "404 identical to a random id", s3, c)
         await step("4 other_demo admin lists principals", "only other_demo principals", s4, c)
         await step("5 demo agent lists principals", "403 forbidden (no principal.read)", s5, c)
-        await step("6 demo admin lists principals", "6 demo principals", s6, c)
+        await step("6 demo admin lists principals", "7 demo principals (P5 added agent_support)", s6, c)
         await step("7 revoke a throwaway key", "key and its JWT -> 401", s7, c)
         await step("8 readiness", "postgres, neo4j, router(mock), worker ok", s8, c)
 

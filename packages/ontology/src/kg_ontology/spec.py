@@ -12,7 +12,17 @@ import re
 from typing import Annotated, Any, Literal
 
 import yaml
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    StringConstraints,
+    ValidationError,
+    model_serializer,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from kg_ontology.report import Issue
@@ -143,12 +153,26 @@ class RuleRef(_Strict):
     tests: list[RuleTest] = Field(default_factory=list)
 
 
+EntityAccess = Literal["workspace", "subject_scoped"]
+ENTITY_ACCESS: tuple[str, ...] = ("workspace", "subject_scoped")
+
+
 class EntityTypeSpec(_Strict):
     description: str = Field(default="", max_length=500)
     identity: IdentitySpec = Field(default_factory=IdentitySpec)
     allowed_classifications: list[Classification] = Field(default_factory=lambda: list(CLASSIFICATIONS))  # type: ignore[arg-type]
+    # P7 (ADR-037): `subject_scoped` entities, and every fact touching one, are visible only to principals granted that subject. The default is the P2-P6 behaviour, and it
+    # is not serialised, so a document published before P7 hashes exactly as it did.
+    access: EntityAccess = "workspace"
     attributes: dict[AttrKey, AttributeSpec] = Field(default_factory=dict)
     rules: list[RuleRef] = Field(default_factory=list)
+
+    @model_serializer(mode="wrap")
+    def _omit_default_access(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if data.get("access") == "workspace":
+            data.pop("access", None)
+        return data
 
 
 class RelationshipTypeSpec(_Strict):
@@ -168,13 +192,192 @@ class OntologyHeader(_Strict):
     mode: Literal["strict", "permissive"] = "strict"  # permissive: unknown attributes are kept and warned about
 
 
+CONTEXT_WEIGHT_KEYS = ("relevance", "authority", "importance", "evidence", "proximity", "recency", "diversity")
+CONTEXT_SECTIONS = ("current_facts", "relevant_facts", "episodic", "semantic", "procedural", "working", "uncertainty", "history")
+CONTEXT_COMPRESSIONS = ("structured", "extractive", "summarized")
+SignalKey = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,63}$")]
+
+
+class SignalSource(_Strict):
+    """One way an expected signal can be satisfied (P6, §5.6): a relationship the subject holds, an attribute it carries, or a memory assertion about it."""
+
+    relationship: RelKey | None = None
+    direction: Literal["out", "in", "both"] = "out"
+    attribute: Identifier | None = None
+    memory_predicate: Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,63}$")] | None = None
+
+    @model_validator(mode="after")
+    def _one(self) -> SignalSource:
+        if sum(x is not None for x in (self.relationship, self.attribute, self.memory_predicate)) != 1:
+            raise PydanticCustomError(
+                "signal_source_shape", "a signal source names exactly one of relationship, attribute, memory_predicate"
+            )
+        return self
+
+
+class ExpectedSignal(_Strict):
+    """Deterministic unknown detection: when no authorised, verified item satisfies any `satisfied_by`, the context says `No verified <label> for <subject>`."""
+
+    key: SignalKey
+    label: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9][A-Za-z0-9 _/-]*$")
+    for_types: list[Identifier] = Field(min_length=1, max_length=10)
+    satisfied_by: list[SignalSource] = Field(min_length=1, max_length=6)
+
+
+class ContextGraphSettings(_Strict):
+    enabled: bool = True
+    hops: int = Field(default=1, ge=0, le=2)
+    limit: int = Field(default=20, ge=1, le=25)
+
+
+def _default_memory_types() -> list[Literal["working", "episodic", "semantic", "procedural"]]:
+    return ["episodic", "semantic", "procedural"]
+
+
+class ContextMemorySettings(_Strict):
+    types: list[Literal["working", "episodic", "semantic", "procedural"]] = Field(default_factory=_default_memory_types)
+    limit_per_type: int = Field(default=8, ge=1, le=50)
+
+
 class ContextProfile(BaseModel):
-    """Stored and shape-checked now; evaluated in P6. Unknown keys are kept so P6 can extend the profile without a migration."""
+    """A versioned context profile (P6, blueprint 02-domain/05): caps, sections, retrieval weights, compression modes, expected signals.
+
+    Every P6 field is optional and None until set, and a None field is not serialised, so a document published before P6 hashes exactly as it did. Unknown keys are
+    still kept (`extra="allow"`). A request or an agent override can only NARROW what a profile allows (`kg_context.profiles`)."""
 
     model_config = ConfigDict(extra="allow")
     max_tokens: int | None = Field(default=None, ge=1)
     include: list[str] = Field(default_factory=list)
     evidence_required: bool = False
+    # ---- P6 ----
+    max_items: int | None = Field(default=None, ge=1, le=200)
+    evidence_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
+    compression: list[Literal["structured", "extractive", "summarized"]] | None = Field(default=None, min_length=1)
+    graph: ContextGraphSettings | None = None
+    memory: ContextMemorySettings | None = None
+    weights: dict[str, float] | None = None
+    section_budget: dict[str, float] | None = None
+    history: Literal["never", "when_relevant", "always"] | None = None
+    current_facts: Literal["always", "relevant"] | None = (
+        None  # always: a subject's critical current facts are packed whatever the task says
+    )
+    required_current_k: int | None = Field(default=None, ge=0, le=10)
+    required_procedural_k: int | None = Field(default=None, ge=0, le=5)
+    item_chars: int | None = Field(default=None, ge=40, le=1000)
+    intent_terms: list[Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9 -]{0,39}$")]] | None = Field(
+        default=None, max_length=12
+    )  # words that say what a task of this kind needs; appended to the MEMORY query
+    expected_signals: list[ExpectedSignal] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check(self) -> ContextProfile:
+        if self.weights is not None:
+            for key, value in self.weights.items():
+                if key not in CONTEXT_WEIGHT_KEYS or not 0.0 <= value <= 5.0:
+                    raise PydanticCustomError(
+                        "invalid_weight", "weights are {names}, each between 0 and 5", {"names": list(CONTEXT_WEIGHT_KEYS)}
+                    )
+        if self.section_budget is not None:
+            for key, value in self.section_budget.items():
+                if not 0.0 <= value <= 1.0:
+                    raise PydanticCustomError("invalid_section_budget", "section_budget shares are between 0 and 1")
+                _ = key
+        return self  # `include` is deliberately not checked: a version published before P6 may name sections this release does not know (they are ignored)
+
+    @model_serializer(mode="wrap")
+    def _omit_unset(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        for key in (
+            "max_items",
+            "evidence_threshold",
+            "compression",
+            "graph",
+            "memory",
+            "weights",
+            "section_budget",
+            "history",
+            "current_facts",
+            "required_current_k",
+            "required_procedural_k",
+            "item_chars",
+            "intent_terms",
+        ):
+            if data.get(key) is None:
+                data.pop(key, None)
+        if not data.get("expected_signals"):
+            data.pop("expected_signals", None)
+        return data
+
+
+MemoryTypeName = Literal["working", "episodic", "semantic", "procedural"]
+MEMORY_POLICY_KEYS = ("default", "working", "episodic", "semantic", "procedural")
+_PROCEDURAL_ALIAS = {"review_required": True, "required": True, "allowed": False, "auto_activate": False}
+
+
+class MemoryPolicy(_Strict):
+    """Typed, versioned memory policy (P5, ADR-029/030). Every field is optional: an unset field falls through `memory_policies.<type>` -> `default` ->
+    the platform defaults (`kg_memory.policy`). The P2 key set is accepted (`inferred_shared_procedural`, `archive_after_days`), so versions published
+    before P5 keep parsing; their stored hashes are never re-derived."""
+
+    extraction: Literal["enabled", "disabled"] | None = None
+    extraction_min_importance: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_memories_per_interaction: int | None = Field(default=None, ge=0, le=20)
+    auto_activate: list[Literal["episodic", "semantic", "procedural"]] | None = None
+    procedural_requires_review: bool | None = None
+    agent_shared_requires_review: bool | None = None
+    working_ttl_hours: float | None = Field(default=None, gt=0.0, le=24 * 30)
+    max_content_chars: int | None = Field(default=None, ge=50, le=10_000)
+    default_extracted_scope: Literal["subject", "workspace"] | None = None
+    excluded_classifications: list[Classification] | None = None
+    archive_after_days: int | None = Field(default=None, ge=1)  # reserved for P8 retention
+    # P8 (ADR-043): consolidation. Unset fields are not serialised, so a document published before P8 hashes exactly as it did.
+    consolidation: Literal["disabled", "reinforce", "synthesize"] | None = None
+    consolidation_min_group: int | None = Field(default=None, ge=2, le=50)
+    consolidation_auto_supersede: bool | None = (
+        None  # reinforce only: folded duplicates are superseded at once. Synthesis never supersedes without a reviewer.
+    )
+    near_duplicate_jaccard: float | None = Field(default=None, ge=0.5, le=1.0)
+    near_duplicate_cosine: float | None = Field(default=None, ge=0.5, le=1.0)
+    episodic_window_days: int | None = Field(default=None, ge=1, le=3650)
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_consolidation(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        for key in (
+            "consolidation",
+            "consolidation_min_group",
+            "consolidation_auto_supersede",
+            "near_duplicate_jaccard",
+            "near_duplicate_cosine",
+            "episodic_window_days",
+        ):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def _p2_aliases(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "inferred_shared_procedural" not in data:
+            return data
+        data = dict(data)
+        value = data.pop("inferred_shared_procedural")
+        if value not in _PROCEDURAL_ALIAS:
+            raise PydanticCustomError(
+                "invalid_policy_value", "inferred_shared_procedural must be one of {options}", {"options": sorted(_PROCEDURAL_ALIAS)}
+            )
+        data.setdefault("procedural_requires_review", _PROCEDURAL_ALIAS[value])
+        return data
+
+    @model_validator(mode="after")
+    def _check(self) -> MemoryPolicy:
+        if self.excluded_classifications is not None and "local_only" not in self.excluded_classifications:
+            raise PydanticCustomError("local_only_not_excludable", "local_only content is never sent to a model, so it must stay excluded")
+        if self.auto_activate and "procedural" in self.auto_activate and self.procedural_requires_review is not False:
+            raise PydanticCustomError(
+                "procedural_needs_review", "procedural memory can only auto-activate when procedural_requires_review is false"
+            )
+        return self
 
 
 class OntologySpec(_Strict):
@@ -183,7 +386,7 @@ class OntologySpec(_Strict):
     relationship_types: dict[RelKey, RelationshipTypeSpec] = Field(default_factory=dict)
     rules: list[RuleRef] = Field(default_factory=list)  # workspace-wide
     context_profiles: dict[str, ContextProfile] = Field(default_factory=dict)
-    memory_policies: dict[str, dict[str, str | int | float | bool | None]] = Field(default_factory=dict)
+    memory_policies: dict[Literal["default", "working", "episodic", "semantic", "procedural"], MemoryPolicy] = Field(default_factory=dict)
 
     @property
     def version(self) -> str:

@@ -106,7 +106,7 @@ function Jobs() {
               <tr key={j.id} className="border-t border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900">
                 <td className="py-2 pr-4"><Link to={`/operations/jobs/${j.id}`} className="font-mono text-xs underline-offset-2 hover:underline">{j.stage}{j.generation > 0 ? ` g${j.generation}` : ""}</Link></td>
                 <td className="pr-4 text-xs">
-                  {j.subject_type === "interaction" ? <Link to={`/interactions/${j.subject_id}`} className="underline">event {j.subject_id.slice(0, 8)}…</Link> : <Link to={`/commands/${j.subject_id}`} className="underline">command {j.subject_id.slice(0, 8)}…</Link>}
+                  {j.subject_type === "interaction" ? <Link to={`/interactions/${j.subject_id}`} className="underline">event {j.subject_id.slice(0, 8)}…</Link> : j.subject_type === "memory" ? <span className="font-mono text-xs">memory {j.subject_id.slice(0, 8)}…</span> : <Link to={`/commands/${j.subject_id}`} className="underline">command {j.subject_id.slice(0, 8)}…</Link>}
                 </td>
                 <td className="pr-4"><JobBadge status={j.status} /></td>
                 <td className="pr-4">{j.attempts}/{j.max_attempts}</td>

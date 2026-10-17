@@ -17,6 +17,8 @@ from kg_common.errors import NotFound
 from kg_common.pagination import clamp_limit, decode_cursor, encode_cursor
 from kg_domain.envelope import Page
 from kg_domain.principal import WorkspaceContext
+from kg_governance.grants import ScopeGrants, SubjectFilter, entity_visible_sql, fact_visible_sql
+from kg_obs import metrics
 from sqlalchemy import Row, text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -56,7 +58,7 @@ def visibility_sql(*, include_history: bool, known_at_given: bool) -> str:
         "AND (f.superseded_at IS NULL OR f.superseded_at > COALESCE(CAST(:known_at AS timestamptz), now()))"
     )
     if include_history:
-        history = "f.status NOT IN ('deleted','proposed','rejected')" + (f" AND {known}" if known_at_given else "")
+        history = "f.status NOT IN ('deleted','proposed','rejected','deletion_pending')" + (f" AND {known}" if known_at_given else "")
         return f"(({history}) OR f.status = ANY(CAST(:extras AS text[])))"
     current = (
         "f.status = 'active' AND (f.valid_from IS NULL OR f.valid_from <= COALESCE(CAST(:as_of AS timestamptz), now())) "
@@ -71,9 +73,34 @@ def _redact(attrs: dict[str, Any], sensitive: set[str], allowed: bool) -> dict[s
     return {k: (dict(REDACTED_VALUE) if k in sensitive else v) for k, v in attrs.items()}
 
 
+_LEDGER_ONLY = (  # the knowledge commands: memory (P5) and principal-management (P7) commands are read through their own, scope-aware surfaces
+    "command_type NOT LIKE 'memory.%' AND command_type NOT LIKE 'principal.%' AND command_type NOT LIKE 'key.%' AND command_type NOT LIKE 'grant.%' "
+    "AND command_type NOT LIKE 'settings.%' AND command_type NOT LIKE 'deletion.%' AND command_type <> 'correction.memory'"
+)
+_MAX_CLASS_HEAD = (
+    "SELECT f.classification FROM facts f JOIN entities s ON s.workspace_id = f.workspace_id AND s.id = f.source_entity_id "
+    "JOIN entities t ON t.workspace_id = f.workspace_id AND t.id = f.target_entity_id "
+    "WHERE f.workspace_id = :ws AND f.status IN ('active','disputed','proposed')"
+)
+_MAX_CLASS_TAIL = (
+    "AND (f.source_entity_id = ANY(:ids) OR f.target_entity_id = ANY(:ids)) "
+    "ORDER BY array_position(ARRAY['public','internal','confidential','restricted','local_only'], f.classification) DESC LIMIT 1"
+)
+
+
 class Reads:
     def __init__(self, specs: SpecCache):
         self._specs = specs
+
+    async def subject_filter(self, conn: AsyncConnection, ws: uuid.UUID, grants: ScopeGrants) -> SubjectFilter:
+        """The caller's entity/fact filter under the ACTIVE ontology (P7, ADR-037). A workspace with no `subject_scoped` type gets an unenforced filter."""
+        return grants.subject_filter(await self._specs.scoped_types(conn, ws))
+
+    @staticmethod
+    def hidden(surface: str, n: int = 1) -> None:
+        """Counts how often the subject filter hid something (no ids: `acl_hidden_total{surface}`)."""
+        if n > 0:
+            metrics.acl_hidden_total.labels(surface=surface).inc(n)
 
     async def _sensitive(
         self, conn: AsyncConnection, ws: uuid.UUID, version_id: uuid.UUID, type_key: str, *, relationship: bool
@@ -120,6 +147,7 @@ class Reads:
         ctx: WorkspaceContext,
         *,
         can_see_sensitive: bool,
+        subjects: SubjectFilter,
         type_key: str | None,
         q: str | None,
         status: str | None,
@@ -128,6 +156,9 @@ class Reads:
     ) -> Page[EntityOut]:
         size, after = clamp_limit(limit), decode_cursor(cursor)
         where, params = ["e.workspace_id = :ws"], {"ws": ctx.workspace_id, "n": size + 1}
+        acl, acl_params = entity_visible_sql(subjects, alias="e")
+        where.append(acl)
+        params.update(acl_params)
         if type_key:
             where.append("e.type_key = :type")
             params["type"] = type_key
@@ -148,6 +179,79 @@ class Reads:
         items = [await self._entity_out(conn, ctx.workspace_id, r, can_see_sensitive) for r in page]
         return Page[EntityOut](items=items, next_cursor=encode_cursor(page[-1].recorded_at, page[-1].id) if more else None)
 
+    async def entities_by_ids(
+        self, conn: AsyncConnection, ctx: WorkspaceContext, ids: Sequence[uuid.UUID], *, can_see_sensitive: bool, subjects: SubjectFilter
+    ) -> list[EntityOut]:
+        """The active entities among `ids`, in the order asked. A merged entity answers as the entity it was merged into; an id that does not exist in this workspace
+        (or lives in another) is simply absent, exactly like a deleted one: the caller cannot tell them apart."""
+        wanted: list[uuid.UUID] = list(dict.fromkeys(ids))
+        found: dict[uuid.UUID, Row[Any]] = {}
+        resolve: dict[uuid.UUID, uuid.UUID] = {}
+        todo = list(wanted)
+        for _ in range(3):  # a merge chain is shallow; bounded all the same
+            if not todo:
+                break
+            acl, acl_params = entity_visible_sql(subjects, alias="e")
+            rows = (
+                await conn.execute(
+                    text(f"SELECT e.*, {_EXTERNAL_IDS} FROM entities e WHERE e.workspace_id = :ws AND e.id = ANY(:ids) AND {acl}"),  # noqa: S608
+                    {"ws": ctx.workspace_id, "ids": todo, **acl_params},
+                )
+            ).all()
+            todo = []
+            for r in rows:
+                if r.status == "merged" and r.merged_into_id is not None:
+                    resolve[r.id] = r.merged_into_id
+                    todo.append(r.merged_into_id)
+                elif r.status == "active":
+                    found[r.id] = r
+        out: list[EntityOut] = []
+        seen: set[uuid.UUID] = set()
+        for want in wanted:
+            canonical = want
+            for _ in range(3):
+                canonical = resolve.get(canonical, canonical)
+            row = found.get(canonical)
+            if row is not None and canonical not in seen:
+                seen.add(canonical)
+                out.append(await self._entity_out(conn, ctx.workspace_id, row, can_see_sensitive))
+        return out
+
+    async def max_fact_classification(
+        self, conn: AsyncConnection, ctx: WorkspaceContext, entity_ids: Sequence[uuid.UUID], *, subjects: SubjectFilter
+    ) -> str | None:
+        """The highest classification among the current facts that touch these entities and that the caller may see (P6: the egress classification of a task about them;
+        a fact the caller cannot see must not change how its task is treated)."""
+        if not entity_ids:
+            return None
+        acl, acl_params = fact_visible_sql(subjects, source="s", target="t")
+        sql = f"{_MAX_CLASS_HEAD} AND {acl} {_MAX_CLASS_TAIL}"  # noqa: S608 (constant fragments; the filter is bound parameters)
+        row = (await conn.execute(text(sql), {"ws": ctx.workspace_id, "ids": list(entity_ids), **acl_params})).first()
+        return str(row.classification) if row else None
+
+    async def open_review_links(
+        self, conn: AsyncConnection, ctx: WorkspaceContext, fact_ids: Sequence[uuid.UUID]
+    ) -> dict[uuid.UUID, uuid.UUID]:
+        """fact id -> the id of the open contradiction review that concerns it (as the claim or as the fact it competes with). Ids only: the item is read through the
+        review API, which has its own authorisation (P6 context conflicts)."""
+        if not fact_ids:
+            return {}
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT id, fact_id, competing_fact_id FROM review_items WHERE workspace_id = :ws AND item_type = 'contradiction' AND status = 'open' "
+                    "AND (fact_id = ANY(:ids) OR competing_fact_id = ANY(:ids)) ORDER BY created_at, id"
+                ),
+                {"ws": ctx.workspace_id, "ids": list(fact_ids)},
+            )
+        ).all()
+        out: dict[uuid.UUID, uuid.UUID] = {}
+        for r in rows:
+            for fid in (r.fact_id, r.competing_fact_id):
+                if fid is not None:
+                    out.setdefault(fid, r.id)
+        return out
+
     async def get_entity(
         self,
         conn: AsyncConnection,
@@ -155,18 +259,22 @@ class Reads:
         entity_id: uuid.UUID,
         *,
         can_see_sensitive: bool,
+        subjects: SubjectFilter,
         include_history: bool,
         as_of: dt.datetime | None,
         known_at: dt.datetime | None,
         include: Sequence[str] = (),
     ) -> EntityDetailOut:
+        acl, acl_params = entity_visible_sql(subjects, alias="e")
         row = (
             await conn.execute(
-                text(f"SELECT e.*, {_EXTERNAL_IDS} FROM entities e WHERE e.workspace_id = :ws AND e.id = :id"),  # noqa: S608
-                {"ws": ctx.workspace_id, "id": entity_id},
+                text(f"SELECT e.*, {_EXTERNAL_IDS} FROM entities e WHERE e.workspace_id = :ws AND e.id = :id AND {acl}"),  # noqa: S608
+                {"ws": ctx.workspace_id, "id": entity_id, **acl_params},
             )
         ).first()  # noqa: S608
         if row is None:
+            if subjects.enforced:
+                await self._note_hidden_entity(conn, ctx, entity_id, "entity")
             raise NotFound()
         base = await self._entity_out(conn, ctx.workspace_id, row, can_see_sensitive)
         facts = await self.list_facts(
@@ -179,6 +287,7 @@ class Reads:
             known_at=known_at,
             include_history=include_history,
             can_see_sensitive=can_see_sensitive,
+            subjects=subjects,
             include=include,
         )
         return EntityDetailOut(**base.model_dump(), relationships=facts)
@@ -269,9 +378,11 @@ class Reads:
         known_at: dt.datetime | None,
         include_history: bool,
         can_see_sensitive: bool,
+        subjects: SubjectFilter,
         include: Sequence[str] = (),
     ) -> list[FactOut]:
-        """`include` adds fact statuses that are not "current": proposed, disputed, rejected. They are always labelled by their `status`."""
+        """`include` adds fact statuses that are not "current": proposed, disputed, rejected. They are always labelled by their `status`. A fact is shown only when BOTH its
+        endpoints are visible to `subjects` (the predicate is inside the statement)."""
         where = ["f.workspace_id = :ws"]
         extras = sorted({x for x in include if x in ("proposed", "disputed", "rejected")})
         params: dict[str, Any] = {"ws": ctx.workspace_id, "e": entity_id, "as_of": as_of, "known_at": known_at, "extras": extras}
@@ -286,24 +397,58 @@ class Reads:
             where.append("f.rel_type = :rel")
             params["rel"] = rel_type
         where.append(visibility_sql(include_history=include_history, known_at_given=known_at is not None))
-        sql = f"{FACT_SELECT} WHERE {' AND '.join(where)} ORDER BY f.valid_from NULLS FIRST, f.recorded_at, f.id"  # noqa: S608 (constant fragments)
-        rows = (await conn.execute(text(sql), params)).all()
+        acl, acl_params = fact_visible_sql(subjects, source="s", target="t")
+        sql = f"{FACT_SELECT} WHERE {' AND '.join(where)} AND {acl} ORDER BY f.valid_from NULLS FIRST, f.recorded_at, f.id"  # noqa: S608 (constant fragments)
+        rows = (await conn.execute(text(sql), {**params, **acl_params})).all()
+        if subjects.enforced:
+            # a count of what the filter hid on this read (no ids): the same statement without the filter, minus what it returned
+            count_sql = f"SELECT count(*) AS n FROM ({FACT_SELECT} WHERE {' AND '.join(where)}) x"  # noqa: S608 (constant fragments)
+            self.hidden("facts", int((await conn.execute(text(count_sql), params)).scalar_one()) - len(rows))
         evidence = await self._evidence(conn, ctx.workspace_id, [r.id for r in rows])
         return [await self._fact_out(conn, ctx.workspace_id, r, can_see_sensitive, evidence.get(r.id, [])) for r in rows]
 
-    async def entity_exists(self, conn: AsyncConnection, ctx: WorkspaceContext, entity_id: uuid.UUID) -> None:
+    async def entity_exists(self, conn: AsyncConnection, ctx: WorkspaceContext, entity_id: uuid.UUID, *, subjects: SubjectFilter) -> None:
+        """404 for an id that does not exist here, lives in another workspace, or that the subject filter hides: one answer for all three."""
+        acl, acl_params = entity_visible_sql(subjects, alias="e")
         if (
+            await conn.execute(
+                text(f"SELECT 1 FROM entities e WHERE e.workspace_id = :ws AND e.id = :id AND {acl}"),  # noqa: S608
+                {"ws": ctx.workspace_id, "id": entity_id, **acl_params},
+            )
+        ).first() is None:
+            if subjects.enforced:
+                await self._note_hidden_entity(conn, ctx, entity_id, "entity")
+            raise NotFound()
+
+    async def _note_hidden_entity(self, conn: AsyncConnection, ctx: WorkspaceContext, entity_id: uuid.UUID, surface: str) -> None:
+        """Only on the failure path of an enforced filter: was it the filter that hid it (an entity of this workspace) rather than a plain miss? Counts, never says."""
+        row = (
             await conn.execute(
                 text("SELECT 1 FROM entities WHERE workspace_id = :ws AND id = :id"), {"ws": ctx.workspace_id, "id": entity_id}
             )
-        ).first() is None:
-            raise NotFound()
+        ).first()
+        if row is not None:
+            self.hidden(surface)
 
-    async def get_fact(self, conn: AsyncConnection, ctx: WorkspaceContext, fact_id: uuid.UUID, *, can_see_sensitive: bool) -> FactOut:
+    async def get_fact(
+        self, conn: AsyncConnection, ctx: WorkspaceContext, fact_id: uuid.UUID, *, can_see_sensitive: bool, subjects: SubjectFilter
+    ) -> FactOut:
+        acl, acl_params = fact_visible_sql(subjects, source="s", target="t")
         row = (
-            await conn.execute(text(f"{FACT_SELECT} WHERE f.workspace_id = :ws AND f.id = :id"), {"ws": ctx.workspace_id, "id": fact_id})
-        ).first()  # noqa: S608
+            await conn.execute(
+                text(f"{FACT_SELECT} WHERE f.workspace_id = :ws AND f.id = :id AND f.status <> 'deletion_pending' AND {acl}"),  # noqa: S608
+                {"ws": ctx.workspace_id, "id": fact_id, **acl_params},
+            )
+        ).first()
         if row is None:
+            if subjects.enforced:
+                hidden = (
+                    await conn.execute(
+                        text("SELECT 1 FROM facts WHERE workspace_id = :ws AND id = :id"), {"ws": ctx.workspace_id, "id": fact_id}
+                    )
+                ).first()
+                if hidden is not None:
+                    self.hidden("fact")
             raise NotFound()
         return await self._fact_out(conn, ctx.workspace_id, row, can_see_sensitive)
 
@@ -337,6 +482,7 @@ class Reads:
         conn: AsyncConnection,
         ctx: WorkspaceContext,
         *,
+        subjects: SubjectFilter,
         status: str | None,
         command_type: str | None,
         entity_id: uuid.UUID | None,
@@ -344,7 +490,11 @@ class Reads:
         cursor: str | None,
     ) -> Page[CommandSummary]:
         size, before = clamp_limit(limit), decode_cursor(cursor)
-        where, params = ["workspace_id = :ws"], {"ws": ctx.workspace_id, "n": size + 1}
+        # memory commands (P5) and principal-management commands (P7) are not listed: their visibility depends on the memory's scopes / on `principal.manage`
+        where, params = ["workspace_id = :ws", _LEDGER_ONLY], {"ws": ctx.workspace_id, "n": size + 1}
+        hide_sql, hide_params = self._commands_hidden_sql(subjects)
+        where.append(hide_sql)
+        params.update(hide_params)
         if status:
             where.append("status = :status")
             params["status"] = status
@@ -365,12 +515,31 @@ class Reads:
             next_cursor=encode_cursor(page[-1].created_at, page[-1].id) if more else None,
         )
 
-    async def get_command(self, conn: AsyncConnection, ctx: WorkspaceContext, command_id: uuid.UUID) -> CommandDetailOut:
-        row = (
-            await conn.execute(
-                text("SELECT * FROM commands WHERE workspace_id = :ws AND id = :id"), {"ws": ctx.workspace_id, "id": command_id}
-            )
-        ).first()
+    @staticmethod
+    def _commands_hidden_sql(subjects: SubjectFilter) -> tuple[str, dict[str, Any]]:
+        """A command is shown only when none of the entities it touches is hidden from the caller (an app writer sees commands about visible subjects only)."""
+        frozen = (  # P8: a command about a record whose deletion has been accepted is unreadable from that moment, like the record itself
+            "NOT EXISTS (SELECT 1 FROM entities fz WHERE fz.workspace_id = commands.workspace_id AND fz.status = 'deletion_pending' "
+            "AND (fz.id::text = commands.result->>'entity_id' OR commands.result->'endpoint_entity_ids' @> to_jsonb(fz.id::text))) "
+            "AND NOT EXISTS (SELECT 1 FROM facts fzf WHERE fzf.workspace_id = commands.workspace_id AND fzf.status = 'deletion_pending' "
+            "AND fzf.id::text = commands.result->>'fact_id')"
+        )
+        if not subjects.enforced:
+            return frozen, {}
+        acl, params = entity_visible_sql(subjects, alias="he")
+        return (
+            frozen  # noqa: S608
+            + " AND NOT EXISTS (SELECT 1 FROM entities he WHERE he.workspace_id = commands.workspace_id AND he.type_key = ANY(CAST(:sfc_scoped AS text[])) "  # noqa: S608
+            f"AND NOT {acl} AND (he.id::text = commands.result->>'entity_id' OR commands.result->'endpoint_entity_ids' @> to_jsonb(he.id::text)))",
+            {**params, "sfc_scoped": sorted(subjects.scoped_types)},
+        )
+
+    async def get_command(
+        self, conn: AsyncConnection, ctx: WorkspaceContext, command_id: uuid.UUID, *, subjects: SubjectFilter
+    ) -> CommandDetailOut:
+        hide_sql, hide_params = self._commands_hidden_sql(subjects)
+        sql = f"SELECT * FROM commands WHERE workspace_id = :ws AND id = :id AND {_LEDGER_ONLY} AND {hide_sql}"  # noqa: S608 (constant fragments)
+        row = (await conn.execute(text(sql), {"ws": ctx.workspace_id, "id": command_id, **hide_params})).first()
         if row is None:
             raise NotFound()
         return CommandDetailOut(

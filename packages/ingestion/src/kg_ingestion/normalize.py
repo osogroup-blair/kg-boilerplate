@@ -113,15 +113,31 @@ def canonicalise(doc: dict[str, Any]) -> Canonical:
 
 
 async def lock_stage(conn: AsyncConnection, ws: uuid.UUID, interaction_id: uuid.UUID, stage: str) -> Row[Any] | None:
+    """The stage row, locked. None when there is none, and also when the interaction is frozen by a deletion request (P8, SEC-05): every stage handler treats None as "nothing
+    to do", so a job that was already running when the freeze happened writes nothing more about it."""
     return (
         await conn.execute(
             text(
-                "SELECT stage, status, generation, attempts, last_error_code, ontology_version_id, pipeline_version FROM interaction_stages "
-                "WHERE workspace_id = :ws AND interaction_id = :i AND stage = :s FOR UPDATE"
+                "SELECT s.stage, s.status, s.generation, s.attempts, s.last_error_code, s.ontology_version_id, s.pipeline_version FROM interaction_stages s "
+                "JOIN interactions i ON i.workspace_id = s.workspace_id AND i.id = s.interaction_id AND i.processing_status <> 'deletion_pending' "
+                "WHERE s.workspace_id = :ws AND s.interaction_id = :i AND s.stage = :s FOR UPDATE OF s"
             ),
             {"ws": ws, "i": interaction_id, "s": stage},
         )
     ).first()
+
+
+async def stage_unavailable(conn: AsyncConnection, ws: uuid.UUID, interaction_id: uuid.UUID) -> JobError:
+    """Why `lock_stage` found nothing: a deletion froze the interaction (the job is skipped, quietly) or the stage row really is missing (a fault)."""
+    frozen = (
+        await conn.execute(
+            text("SELECT 1 FROM interactions WHERE workspace_id = :ws AND id = :i AND processing_status = 'deletion_pending'"),
+            {"ws": ws, "i": interaction_id},
+        )
+    ).first()
+    if frozen is not None:
+        return JobError(Category.POLICY_TERMINAL, "cancelled_by_deletion")
+    return JobError(Category.CONFIG_TERMINAL, "stage_missing")
 
 
 class NormalizeHandler:
@@ -139,7 +155,7 @@ class NormalizeHandler:
         async with tenant_session(self._engine, ctx) as conn:
             st = await lock_stage(conn, ws, iid, STAGE)
             if st is None:
-                raise JobError(Category.CONFIG_TERMINAL, "stage_missing")
+                raise await stage_unavailable(conn, ws, iid)
             if st.generation > gen:
                 return  # a replay superseded this job
             if st.generation < gen:

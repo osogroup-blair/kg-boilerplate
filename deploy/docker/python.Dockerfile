@@ -17,14 +17,21 @@ COPY packages/knowledge/pyproject.toml packages/knowledge/pyproject.toml
 COPY packages/jobs/pyproject.toml packages/jobs/pyproject.toml
 COPY packages/ingestion/pyproject.toml packages/ingestion/pyproject.toml
 COPY packages/extraction/pyproject.toml packages/extraction/pyproject.toml
+COPY packages/memory/pyproject.toml packages/memory/pyproject.toml
+COPY packages/context/pyproject.toml packages/context/pyproject.toml
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
 COPY apps/cli/pyproject.toml apps/cli/pyproject.toml
+COPY apps/mcp/pyproject.toml apps/mcp/pyproject.toml
+COPY sdk/python/pyproject.toml sdk/python/pyproject.toml
+COPY sdk/python/README.md sdk/python/README.md
 RUN uv sync --frozen --no-dev --no-install-workspace
 COPY packages packages
 COPY apps/api apps/api
 COPY apps/worker apps/worker
 COPY apps/cli apps/cli
+COPY apps/mcp apps/mcp
+COPY sdk/python sdk/python
 COPY compat compat
 COPY contracts contracts
 COPY scripts scripts

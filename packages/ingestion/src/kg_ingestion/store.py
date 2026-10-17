@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from kg_common.errors import UnknownEntity
+from kg_common.errors import SubjectSuppressed, UnknownEntity
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -47,31 +47,34 @@ class SubjectResolver:
             if isinstance(ref, EntityRef):
                 row = (
                     await conn.execute(
-                        text("SELECT id FROM entities WHERE workspace_id = :ws AND id = :id"), {"ws": ws, "id": ref.entity_id}
-                    )
+                        text("SELECT id FROM entities WHERE workspace_id = :ws AND id = :id AND status <> 'deletion_pending'"),
+                        {"ws": ws, "id": ref.entity_id},
+                    )  # a subject frozen by a deletion request is as unknown as one that never existed (SEC-05)
                 ).first()
                 if row is None:
                     raise UnknownEntity()
                 out.append(ResolvedRef(role, ordinal, row.id, None, None, None))
             elif isinstance(ref, ExternalRef):
+                digest = self._hasher.ref(ws, ref.type, ref.system, ref.value)
+                if (
+                    await conn.execute(
+                        text(
+                            "SELECT 1 FROM deletion_suppressions WHERE workspace_id = :ws AND kind = 'external_id' AND value_hmac = :h AND lifted_at IS NULL"
+                        ),
+                        {"ws": ws, "h": digest},
+                    )
+                ).first():
+                    raise SubjectSuppressed()  # the identifier of a deleted subject is not recorded again (409 subject_suppressed)
                 row = (
                     await conn.execute(
                         text(
-                            "SELECT entity_id FROM entity_external_ids WHERE workspace_id = :ws AND type_key = :t AND system = :s AND value = :v"
+                            "SELECT x.entity_id FROM entity_external_ids x JOIN entities e ON e.workspace_id = x.workspace_id AND e.id = x.entity_id AND e.status <> 'deletion_pending' "
+                            "WHERE x.workspace_id = :ws AND x.type_key = :t AND x.system = :s AND x.value = :v"
                         ),
                         {"ws": ws, "t": ref.type, "s": ref.system, "v": ref.value},
                     )
                 ).first()
-                out.append(
-                    ResolvedRef(
-                        role,
-                        ordinal,
-                        row.entity_id if row else None,
-                        ref.type,
-                        ref.system,
-                        self._hasher.ref(ws, ref.type, ref.system, ref.value),
-                    )
-                )
+                out.append(ResolvedRef(role, ordinal, row.entity_id if row else None, ref.type, ref.system, digest))
         return out
 
 

@@ -149,7 +149,7 @@ describe("Interaction detail", () => {
     expect(confirm).toBeEnabled();
     await userEvent.click(confirm);
     await waitFor(() => expect(posted).not.toBeNull());
-    expect(posted!.body).toEqual({ reason_code: "fault_cleared", stage: null, repin: false });
+    expect(posted!.body).toEqual({ reason_code: "fault_cleared", stage: null, repin: false, upgrade_pipeline: false });
     expect(posted!.key).toBeTruthy();
     expect(await screen.findByText(/Replay queued/)).toBeInTheDocument();
   });

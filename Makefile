@@ -7,9 +7,9 @@ SPIKE   := cd spikes && $(UV) run
 ENVFILE := $(if $(wildcard .env),.env,.env.example)
 KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(ENVFILE)
 RUN := $(UV) run
-PYSRC := packages apps tests scripts
+PYSRC := packages apps sdk tests scripts
 
-.PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 eval-extraction eval-extraction-live logs ps admin-dev admin-install \
+.PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check
 
 sync:                ## install the Python workspace (exact versions from uv.lock)
@@ -18,6 +18,7 @@ sync:                ## install the Python workspace (exact versions from uv.loc
 # ---- stack ------------------------------------------------------------------------------------------------------------------------
 up:                  ## build and start the stack: postgres, neo4j, mock-router, migrate, api, worker (ports: api 8000, pg 5544, neo4j 7475/7688, mock 8782)
 	mkdir -p .local/faults && chmod 777 .local/faults
+	mkdir -p .local/deletion-journal && chmod 777 .local/deletion-journal
 	$(KG_COMPOSE) up -d --build --wait
 
 stack-up:            ## start only the backing services (what host-run tests and `make demo-p1` against a host API need)
@@ -40,19 +41,65 @@ demo-p2:             ## P2 demo: ontology publish/rollback, deterministic comman
 	$(RUN) python scripts/demo_p2.py
 
 demo-p3:             ## P3 demo: idempotent ledger, encryption at rest, SIGKILL mid-burst, Neo4j outage, dead letter + audited replay (needs `make up seed`; `make reset up seed demo-p3` for the first run)
-	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
+	$(RUN) kg seed demo --no-memory-extraction --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
 	$(RUN) python scripts/demo_p3.py
 
 demo-p4:             ## P4 demo: Graphiti extraction as a proposal, identity + review, time-aware facts, outage/unparseable/consent drills (needs `make up seed`; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4` for the first run)
-	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
+	$(RUN) kg seed demo --no-memory-extraction --ontology examples/ontologies/personal-knowledge.yaml > /dev/null
 	$(RUN) python scripts/demo_p4.py
 	$(RUN) python -m eval.extraction.run_eval --mode mock
+
+demo-p5:             ## P5 demo: curated memory: typed policy, extraction, explicit save, proposals, scopes, working memory, supersede, TTL, outage drill, leak check (needs `make up seed`; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5` for the first run)
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge-memory.yaml > /dev/null
+	$(RUN) python scripts/demo_p5.py
+	$(RUN) python -m eval.memory.run_eval --mode mock
+
+demo-p6:             ## P6 demo: the task-aware context engine: the planning task at 600 / 250 / 64 tokens, as_of, the distractor, insufficient evidence, denied, a Neo4j outage, traces, re-materialisation (needs `make up seed`; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6` for the first run)
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge-context.yaml > /dev/null
+	$(RUN) python scripts/demo_p6.py
+	$(RUN) python -m eval.context.run_eval --mode mock
+
+demo-p7:             ## P7 demo: the blueprint's two-agent scenario, offline: registration, subject ACLs (ontology v1.4.0), the publish model and labels, SDK + MCP, quotas, compromised revocation (needs `make up seed`; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7` for the first run)
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge-agents.yaml > /dev/null
+	$(RUN) python scripts/demo_p7.py
+	$(RUN) python -m eval.context.run_eval --mode mock
+
+demo-p8:             ## P8 demo: governance: simulate and publish a draft ontology, corrections with impact preview, split, consolidation, deletion with a receipt, legal hold, containment, the privacy audit (needs `make up seed`; run-unique data, repeatable; `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8` for the first run)
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge-agents.yaml > /dev/null
+	$(RUN) python scripts/demo_p8.py
+
+mcp-up:              ## start the MCP server container (profile `agents`, port 8010); it forwards each caller's own key to the API and holds no credential
+	$(KG_COMPOSE) --profile agents up -d --build --wait mcp
+
+sdk-models:          ## regenerate sdk/python/src/kg_platform_sdk/models.py from contracts/openapi.json (the drift test fails when it is stale)
+	$(RUN) python scripts/gen_sdk_models.py
 
 eval-extraction:     ## extraction evaluation against the scenario gold set through the strict mock router (offline, deterministic)
 	$(RUN) python -m eval.extraction.run_eval --mode mock
 
 eval-extraction-live: ## extraction evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
 	OSO_ROUTER_MODE=live $(RUN) python -m eval.extraction.run_eval --mode live
+
+eval-memory:         ## memory evaluation against the scenario gold set through the strict mock router (offline, deterministic; must score 100%)
+	$(RUN) python -m eval.memory.run_eval --mode mock
+
+eval-memory-live:    ## memory evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.memory.run_eval --mode live
+
+eval-context:        ## context evaluation (16 frozen cases: 14 in Sarah's world, 2 with subject ACLs enforced) through the strict mock router (offline, deterministic): leakage 0, budget 100%, attribution 100%; ARGS="--ablate proximity" zeroes one ranking weight
+	$(RUN) python -m eval.context.run_eval --mode mock $(ARGS)
+
+eval-context-live:   ## context evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.context.run_eval --mode live $(ARGS)
+
+eval-consolidation:  ## consolidation evaluation (reinforce clustering and the synthesis validator over a labelled gold set), offline and deterministic: every strict counter must be 0
+	$(RUN) python -m eval.consolidation.run_eval --mode mock
+
+eval-consolidation-live: ## the same synthesis groups answered by the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.consolidation.run_eval --mode live
+
+eval-simulation-live: ## ontology simulation sanity through the REAL router: well-formed report, cost within 0.2x-5x of the estimate, nothing left behind (user action; needs OSO_ROUTER_API_KEY; costs model calls)
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.simulation.run_eval --mode live
 
 logs:
 	$(KG_COMPOSE) logs -f --tail=100
@@ -62,7 +109,7 @@ ps:
 
 # ---- tests (the host-run suites need `make stack-up`; the targets fail loudly if it is missing) ----------------------------------------
 test:                ## unit + offline contract tests (no stack needed)
-	$(RUN) pytest packages apps tools/mock_router/tests -q
+	$(RUN) pytest packages apps sdk tools/mock_router/tests -q
 
 test-int:            ## integration tests against postgres + neo4j + mock router
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/integration -q
@@ -73,7 +120,7 @@ test-security:       ## tenant-isolation, revocation and policy-registry tests
 test-contract:       ## endpoint, gateway and boundary contracts + OpenAPI drift
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/contract tests/integration/test_api_contract.py packages/modelgw -q
 
-test-resilience:     ## failure injection (FI-01..10): crashes, SIGKILL, lease expiry, postgres restart, neo4j outage. Needs `make stack-up`; restarts compose services
+test-resilience:     ## failure injection (FI-01..12): crashes, SIGKILL, lease expiry, postgres restart, neo4j outage. Needs `make stack-up`; restarts compose services
 	KG_REQUIRE_STACK=1 KG_RESILIENCE=1 $(RUN) pytest tests/resilience -q -p no:cacheprovider
 
 test-all: test test-int test-security test-contract
@@ -86,11 +133,12 @@ lint:                ## ruff (lint + format check), import-linter boundaries, es
 	cd apps/admin && npm run --silent lint
 
 typecheck:           ## mypy --strict on packages/ and apps/, tsc on the admin app
-	$(RUN) mypy packages apps
+	$(RUN) mypy packages apps sdk/python/src
 	cd apps/admin && npm run --silent typecheck
 
-openapi:             ## regenerate contracts/openapi.json and the admin TypeScript client from it
+openapi:             ## regenerate contracts/openapi.json, the SDK models and the admin TypeScript client from it
 	$(RUN) kg openapi export
+	$(RUN) python scripts/gen_sdk_models.py
 	cd apps/admin && npm run --silent generate:api
 
 admin-install:
@@ -102,9 +150,13 @@ admin-dev:           ## Vite dev server on :5273 (proxies /v1 and /health to :80
 test-admin:          ## Vitest component tests
 	cd apps/admin && npm test
 
-test-e2e:            ## Playwright: P1 smoke, P2 ADM-01, P3 ADM-06, P4 ADM-02 (needs `make up seed`; runs demo-p2 and demo-p4 first so the demo workspace has Sarah's story)
+test-e2e:            ## Playwright: P1 smoke, P2 ADM-01, P3 ADM-06, P4 ADM-02, P5 Memory Explorer, P6 Context Lab (ADM-04), P7 Agents & Access, P8 governance (needs `make up seed`; runs demo-p2, demo-p4, demo-p5 and demo-p6 first so the demo workspace has Sarah's story)
 	$(MAKE) -s demo-p2 > /dev/null
 	$(MAKE) -s demo-p4 > /dev/null
+	$(MAKE) -s demo-p5 > /dev/null
+	$(MAKE) -s demo-p6 > /dev/null
+	$(MAKE) -s demo-p7 > /dev/null
+	$(RUN) kg seed demo --ontology examples/ontologies/personal-knowledge-context.yaml > /dev/null   # back to v1.3.0: the P6 specs assert open fact access; the P7 spec activates v1.4.0 itself and restores this one
 	cd apps/admin && npm run e2e
 
 check: lint typecheck test-all test-admin   ## everything except the Playwright smoke (run `make test-e2e` with the stack up)

@@ -82,8 +82,10 @@ async def test_evd01_each_kind_is_accepted_with_a_stable_event_id_and_status_url
     assert [s["stage"] for s in d["stages"]] == ["normalize", "graph_ingest", "memory_propose"]
     assert stage_of(d, "normalize")["status"] == "pending"
     assert stage_of(d, "graph_ingest")["status"] == "pending" and stage_of(d, "graph_ingest")["enabled"] is True  # enabled since P4
-    assert stage_of(d, "memory_propose")["status"] == "skipped_disabled" and stage_of(d, "memory_propose")["enabled"] is False
-    assert stage_of(d, "graph_ingest")["enabled_in"] is None and stage_of(d, "memory_propose")["enabled_in"] == "P5"
+    assert (
+        stage_of(d, "memory_propose")["status"] == "pending" and stage_of(d, "memory_propose")["enabled"] is True
+    )  # enabled since P5, after graph_ingest
+    assert stage_of(d, "graph_ingest")["enabled_in"] is None and stage_of(d, "memory_propose")["enabled_in"] is None
     assert d["occurred_at_unknown"] is (body.get("occurred_at_unknown", False))
 
 
@@ -91,14 +93,14 @@ async def test_acceptance_pins_the_pipeline_and_the_active_ontology_version(tena
     out = (await post(tenant, event())).json()
     d = await detail(tenant, out["event_id"])
     active = (await tenant.get("/v1/ontologies/active")).json()
-    assert d["pipeline_version"] == "p4.v1" and d["ontology_version_id"] == active["version"]["id"]
+    assert d["pipeline_version"] == "p5.v1" and d["ontology_version_id"] == active["version"]["id"]
     (job,) = await rows(
         tenant.api,
         tenant,
         "SELECT pipeline_version, ontology_version_id, stage, payload FROM outbox_jobs WHERE subject_id = :i",
         i=uuid.UUID(out["event_id"]),
     )
-    assert (job.pipeline_version, str(job.ontology_version_id), job.stage) == ("p4.v1", active["version"]["id"], "normalize")
+    assert (job.pipeline_version, str(job.ontology_version_id), job.stage) == ("p5.v1", active["version"]["id"], "normalize")
     assert job.payload == {"interaction_id": out["event_id"], "generation": 0}
 
 
@@ -265,7 +267,7 @@ async def test_normalize_runs_and_the_source_only_event_is_indexed_evd04(tenant)
     assert norm["status"] == "succeeded" and norm["attempts"] == 1 and norm["generation"] == 0 and norm["finished_at"]
     assert norm["result"]["byte_size"] > 0 and norm["result"]["token_estimate"] > 0 and "text" not in json.dumps(norm["result"])
     assert norm["derivatives"][0]["kind"] == "normalized_content"  # the provenance path (EVD-03)
-    assert stage_of(d, "graph_ingest")["status"] == "skipped_by_policy" and stage_of(d, "memory_propose")["status"] == "skipped_disabled"
+    assert stage_of(d, "graph_ingest")["status"] == "skipped_by_policy" and stage_of(d, "memory_propose")["status"] == "skipped_by_policy"
     (j,) = await rows(tenant.api, tenant, "SELECT status, attempts FROM outbox_jobs WHERE subject_id = :i", i=uuid.UUID(eid))
     assert (j.status, j.attempts) == ("succeeded", 1)
 

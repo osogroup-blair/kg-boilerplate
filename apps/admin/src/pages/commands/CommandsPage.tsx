@@ -30,7 +30,7 @@ function CommandDrawer({ commandId, onClose }: { commandId: string; onClose: () 
             <dt className="text-slate-500">Authority</dt><dd>{c.authority_class.replace(/_/g, " ")} · {c.classification}</dd>
             <dt className="text-slate-500">Source</dt><dd>{c.source_system ?? "—"}{c.source_ref ? ` · ${c.source_ref}` : ""}</dd>
             <dt className="text-slate-500">When</dt><dd>{fmt(c.created_at)}</dd>
-            <dt className="text-slate-500">Ontology</dt><dd><Link to={`/ontology/versions/${c.ontology_version_id}`} className="font-mono text-xs underline">{c.ontology_version_id.slice(0, 8)}…</Link></dd>
+            <dt className="text-slate-500">Ontology</dt><dd>{c.ontology_version_id ? <Link to={`/ontology/versions/${c.ontology_version_id}`} className="font-mono text-xs underline">{c.ontology_version_id.slice(0, 8)}…</Link> : "none (a workspace without an ontology)"}</dd>
             {c.entity_id ? <><dt className="text-slate-500">Entity</dt><dd><Link to={`/entities/${c.entity_id}`} className="underline">open</Link></dd></> : null}
             {c.fact_id ? <><dt className="text-slate-500">Fact</dt><dd className="font-mono text-xs">{c.fact_id}</dd></> : null}
           </dl>

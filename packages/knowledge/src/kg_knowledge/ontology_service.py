@@ -28,6 +28,7 @@ from kg_domain.principal import Principal, WorkspaceContext
 from kg_governance.audit import AuditMetadata, AuditWriter
 from kg_obs import metrics
 from kg_ontology import (
+    AccessImpact,
     DiffResult,
     GraphCompilerPort,
     ImpactCount,
@@ -377,7 +378,39 @@ class OntologyService:
             old = await self._spec_of(await self._row(conn, ws, other))
         result = diff_specs(old, new)
         result.impact = await self._impact(conn, ws, old, result)
+        result.access_impact = await self._access_impact(conn, ws, result)
         return result
+
+    @staticmethod
+    async def _access_impact(conn: AsyncConnection, ws: uuid.UUID, result: DiffResult) -> list[AccessImpact]:
+        """For each entity type whose access was tightened: how many active entities, how many principals lose sight of them (everyone but admins, reviewers and
+        holders of `subject:*`), and the total of (principal, entity) pairs that stop being visible (P7, ADR-037)."""
+        out: list[AccessImpact] = []
+        for key in sorted({c.type_key for c in result.changes if c.path.endswith(".access") and c.breaking and c.type_key}):
+            row = (
+                await conn.execute(
+                    text(
+                        "WITH ents AS (SELECT id FROM entities WHERE workspace_id = :ws AND status = 'active' AND type_key = :t), "
+                        "prin AS (SELECT p.id FROM principals p WHERE p.workspace_id = :ws AND p.status = 'active' "
+                        "AND NOT EXISTS (SELECT 1 FROM role_assignments r WHERE r.principal_id = p.id AND r.role IN ('workspace_admin','reviewer')) "
+                        "AND NOT EXISTS (SELECT 1 FROM principal_scopes s WHERE s.workspace_id = p.workspace_id AND s.principal_id = p.id "
+                        "AND s.scope_kind = 'subject' AND s.scope_ref = '*' AND 'read' = ANY(s.privileges))) "
+                        "SELECT (SELECT count(*) FROM ents) AS entities, (SELECT count(*) FROM prin) AS principals, "
+                        "(SELECT count(*) FROM prin CROSS JOIN ents WHERE NOT EXISTS (SELECT 1 FROM principal_scopes s WHERE s.workspace_id = :ws "
+                        "AND s.principal_id = prin.id AND s.scope_kind = 'subject' AND s.scope_ref = ents.id::text AND 'read' = ANY(s.privileges))) AS hidden"
+                    ),
+                    {"ws": ws, "t": key},
+                )
+            ).one()
+            out.append(
+                AccessImpact(
+                    type_key=key,
+                    entities=int(row.entities),
+                    principals_affected=int(row.principals),
+                    entities_hidden_from_a_principal=int(row.hidden),
+                )
+            )
+        return out
 
     @staticmethod
     async def _impact(conn: AsyncConnection, ws: uuid.UUID, old: OntologySpec | None, result: DiffResult) -> list[ImpactCount]:

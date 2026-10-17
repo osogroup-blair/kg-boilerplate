@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = "==3.12.*"
 dependencies = [
   "typer",
+  "httpx==0.28.1",
   "kg-common",
   "kg-domain",
   "kg-obs",
@@ -16,6 +17,7 @@ dependencies = [
   "kg-jobs",
   "kg-ingestion",
   "kg-extraction",
+  "kg-memory",
 ]
 
 [project.scripts]
@@ -41,3 +43,4 @@ kg-knowledge = { workspace = true }
 kg-jobs = { workspace = true }
 kg-ingestion = { workspace = true }
 kg-extraction = { workspace = true }
+kg-memory = { workspace = true }

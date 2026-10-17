@@ -23,6 +23,8 @@ class Report:
     duplicate_success: list[str] = field(default_factory=list)
     bad_normalized_rows: list[str] = field(default_factory=list)
     plaintext_tables: list[str] = field(default_factory=list)
+    duplicate_memories: list[str] = field(default_factory=list)  # P5: two live memories with the same keyed content hash
+    memories_without_scopes: int = 0  # P5: a memory nobody can see is a bug (visibility is the scope rows)
     reclaims: int = 0
     attempts: dict[uuid.UUID, int] = field(default_factory=dict)
     statuses: dict[str, int] = field(default_factory=dict)
@@ -41,6 +43,10 @@ class Report:
             out.append(f"duplicate succeeded jobs: {self.duplicate_success[:3]}")
         if self.bad_normalized_rows:
             out.append(f"interactions with other than one normalized row: {self.bad_normalized_rows[:3]}")
+        if self.duplicate_memories:
+            out.append(f"duplicate live memories: {self.duplicate_memories[:3]}")
+        if self.memories_without_scopes:
+            out.append(f"{self.memories_without_scopes} memories without a scope")
         if self.plaintext_tables:
             out.append(f"plaintext sentinel found in {self.plaintext_tables}")
         return out
@@ -103,6 +109,25 @@ async def check(ws: uuid.UUID, *, sentinel: str | None = None, owner_url: str | 
                     )
                 ).all()
             ]
+            r.duplicate_memories = [
+                str(x.candidate_hmac)[:12]
+                for x in (
+                    await c.execute(
+                        text(
+                            "SELECT candidate_hmac FROM curated_memories WHERE workspace_id = :ws AND status IN ('proposed','active') GROUP BY candidate_hmac HAVING count(*) > 1"
+                        ),
+                        p,
+                    )
+                ).all()
+            ]
+            r.memories_without_scopes = (
+                await c.execute(
+                    text(
+                        "SELECT count(*) FROM curated_memories m WHERE m.workspace_id = :ws AND NOT EXISTS (SELECT 1 FROM memory_scopes s WHERE s.memory_id = m.id)"
+                    ),
+                    p,
+                )
+            ).scalar_one()
             r.reclaims = (
                 await c.execute(text("SELECT count(*) FROM job_attempts WHERE workspace_id = :ws AND outcome = 'lease_expired'"), p)
             ).scalar_one()

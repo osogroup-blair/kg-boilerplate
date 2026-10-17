@@ -51,7 +51,19 @@ def test_settings_production_refuses_dev_defaults():
         content_hmac_secret="c" * 40,
         payload_keys="prod1:" + base64.b64encode(b"k" * 32).decode(),
         payload_active_kid="prod1",
+        deletion_journal_dir="/var/lib/kg/deletion-journal",
     )
+    with pytest.raises(
+        ValueError, match="DELETION_JOURNAL_DIR"
+    ):  # P8: the journal lives outside the database and its backups, so production must say where
+        Settings(
+            _env_file=None,
+            env="production",
+            **p1,
+            content_hmac_secret="c" * 40,
+            payload_keys="prod1:" + base64.b64encode(b"k" * 32).decode(),
+            payload_active_kid="prod1",
+        )
     assert ok.is_production and DEV_PEPPER not in repr(ok) and DEV_JWT_SECRET not in repr(ok) and "prod1:" not in repr(ok)
 
 

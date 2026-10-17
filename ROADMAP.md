@@ -223,6 +223,16 @@ It has two exits: offline (mock scenario fixtures) and **live** (`make verify-ro
 
 ## Phase 5 — First-Class Curated Memory (Slice 4) — can start after P3
 
+**Detailed plan:** [docs/plans/phase-5-curated-memory.md](docs/plans/phase-5-curated-memory.md). It covers 11 work packages and applies 14 lessons from P0–P4 (R1–R14):
+- scope-enforced visibility, pulling `principal_scopes` enforcement forward from P7;
+- a typed memory policy in the ontology;
+- the `memory_propose` stage after `graph_ingest`;
+- exact scoped hybrid search in one SQL statement;
+- a sentinel leak suite;
+- the Memory Explorer.
+
+It has two exits: offline (mock) and **live** (`make eval-memory-live`, run together with the P4 live exit before P6).
+
 - **Schema:**
   - the `curated_memories` table with normalized scope ACLs, provenance join tables, revisions/etag and status/TTL;
   - a pgvector column sized to the router embedding model pinned in P0.
@@ -239,7 +249,30 @@ It has two exits: offline (mock scenario fixtures) and **live** (`make verify-ro
   - `evt_004` produces a separate explicit preference.
 - **Gate:** MEM-01, MEM-02, MEM-04 and MEM-05; scope isolation tests that include the vector candidate set.
 
+**Status (2026-10-12): offline exit reached; live exit pending (user action).**
+- `make reset up seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5` passes, and again without a reset (demo-p5 12/12, demo-p4 13/13). `make check` is green: ruff, import-linter (17 contracts), mypy `--strict` (169 files), 1178 unit/offline tests, 294 integration, 62 security, 57 contract, 125 Vitest. `make test-resilience` 12/12 (FI-01..12) and `make test-e2e` 19/19 (Memory Explorer added). `make eval-memory` scores 100% on the 9 scenario fixtures (strict mock router). Exact scoped search over 50,000 memories in 20 workspaces: p95 ≈ 18 ms.
+- Built: `kg_memory` (typed policy, scope grants and visibility predicate, four creation paths, lifecycle, review decisions, hybrid scoped search `mem-rrf.v1`, re-embed), the `memory_propose` stage (pipeline `p5.v1`), migration `0005`, `/v1/memories` and `/v1/scopes`, `kg memories|scopes` CLI, the Memory Explorer, memory review cards and scope grants in the console, the leak/isolation suites and `eval/memory`.
+- Details: [docs/architecture/p5-memory.md](docs/architecture/p5-memory.md) (sequences, data, **14 deviations from the plan**), ADR-029 (model, scopes, visibility), ADR-030 (extraction, creation policy, prompt safety), ADR-031 (hybrid scoped search), runbooks [memory-reembed](docs/runbooks/memory-reembed.md) and [memory-quarantine](docs/runbooks/memory-quarantine.md).
+- **Live exit (required before P6, user action):** `make verify-router`, then `OSO_ROUTER_API_KEY=... make eval-memory-live` (together with the P4 live exit). Use it to confirm the proposed thresholds and to set `MEMORY_VEC_MIN_COSINE` (currently a mock-sized 0.2).
+- Surprises worth knowing in P6+:
+  - **Visibility is a predicate inside the ranking statement**, never a post-filter; `candidates_considered` counts authorised rows only. P6 must reuse `MemorySearch`, not query `curated_memories` itself.
+  - **Memory commands are hidden from `/v1/commands`** (their visibility depends on scopes), so any audit or timeline view must go through `kg_memory.reads`.
+  - **Workspace-scoped memory is visible to every principal that may read memory**; "granted nothing" means workspace-wide memory only.
+  - **Suites and demos written before P5 run with `extraction: disabled`** (`NO_MEMORY_YAML`, `kg seed demo --no-memory-extraction`); P5 suites use the v1.2.0 example. A stage that dies behind a dead dependency leaves the event `partial`.
+  - `kg seed demo --ontology X` now re-activates X when it is already published but another version is active.
+  - `kg db downgrade` past `0005` needs `--force-drop-memories`.
+
 ## Phase 6 — Task-Aware Context Engine (Slice 5) — **MVP Milestone**
+
+**Detailed plan:** [docs/plans/phase-6-context-engine.md](docs/plans/phase-6-context-engine.md). It covers 12 work packages and applies 12 lessons from P0–P5 (S1–S12):
+- critical current facts come from Postgres; graph and memory searches are reused, never bypassed;
+- deterministic ranking (`ctx-rank.v1`) and tiered packing under a hard budget, enforced on the rendered output;
+- deterministic unknowns from `expected_signals` in the profile;
+- metadata-only traces with re-materialization;
+- the Context Lab through an audited act-as;
+- a retrieval evaluation harness.
+
+**It can be built offline. MVP sign-off needs the single live session** (P4, P5 and P6 live evaluations plus TK-02).
 
 - **Context build pipeline:** `POST /v1/context/build` runs:
   1. plan and select a profile;
@@ -265,7 +298,29 @@ It has two exits: offline (mock scenario fixtures) and **live** (`make verify-ro
   The cycling distractor is excluded.
 - **Gate:** CTX-01 to CTX-08; RET-01 to RET-06; AT-06 to AT-09 and AT-12.
 
+**Status (2026-10-12): offline exit reached; MVP sign-off needs the single live session (user action).**
+- Verified: `make reset up seed demo-p1 … demo-p6` passes and demo-p6 re-runs (11/11, twice); `make check` is green (ruff, import-linter 19 contracts, mypy `--strict` 194 files, 1255+ unit/offline, 347 integration, 70 security, 58 contract, 138 Vitest); `make test-resilience` 12/12; `make test-e2e` 25/25 (Context Lab added); `make eval-context` PASS on the 14 frozen cases (leakage 0, budget 100%, attribution 100%, recall 1.0 in mock). Baseline in `eval/reports/context-perf.json`. The reset run also found three stale assertions left by P5 in `demo_p1`, `demo_p3` and `demo_p5` (a seventh principal, `skipped_by_policy` instead of `skipped_disabled`, `p5.v1`), now fixed.
+- Built: `kg_context` (planner, candidates, merge, temporal reconciliation, deterministic unknowns, `ctx-rank.v1`, exact-budget tiered packer, renderer with the neutraliser, validated `summarized` mode, parallel sources with per-source timeouts, traces, `ContextService`), migration `0006`, `/v1/context/*` and `/v1/memories/{id}/usage`, the Context Lab (act-as, ADR-035), the trace inspector and "Used in contexts", `kg context`, worker retention, the typed `ContextProfile` and ontology v1.3.0, the `GraphSearch` egress fix, `eval/context` (14 frozen cases) and `make demo-p6`.
+- Details: [docs/architecture/p6-context.md](docs/architecture/p6-context.md) (sequences, data, **13 deviations from the plan**), ADR-032 (contract, statuses, one query embedding), ADR-033 (ranking, packing, compression), ADR-034 (traces, re-materialisation, debug snapshots), ADR-035 (Lab act-as), runbook [context-debugging](docs/runbooks/context-debugging.md), [agent-integration](docs/agent-integration.md).
+- **Live exit (user action, once, P4 + P5 + P6 together):** `make verify-router` (LV-01..10, G-05, GR-11..13, **TK-02**), then `OSO_ROUTER_API_KEY=... make eval-extraction-live eval-memory-live eval-context-live`; confirm the proposed baselines, set `IDENTITY_COS_MIN` and `MEMORY_VEC_MIN_COSINE`, close TK-02 (the token margin) and re-run `make eval-context`.
+- Surprises worth knowing in P7+:
+  - **A context is never stored, only explained.** `GET /v1/context/{id}` re-materialises from item ids under the caller's *current* access; anything that changed is `withdrawn`. P8's deletion must purge `context_items` rows that name a deleted record (a keyed delete).
+  - **Facts are workspace-readable until P7 adds subject ACLs**, so an agent with no grants gets a subject's facts and none of its memories (S7); `context.build` already takes the visible-subject set, so P7 narrows one place.
+  - **The act-as header counts on `POST /v1/context/build` only** and only for admins acting as an active agent/app of the same workspace; P7's allowed-profiles per agent must be honoured by it.
+  - **Command facts carry no `fact_text`**; the engine renders them with the ontology's own template (what the graph holds). An ontology edit changes how current facts read.
+  - **Rate limit and the concurrency cap are in-process** (P9 moves them to shared state); a build holds up to three DB connections.
+  - **Suites that need Sarah's whole world use `tests/support/p6.sarah_world`** (strict mock + the real worker, ~5 s); `eval.context.run_eval` reuses it.
+
 ## Phase 7 — Shared Multi-Agent Memory, SDK and MCP (Slice 6) — runs alongside P8
+
+**Detailed plan:** [docs/plans/phase-7-multi-agent.md](docs/plans/phase-7-multi-agent.md). It covers 10 work packages and applies 12 lessons from P0–P6 (T1–T12):
+- agent and app registration with grants and privileges;
+- ontology-driven subject ACLs on entities and facts, where a hidden endpoint hides the whole fact;
+- the publish model with `agent_generated`/`verified` labels;
+- final revocation, with a `compromised` quarantine path;
+- quotas;
+- the Python SDK and the MCP server, both of which forward the caller's own key;
+- the two-agent success scenario, run offline.
 
 - **Agent registration:** agents get scopes, quotas, allowed profiles and a model-disclosure policy. Run and session IDs are kept separate from agent identity.
 - **Publishing:** propose → validate (evidence exists and is authorized) → policy auto-approve or review → publish. Findings carry `agent_generated` / `verified` labels, and `evidence_required` is supported.
@@ -280,7 +335,28 @@ It has two exits: offline (mock scenario fixtures) and **live** (`make verify-ro
   - a revoked agent is blocked.
 - **Gate:** AGT-01 to AGT-05; MEM-03; AT-10, AT-11 and AT-14; SEC-03.
 
+**Status (2026-10-12): offline exit reached; adds no live dependency (the P4 + P5 + P6 live session stays the user's action).**
+- Verified: `make reset up seed demo-p1 … demo-p7` passes from a clean reset and demo-p7 re-runs (10/10); `make lint typecheck` clean (import-linter 22 contracts, mypy `--strict` 213 files); 1328 unit/offline, 407 integration, 87 security, 70 contract (incl. SDK and MCP parity), 150 Vitest; `make test-resilience` 12/12; `make test-e2e` 29/29 (Agents & Access added); `make eval-context` PASS on 16 cases (C15/C16 are the subject-ACL cases, leakage 0).
+- Built: migration `0007` (access, privileges, quotas, evidence guard, revocation state), ontology `access: workspace|subject_scoped` with a required `SubjectFilter` on every knowledge/ingestion read, grants with `read|propose|publish`, the publish model and `agent_generated`/`verified` labels, final revocation (retired vs compromised with the `source_compromised` review), quotas, `sdk/python` (models generated from OpenAPI), `apps/mcp` (stateless Streamable HTTP, forwards the caller's key), the Agents & Access admin, `make demo-p7`.
+- Details: [docs/architecture/p7-agents.md](docs/architecture/p7-agents.md) (**14 deviations from the plan**), ADR-036..040, runbooks [agent-onboarding](docs/runbooks/agent-onboarding.md) and [agent-revocation](docs/runbooks/agent-revocation.md), [agent-integration](docs/agent-integration.md).
+- Nothing in P5–P7 is committed yet; the working tree holds all three phases.
+- Surprises worth knowing in P8+:
+  - **A hidden id answers the same 404 as a missing one**, and a fact is visible only when both endpoints are: P8's deletion and correction paths must go through the same `SubjectFilter`, never around it.
+  - **Compromised-revoke quarantines only what came from submissions and published findings**, not facts an app created by command.
+  - **`make mcp-up` recreates api and mock-router**: never run it during a test run.
+  - **Quota counters are in-process (requests) and durable (daily tokens/interactions)**; P9 moves the request bucket to shared state.
+
 ## Phase 8 — Governance: Corrections, Consolidation, Deletion (Slice 7)
+
+**Detailed plan:** [docs/plans/phase-8-governance.md](docs/plans/phase-8-governance.md). It covers 13 work packages and applies 14 lessons from P0–P7 (U1–U14):
+- corrections and identity split as audited ledger commands, with impact preview;
+- consolidation: deterministic reinforce runs automatically, LLM synthesis always goes to review;
+- deletion as freeze → plan → purge → verify → receipt, with legal holds, suppression and an out-of-band journal for P9 restores;
+- a trigger-enforced purge gate on immutable tables;
+- ontology simulation in staging namespaces;
+- workspace settings and retention;
+- the SEC-04/AT-15 and SEC-06 containment suites;
+- Review Queue v2, Deletions, Settings and the privacy audit view.
 
 - **Corrections:** correction commands for facts and entities, merge and split, and relationship expiry. Corrections propagate to the Neo4j projection, linked memories, embeddings and cached context, using the DEC-04 approach chosen in P0.
 - **Memory consolidation worker:** idempotent, policy-gated, and preserves distinct claims and sources.
@@ -301,7 +377,29 @@ It has two exits: offline (mock scenario fixtures) and **live** (`make verify-ro
   - a subject deletion removes the subject from context immediately and the purge completes.
 - **Gate:** MEM-06, MEM-07; ADM-03; AT-13, AT-15, AT-16 and AT-17; SEC-04, SEC-05 and SEC-06.
 
+**Status (2026-10-15): offline exit reached; the live session (P4 + P5 + P6 + P8) is still the user's action.**
+- Verified: `make reset up seed demo-p1 … demo-p8` passes from a clean reset (demo-p8 13/13, and it re-runs: it makes its own people and leaves the ontology as it found it); `make lint typecheck` clean (import-linter 22 contracts, mypy `--strict` 242 files); 1392 unit/offline, 604 integration + security + contract, 172 Vitest; `make test-e2e` 35/35 (the new `governance.spec.ts`: ADM-03, deletion with receipt, the legal-hold path, Settings, the privacy audit, tenant isolation, role gating); `make eval-consolidation` PASS (every strict counter 0). Not run here: the live evals (`eval-consolidation-live`, `eval-simulation-live`, plus the P4-P6 ones) and `make test-resilience`.
+- Built: migration `0008` (the purge gate, redaction guards, deletion / hold / correction / lineage / settings tables), corrections (fact, attribute, rename, memory) and the identity split with impact previews and authoritative-override notices, consolidation (reinforce, and synthesis that always goes to review), deletion orchestration (freeze, plan, purge, verify, receipt; holds, suppression, tombstones, the out-of-band journal, workspace cooling-off, retention), ontology simulation in staging namespaces, versioned workspace settings with narrow-only egress, the privacy audit, the SEC-04/AT-15 corpus (45 payloads) and the SEC-06 matrix, the admin console (Review Queue v2, Deletions, Settings, Privacy audit, correction / split / simulate dialogs), `kg deletions`, `make demo-p8`.
+- Details: [docs/architecture/p8-governance.md](docs/architecture/p8-governance.md) (deviations listed there), ADR-041..047, runbooks [subject-deletion](docs/runbooks/subject-deletion.md), [legal-hold](docs/runbooks/legal-hold.md), [identity-correction](docs/runbooks/identity-correction.md) (split added), [ontology-simulation](docs/runbooks/ontology-simulation.md), [retention](docs/runbooks/retention.md).
+- Nothing in P5-P8 is committed yet (WP0 needs the owner's approval); the working tree holds all four phases.
+- Surprises worth knowing in P9+:
+  - **The restore contract is the journal:** a backup restored from before a deletion must replay `DELETION_JOURNAL_DIR` (`kg deletions journal --since <backup time>` lists the lines; `kg deletions reapply` is P9's).
+  - **Egress narrowing is cached per process** (`WORKSPACE_EGRESS_TTL_SECONDS`); the dev compose uses 3 s. A shared limiter / cache is P9.
+  - **The purge gate trusts a role shortcut** (owner / BYPASSRLS) except for the ontology registry, which stays immutable even for the owner (`purge_request_allows`).
+  - Demos share one workspace: a mock-router rule matched by `contains: [marker]` applies to every later prompt with that marker, and real extraction in a workspace that already has nodes also needs `NodeResolutions` and `SummarizedEntities` rules.
+
 ## Phase 9 — Evaluation, Recoverability and Release Hardening (Slice 8)
+
+**Detailed plan:** [docs/plans/phase-9-release-hardening.md](docs/plans/phase-9-release-hardening.md). It covers 13 work packages and applies 13 lessons from P0–P8 (V1–V13). Two owner actions gate it: committing P5–P8 (WP0) and the single live session (WP1, `make live-session`). It then delivers:
+- frozen, hash-locked evaluation suites and `eval-gate`;
+- failure matrix FI-01..23 and a unified `kg reconcile`;
+- encrypted backups and a restore rehearsal with `kg deletions reapply` (AT-18);
+- load baselines for owner-set SLOs (DEC-11);
+- a threat review, release sweep, scanners and hardening;
+- OIDC, a shared Postgres limiter and NOTIFY cache invalidation;
+- Flow F reindex with atomic cutover;
+- Operations v2 and alerting;
+- a production reference deployment, runbooks, a decision register and the `v1.0.0-rc1` release candidate run.
 
 - **Evaluation suite:** the full regression and evaluation suite, with separate labelled sets for ranking, extraction, conflicts, authorization and injection. Model or router changes are tested against the frozen data set.
 - **Failure injection:** Neo4j outage, router/LLM outage, worker crash, and replay. Also the reconciliation command that compares the ledger against the graph and memory store.

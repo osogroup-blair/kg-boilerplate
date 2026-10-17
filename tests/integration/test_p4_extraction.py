@@ -423,7 +423,16 @@ async def test_instructions_inside_content_are_data_and_change_nothing(api, tena
     assert (await t.get("/v1/ontologies/versions", "admin")).json() == versions_before  # no ontology, policy or role change
     assert (await t.get("/v1/ontologies/active", "admin")).json()["version"]["version"] == "1.0.0"
     principals = (await t.get("/v1/principals", "admin")).json()["items"]
-    assert sorted(p["handle"].split("@")[0] for p in principals) == ["admin", "agent", "app", "operator", "reader", "reviewer"]
+    assert sorted(p["handle"].split("@")[0] for p in principals) == [
+        "admin",
+        "agent",
+        "agent2",
+        "agent3",
+        "app",
+        "operator",
+        "reader",
+        "reviewer",
+    ]
 
 
 async def test_another_workspace_never_supplies_a_candidate_or_receives_a_node(api, tenant, strict_mock):

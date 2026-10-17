@@ -69,3 +69,21 @@ async def run_command(
         except Exception as exc:
             log.warning("projection_attempt_errored", error_type=type(exc).__name__)
     return JSONResponse(result.out.model_dump(mode="json"), status_code=_status_code(result), headers=headers)
+
+
+async def project_now(state: AppState, ws: WorkspaceContext, command_id: object) -> str:
+    """The fast path of a ledger command that is not a deterministic knowledge command (a review decision, a correction, a split): restore the rows it changed
+    within the request budget, after the commit. The outbox job finishes anything slower; Postgres is already right either way."""
+    try:
+        async with (
+            state.knowledge.lock.hold(ws.workspace_id, wait_seconds=FAST_PATH_LOCK_WAIT_SECONDS),
+            asyncio.timeout(state.settings.projection_request_budget_seconds),
+        ):
+            return str(await state.knowledge.projector.project_command(ws, command_id))  # type: ignore[arg-type]
+    except GraphBusy:
+        log.info("projection_deferred", reason="graph_busy")
+    except TimeoutError:
+        log.info("projection_deferred", reason="budget")
+    except Exception as exc:
+        log.warning("projection_attempt_errored", error_type=type(exc).__name__)
+    return "pending"

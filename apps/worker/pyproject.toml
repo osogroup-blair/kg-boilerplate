@@ -16,6 +16,8 @@ dependencies = [
   "kg-jobs",
   "kg-ingestion",
   "kg-extraction",
+  "kg-memory",
+  "kg-context",
 ]
 
 [build-system]
@@ -38,3 +40,5 @@ kg-knowledge = { workspace = true }
 kg-jobs = { workspace = true }
 kg-ingestion = { workspace = true }
 kg-extraction = { workspace = true }
+kg-memory = { workspace = true }
+kg-context = { workspace = true }

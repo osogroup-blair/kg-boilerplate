@@ -30,7 +30,7 @@ async def list_jobs(
     db: DbDep,
     status: JobStatus | None = None,
     stage: Annotated[str | None, Query(max_length=32, pattern=r"^[a-z][a-z_]*$")] = None,
-    subject_type: Literal["interaction", "command"] | None = None,
+    subject_type: Literal["interaction", "command", "memory"] | None = None,
     subject_id: uuid.UUID | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     cursor: str | None = None,

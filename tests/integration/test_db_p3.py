@@ -299,14 +299,17 @@ async def test_kg_app_cannot_update_or_delete_outbox_rows_directly(app_engine, s
     for sql in (
         "UPDATE outbox_jobs SET status = 'succeeded'",
         "UPDATE outbox_jobs SET attempts = 0",
-        "DELETE FROM outbox_jobs",
+        "DELETE FROM outbox_jobs",  # P8: refused by the purge gate (the row exists)
         "UPDATE job_attempts SET outcome = 'x'",
         "INSERT INTO job_attempts (id, job_id, workspace_id, attempt_no, worker_id, started_at) SELECT gen_random_uuid(), id, workspace_id, 1, 'w', now() FROM outbox_jobs",
-        "DELETE FROM job_attempts",
     ):
         with pytest.raises((ProgrammingError, DBAPIError)):
             async with tenant_session(app_engine, ctx(ws)) as c:
                 await c.execute(text(sql))
+    async with tenant_session(
+        app_engine, ctx(ws)
+    ) as c:  # P8 granted DELETE behind the gate: nothing to delete is no error, and no row goes
+        assert (await c.execute(text("DELETE FROM job_attempts"))).rowcount == 0
     assert (await job_row(app_engine, ws, job_id)).status == "pending"
 
 

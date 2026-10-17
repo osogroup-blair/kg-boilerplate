@@ -22,9 +22,11 @@ from kg_knowledge.models import (
     Instant,
     MentionOut,
 )
+from kg_memory.reads import Viewer
+from kg_memory.scopes import ScopeGrants
 
 from kg_api.commands_runner import run_command
-from kg_api.deps import DbDep, PrincipalDep, StateDep, WorkspaceDep
+from kg_api.deps import DbDep, PrincipalDep, StateDep, SubjectsDep, WorkspaceDep
 from kg_api.http import IdempotencyKeyHeader, IfMatchHeader, etag, parse_if_match, require_key
 
 router = APIRouter(prefix="/v1/entities", tags=["entities"])
@@ -62,6 +64,7 @@ async def list_entities(
     principal: PrincipalDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     type: Annotated[str | None, Query(max_length=64)] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     status: Literal["active", "deleted", "candidate", "untyped", "merged"] | None = None,
@@ -72,6 +75,7 @@ async def list_entities(
         db,
         ws,
         can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE),
+        subjects=subjects,
         type_key=type,
         q=q,
         status=status,
@@ -88,6 +92,7 @@ async def get_entity(
     principal: PrincipalDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     include: Annotated[str | None, Query(max_length=100, description="comma list: history, proposed, disputed, rejected")] = None,
     as_of: Annotated[Instant | None, Query()] = None,
     known_at: Annotated[Instant | None, Query()] = None,
@@ -99,11 +104,15 @@ async def get_entity(
         ws,
         entity_id,
         can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE),
+        subjects=subjects,
         include_history=history,
         as_of=as_of,
         known_at=known_at,
         include=extras,
     )
+    if is_allowed(principal, Action.MEMORY_READ):
+        viewer = Viewer(principal, await ScopeGrants.for_principal(db, principal), curator=False, subjects=subjects)
+        out.memories = await state.memory.reads.count_visible(db, viewer, entity_id)
     return JSONResponse(out.model_dump(mode="json"), headers={"ETag": etag(out.revision)})
 
 
@@ -137,6 +146,7 @@ async def entity_relationships(
     principal: PrincipalDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     direction: Literal["out", "in", "both"] = "both",
     type: Annotated[str | None, Query(max_length=64)] = None,
     as_of: Annotated[Instant | None, Query()] = None,
@@ -144,7 +154,9 @@ async def entity_relationships(
     include_history: bool = False,
     include: Annotated[str | None, Query(max_length=100, description="comma list: history, proposed, disputed, rejected")] = None,
 ) -> list[FactOut]:
-    await state.knowledge.reads.entity_exists(db, ws, entity_id)  # a foreign or unknown id is a 404, never an empty list
+    await state.knowledge.reads.entity_exists(
+        db, ws, entity_id, subjects=subjects
+    )  # a foreign, unknown or hidden id is a 404, never an empty list
     return await state.knowledge.reads.list_facts(
         db,
         ws,
@@ -155,6 +167,7 @@ async def entity_relationships(
         known_at=known_at,
         include_history=include_history or parse_include(include)[0],
         can_see_sensitive=is_allowed(principal, Action.ENTITY_READ_SENSITIVE),
+        subjects=subjects,
         include=parse_include(include)[1],
     )
 
@@ -166,6 +179,7 @@ async def entity_graph(
     state: StateDep,
     ws: WorkspaceDep,
     db: DbDep,
+    subjects: SubjectsDep,
     hops: Annotated[int, Query(ge=1, le=2)] = 1,
     as_of: Annotated[Instant | None, Query()] = None,
     known_at: Annotated[Instant | None, Query()] = None,
@@ -179,6 +193,7 @@ async def entity_graph(
         db,
         ws,
         entity_id,
+        subjects=subjects,
         hops=hops,
         as_of=as_of,
         known_at=known_at,
@@ -191,23 +206,27 @@ async def entity_graph(
 
 @router.get("/{entity_id}/mentions", response_model=list[MentionOut])
 @requires(Action.ENTITY_READ)
-async def entity_mentions(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[MentionOut]:
+async def entity_mentions(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep) -> list[MentionOut]:
     """The interactions that mention the entity (metadata only), with how each mention was resolved."""
-    return await state.knowledge.graph_reads.mentions(db, ws, entity_id)
+    return await state.knowledge.graph_reads.mentions(db, ws, entity_id, subjects=subjects)
 
 
 @router.get("/{entity_id}/attribute-claims", response_model=list[AttributeClaimOut])
 @requires(Action.ENTITY_READ)
-async def entity_attribute_claims(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> list[AttributeClaimOut]:
+async def entity_attribute_claims(
+    entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep
+) -> list[AttributeClaimOut]:
     """Attribute values a model proposed. They never change the entity: accepting one is a correction (a later phase)."""
-    return await state.knowledge.graph_reads.attribute_claims(db, ws, entity_id)
+    return await state.knowledge.graph_reads.attribute_claims(db, ws, entity_id, subjects=subjects)
 
 
 @router.get("/{entity_id}/summary", response_model=DerivedSummaryOut)
 @requires(Action.ENTITY_READ)
-async def entity_summary(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep) -> DerivedSummaryOut:
+async def entity_summary(entity_id: uuid.UUID, state: StateDep, ws: WorkspaceDep, db: DbDep, subjects: SubjectsDep) -> DerivedSummaryOut:
     """Graphiti's summary of the entity: derived text, labelled `derived_unverified`, from the graph (best effort: a graph outage answers `graph_available: false`)."""
-    await state.knowledge.reads.entity_exists(db, ws, entity_id)  # 404 first: a foreign id never reaches the graph
+    await state.knowledge.reads.entity_exists(
+        db, ws, entity_id, subjects=subjects
+    )  # 404 first: a foreign or hidden id never reaches the graph
     try:
         node = await state.graph.scoped(ws).read_node(str(entity_id))
     except Exception:

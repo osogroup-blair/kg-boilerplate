@@ -41,11 +41,34 @@ class Action(enum.StrEnum):
     REVIEW_DECIDE = "review.decide"
     REVIEW_READ_EVIDENCE = "review.read_evidence"
     GRAPH_SEARCH = "graph.search"
+    # P5 (phase-5 plan §6.3). Scope grants further restrict every one of these: an action says WHAT a role may do, a grant says to WHOSE memory.
+    MEMORY_READ = "memory.read"
+    MEMORY_SAVE = "memory.save"
+    MEMORY_PROPOSE = "memory.propose"
+    MEMORY_WRITE_OWN = "memory.write_own"
+    MEMORY_CURATE = "memory.curate"
+    MEMORY_READ_PRIVATE = "memory.read_private"
+    # P6 (phase-6 plan §6.3). `context.read` / `context.trace` reach only the caller's OWN builds; a workspace admin reaches every build of the workspace.
+    CONTEXT_BUILD = "context.build"
+    CONTEXT_READ = "context.read"
+    CONTEXT_TRACE = "context.trace"
+    CONTEXT_LAB = "context.lab"  # act as an agent or app principal of the same workspace (audited)
+    CONTEXT_DEBUG = "context.debug"  # opt-in encrypted debug snapshots
+    # P7 (phase-7 plan §6.3). Registering, granting and revoking agents and apps: workspace admins only. `principal.read` (P1) stays admin-only as well.
+    PRINCIPAL_MANAGE = "principal.manage"
+    # P8 (phase-8 plan §6.3). Corrections, deletion, legal holds and workspace settings. `deletion.request_subject` is for trusted-source apps (checked again in the service).
+    CORRECTION_APPLY = "correction.apply"
+    CORRECTION_READ = "correction.read"
+    DELETION_REQUEST = "deletion.request"
+    DELETION_REQUEST_SUBJECT = "deletion.request_subject"
+    DELETION_READ = "deletion.read"
+    GOVERNANCE_HOLD = "governance.hold"
+    WORKSPACE_ADMIN = "workspace.admin"
 
 
 # The matrix (phase-1 plan §6.3, extended by phase-2 and phase-3 plan §6.3). Later phases add actions; they never widen an existing cell silently
 # (test_policy asserts the whole table, so every change shows up in review).
-_READ_KNOWLEDGE = frozenset({Action.WORKSPACE_READ, Action.ONTOLOGY_READ, Action.ENTITY_READ})
+_READ_KNOWLEDGE = frozenset({Action.WORKSPACE_READ, Action.ONTOLOGY_READ, Action.ENTITY_READ, Action.MEMORY_READ})
 ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
     Role.WORKSPACE_ADMIN: frozenset(Action),
     Role.OPERATOR: _READ_KNOWLEDGE
@@ -56,6 +79,8 @@ ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
         Action.INTERACTION_READ,
         Action.OPERATIONS_REPAIR,
         Action.GRAPH_SEARCH,
+        Action.CORRECTION_READ,
+        Action.DELETION_READ,
     },
     Role.REVIEWER: _READ_KNOWLEDGE
     | {
@@ -65,10 +90,39 @@ ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
         Action.REVIEW_DECIDE,
         Action.REVIEW_READ_EVIDENCE,
         Action.GRAPH_SEARCH,
+        Action.MEMORY_CURATE,
+        Action.CONTEXT_BUILD,
+        Action.CONTEXT_READ,
+        Action.CONTEXT_TRACE,
+        Action.CORRECTION_APPLY,
+        Action.CORRECTION_READ,
     },
-    Role.APP_WRITER: _READ_KNOWLEDGE | {Action.ENTITY_WRITE, Action.COMMAND_READ, Action.INTERACTION_WRITE, Action.INTERACTION_READ},
+    Role.APP_WRITER: _READ_KNOWLEDGE
+    | {
+        Action.ENTITY_WRITE,
+        Action.COMMAND_READ,
+        Action.INTERACTION_WRITE,
+        Action.INTERACTION_READ,
+        Action.MEMORY_SAVE,
+        Action.MEMORY_PROPOSE,
+        Action.MEMORY_WRITE_OWN,
+        Action.CONTEXT_BUILD,
+        Action.CONTEXT_READ,
+        Action.CONTEXT_TRACE,
+        Action.DELETION_REQUEST_SUBJECT,
+        Action.DELETION_READ,
+    },
     # an agent reads only the interactions it submitted itself (an ownership predicate in the query; P7 generalises it to scopes)
-    Role.AGENT: _READ_KNOWLEDGE | {Action.INTERACTION_WRITE, Action.INTERACTION_READ},
+    Role.AGENT: _READ_KNOWLEDGE
+    | {
+        Action.INTERACTION_WRITE,
+        Action.INTERACTION_READ,
+        Action.MEMORY_PROPOSE,
+        Action.MEMORY_WRITE_OWN,
+        Action.CONTEXT_BUILD,
+        Action.CONTEXT_READ,
+        Action.CONTEXT_TRACE,
+    },
     Role.READER: _READ_KNOWLEDGE,
 }
 # Roles that see every interaction of the workspace; any other role holding interaction.read sees only its own submissions.

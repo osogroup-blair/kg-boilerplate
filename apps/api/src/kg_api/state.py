@@ -5,10 +5,16 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from kg_common.settings import Settings
+from kg_context.services import ContextServices
+from kg_extraction.simulation import SimulationService
 from kg_governance.authn.resolver import Authenticator
+from kg_governance.quotas import Quotas
+from kg_governance.settings import SettingsService
 from kg_graph.service import GraphService
 from kg_ingestion.services import IngestionServices
 from kg_knowledge.services import KnowledgeServices
+from kg_memory.deletion import DeletionServices
+from kg_memory.services import MemoryServices
 from kg_modelgw.calllog import DbCallSink
 from kg_modelgw.factory import RouterStack
 from kg_modelgw.health import RouterHealth
@@ -25,6 +31,12 @@ class AppState:
     graph: GraphService
     knowledge: KnowledgeServices
     ingestion: IngestionServices
+    memory: MemoryServices
+    context: ContextServices
+    quotas: Quotas
+    deletion: DeletionServices
+    settings_service: SettingsService
+    simulation: SimulationService
     _router_health: tuple[float, RouterHealth] | None = field(default=None, repr=False)
     extras: dict[str, Any] = field(default_factory=dict)
 

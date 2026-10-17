@@ -44,6 +44,17 @@ class AcceptService:
         self._cipher, self._hasher, self._max, self._pipeline = cipher, hasher, max_content_bytes, pipeline
         self._resolver = SubjectResolver(hasher)
 
+    @staticmethod
+    async def _disclosure_denied(conn: AsyncConnection, principal: Principal) -> bool:
+        """`principals.model_disclosure = 'denied'`: consent_external = min(request, policy) (phase-7 plan §5.9)."""
+        row = (
+            await conn.execute(
+                text("SELECT model_disclosure FROM principals WHERE workspace_id = :ws AND id = :p"),
+                {"ws": principal.workspace_id, "p": principal.principal_id},
+            )
+        ).first()
+        return row is not None and row.model_disclosure == "denied"
+
     async def accept(
         self, conn: AsyncConnection, ctx: WorkspaceContext, principal: Principal, audit: AuditWriter, key: str, body: InteractionIn
     ) -> AcceptResult:
@@ -86,6 +97,9 @@ class AcceptService:
 
         interaction_id = uuid7()
         classification = body.effective_classification()
+        consent = body.external_processing_allowed
+        if consent and await self._disclosure_denied(conn, principal):
+            consent = False  # P7 (ING-06): the submitter's registration forbids external model processing, whatever the request says: the model stages are skipped by policy
         await insert_interaction(
             conn,
             {
@@ -101,7 +115,7 @@ class AcceptService:
                 "unk": body.occurred_at_unknown,
                 "by": principal.principal_id,
                 "cls": classification,
-                "consent": body.external_processing_allowed,
+                "consent": consent,
                 "pv": self._pipeline.version,
                 "ov": ontology_version_id,
                 "bytes": len(raw_bytes),
@@ -111,7 +125,7 @@ class AcceptService:
         sealed = self._cipher.encrypt(raw_bytes, workspace_id=ws, interaction_id=interaction_id, form="raw")
         await insert_content(conn, ws, interaction_id, "raw", sealed, self._hasher.digest(ws, raw_bytes), len(raw_bytes))
         await insert_subjects(conn, ws, interaction_id, [*subjects, *actors])
-        plan = self._pipeline.initial_statuses(consent_external=body.external_processing_allowed)
+        plan = self._pipeline.initial_statuses(consent_external=consent)
         for stage, status in plan.items():
             await insert_stage(conn, ws, interaction_id, stage, status, self._pipeline.version, ontology_version_id)
         for stage in self._pipeline.ready(plan):
