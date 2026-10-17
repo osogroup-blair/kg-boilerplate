@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-17",
+  "scanners": [
+    "pip-audit",
+    "npm-audit",
+    "trivy-fs",
+    "gitleaks",
+    "ruff-s",
+    "sbom",
+    "trivy-image"
+  ],
+  "errors": {},
+  "counts": {
+    "npm-audit": {
+      "MODERATE": 2
+    },
+    "trivy-fs": {
+      "MEDIUM": 2,
+      "LOW": 2
+    },
+    "trivy-image:kg-python:dev": {
+      "UNKNOWN": 2,
+      "MEDIUM": 5,
+      "LOW": 1
+    }
+  },
+  "blocking": [],
+  "expired_exceptions": [],
+  "excepted": [],
+  "ok": true
+}

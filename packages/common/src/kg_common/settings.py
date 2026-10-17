@@ -9,6 +9,8 @@ from typing import Literal
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from kg_common.secrets import RingError, SecretRing
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 DEV_PEPPER = "dev-only-pepper-change-me-32-bytes-min"  # noqa: S105 (documented development default; production refuses it)
@@ -54,7 +56,9 @@ class Settings(BaseSettings):
     telemetry_hmac_secret: SecretStr = SecretStr(DEV_TELEMETRY_SECRET)
 
     # HTTP
-    max_body_bytes: int = 1024 * 1024
+    max_body_bytes: int = 1024 * 1024  # the largest request body of any route (an interaction, an ontology)
+    max_body_bytes_default: int = Field(default=256 * 1024, ge=1024)  # every other route (P9: a body limit per route class)
+    metrics_host: str = "0.0.0.0"  # noqa: S104 (inside the container network; production publishes no metrics port and the proxy exposes none)
     cors_allow_origins: list[str] = Field(default_factory=list)
     metrics_port_api: int = 9100
     metrics_port_worker: int = 9101
@@ -173,6 +177,19 @@ class Settings(BaseSettings):
     canary_workspace: str = ""  # slug of the workspace whose context the canary builds every 5 minutes; empty disables
     security_headers: bool = True
 
+    # Secret rotation (P9 WP6). Each secret is a RING of versions; empty rings fall back to the single secret above, as version v1 (JWT: local-1). See docs/runbooks/rotate-secrets.md.
+    auth_jwt_keys: SecretStr = SecretStr(
+        ""
+    )  # "kid:secret,kid:secret": tokens are signed with the active kid and verified with any kid in the ring
+    auth_jwt_active_kid: str = ""
+    auth_key_pepper_id: str = "p1"  # the label stored with every API key hash; a key hashed under the PREVIOUS pepper is accepted once and re-hashed under this one
+    auth_key_pepper_previous: SecretStr = SecretStr("")
+    auth_key_pepper_previous_id: str = "p0"
+    content_hmac_secrets: SecretStr = SecretStr(
+        ""
+    )  # "v1:secret,v2:secret": new hashes use the active version; lookups of stored hashes try every version in the ring
+    content_hmac_active: str = ""
+
     # Test-only failure injection (P3 §5.7). Refused when ENV=production.
     kg_faults: str = ""  # "stage:point:count,..." e.g. "normalize:after_claim:3"
     kg_faults_dir: str = ""  # holds the persistent fire counters and an optional `spec` file the dev worker re-reads
@@ -191,6 +208,26 @@ class Settings(BaseSettings):
 
     def router_api_key(self, service: str) -> SecretStr:
         return self.oso_router_api_key_worker if service == "kg-worker" else self.oso_router_api_key_api
+
+    def content_hmac_ring(self) -> SecretRing:
+        return SecretRing.parse(
+            self.content_hmac_secrets.get_secret_value(),
+            self.content_hmac_active,
+            legacy=self.content_hmac_secret.get_secret_value(),
+            legacy_version="v1",
+            name="CONTENT_HMAC_SECRETS",
+            min_bytes=1,
+        )
+
+    def jwt_ring(self) -> SecretRing:
+        return SecretRing.parse(
+            self.auth_jwt_keys.get_secret_value(),
+            self.auth_jwt_active_kid,
+            legacy=self.auth_jwt_secret.get_secret_value(),
+            legacy_version="local-1",
+            name="AUTH_JWT_KEYS",
+            min_bytes=1,
+        )
 
     @property
     def is_production(self) -> bool:
@@ -221,6 +258,25 @@ class Settings(BaseSettings):
             problems.append("PAYLOAD_KEYS still contains the development key")
         if not any(part.strip().startswith(f"{self.payload_active_kid}:") for part in ring.split(",")):
             problems.append("PAYLOAD_ACTIVE_KID is not in PAYLOAD_KEYS")
+        for name, ring_fn, dev in (
+            ("CONTENT_HMAC_SECRETS", self.content_hmac_ring, DEV_CONTENT_HMAC_SECRET),
+            ("AUTH_JWT_KEYS", self.jwt_ring, DEV_JWT_SECRET),
+        ):
+            try:
+                versions = ring_fn().secrets
+            except RingError as exc:
+                problems.append(str(exc))
+                continue
+            for version, secret in versions.items():
+                if secret.decode() == dev:
+                    problems.append(f"{name} version '{version}' is the development default")
+                elif len(secret) < MIN_SECRET_BYTES:
+                    problems.append(f"{name} version '{version}' must be at least {MIN_SECRET_BYTES} bytes")
+        prev = self.auth_key_pepper_previous.get_secret_value()
+        if prev and (len(prev.encode()) < MIN_SECRET_BYTES or prev == DEV_PEPPER):
+            problems.append("AUTH_KEY_PEPPER_PREVIOUS must be a real secret of at least 32 bytes (or empty)")
+        if prev and self.auth_key_pepper_previous_id == self.auth_key_pepper_id:
+            problems.append("AUTH_KEY_PEPPER_PREVIOUS_ID must differ from AUTH_KEY_PEPPER_ID")
         if self.kg_faults or self.kg_faults_dir:
             problems.append("KG_FAULTS / KG_FAULTS_DIR (failure injection) must not be set in production")
         if self.context_ablate:

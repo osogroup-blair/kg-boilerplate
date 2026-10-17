@@ -224,3 +224,145 @@ def reindex_cancel(workspace: Workspace, run_id: str) -> None:
         _echo(await svc.cancel(ctx, __import__("uuid").UUID(run_id)))
 
     asyncio.run(_with_service(workspace, None, go))
+
+
+# ---- kg secrets (rotation) -----------------------------------------------------------------------------------------------------------------------------
+secrets_app = typer.Typer(
+    no_args_is_help=True,
+    help="Secret rotation: status of every ring, generate a secret, record a rotation, force the end of a pepper window",
+)
+KINDS = ("content_hmac", "auth_pepper", "jwt", "payload_key", "router_key", "neo4j_password", "postgres_password")
+
+
+@secrets_app.command("generate")
+def secrets_generate(nbytes: Annotated[int, typer.Option("--bytes", min=32, max=96)] = 48) -> None:
+    """A fresh random secret (URL-safe base64) for a ring entry or a pepper. Printed once; the platform never stores it."""
+    import secrets as pysecrets
+
+    typer.echo(pysecrets.token_urlsafe(nbytes))
+
+
+@secrets_app.command("status")
+def secrets_status() -> None:
+    """Every ring as the running configuration holds it (versions and fingerprints only, never a secret), how many live API keys sit on each pepper, and the journal's key versions."""
+    import hashlib
+
+    from kg_governance.authn.keys import UNLABELED, pepper_fingerprint
+
+    settings = get_settings()
+
+    async def run() -> dict[str, object]:
+        from kg_db.session import system_session
+        from sqlalchemy import text
+
+        engine = create_app_engine(settings, pool_size=2, max_overflow=0)
+        try:
+            async with system_session(engine) as conn:
+                counts = {r.pepper_id: int(r.keys) for r in (await conn.execute(text("SELECT * FROM ops.key_pepper_counts()"))).all()}
+                recorded = [
+                    dict(r._mapping)
+                    for r in (
+                        await conn.execute(text("SELECT kind, version, status, created_at, retire_after FROM ops.secret_status()"))
+                    ).all()
+                ]
+        finally:
+            await engine.dispose()
+        cur, prev = pepper_fingerprint(settings.auth_key_pepper.get_secret_value()), settings.auth_key_pepper_previous.get_secret_value()
+        prev_fp = pepper_fingerprint(prev) if prev else None
+        journal_kids: dict[str, int] = {}
+        from pathlib import Path
+
+        path = Path(settings.deletion_journal_dir or ".local/deletion-journal") / "deletions.jsonl"
+        if path.exists():
+            for line in path.read_text().splitlines():
+                if line.strip():
+                    kid = json.loads(line).get("kid", "v1")
+                    journal_kids[kid] = journal_kids.get(kid, 0) + 1
+
+        def fp(b: bytes) -> str:
+            return hashlib.sha256(b"kg-secret-id|" + b).hexdigest()[:8]
+
+        return {
+            "jwt": {
+                "active": settings.jwt_ring().active,
+                "kids": settings.jwt_ring().versions,
+                "fingerprints": {k: fp(v) for k, v in settings.jwt_ring().secrets.items()},
+            },
+            "content_hmac": {
+                "active": settings.content_hmac_ring().active,
+                "versions": settings.content_hmac_ring().versions,
+                "journal_lines_by_version": journal_kids,
+            },
+            "auth_pepper": {
+                "current": cur,
+                "previous": prev_fp,
+                "live_keys_by_pepper": {
+                    ("current" if k == cur else "previous" if k == prev_fp else "unlabeled" if k == UNLABELED else f"retired:{k}"): v
+                    for k, v in counts.items()
+                },
+            },
+            "payload_keys": {
+                "active": settings.payload_active_kid,
+                "kids": sorted(p.split(":")[0] for p in settings.payload_keys.get_secret_value().split(",") if p),
+            },
+            "recorded_rotations": recorded,
+        }
+
+    typer.echo(json.dumps(asyncio.run(run()), indent=2, default=str))
+
+
+@secrets_app.command("record")
+def secrets_record(
+    kind: Annotated[str, typer.Option(help="|".join(KINDS))],
+    version: str,
+    status: Annotated[str, typer.Option(help="active | retiring | retired")] = "active",
+    retire_after_days: Annotated[int | None, typer.Option(help="when a retiring version is due to be removed")] = None,
+) -> None:
+    """Records a rotation step in `secret_versions` (a label, a status and dates: never the secret). Run it as each step of docs/runbooks/rotate-secrets.md is done."""
+    if kind not in KINDS or status not in ("active", "retiring", "retired"):
+        raise typer.Exit(_bad("unknown kind or status"))
+    import psycopg
+
+    url = get_settings().database_url_owner.get_secret_value().replace("postgresql+psycopg://", "postgresql://")
+    with psycopg.connect(url, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO secret_versions (kind, version, status, retire_after, retired_at) VALUES (%s, %s, %s, now() + make_interval(days => %s::int), CASE WHEN %s = 'retired' THEN now() END) "
+            "ON CONFLICT (kind, version) DO UPDATE SET status = EXCLUDED.status, retire_after = COALESCE(EXCLUDED.retire_after, secret_versions.retire_after), "
+            "retired_at = CASE WHEN EXCLUDED.status = 'retired' THEN now() ELSE secret_versions.retired_at END",
+            (kind, version, status, retire_after_days, status),
+        )
+    typer.echo(f"recorded {kind}/{version}: {status}")
+
+
+@secrets_app.command("expire-keys")
+def secrets_expire_keys(
+    pepper: Annotated[str, typer.Option(help="a pepper fingerprint from `kg secrets status`, or `unlabeled`")],
+    confirm: Annotated[bool, typer.Option("--confirm", help="without it: only count")] = False,
+) -> None:
+    """The end of a pepper rotation window: API keys still hashed under that pepper stop working now (audited in each workspace). Count first, then --confirm."""
+    from kg_db.session import system_session
+    from sqlalchemy import text
+
+    async def run() -> int:
+        engine = create_app_engine(get_settings(), pool_size=2, max_overflow=0)
+        try:
+            async with system_session(engine) as conn:
+                if not confirm:
+                    return int(
+                        (
+                            await conn.execute(
+                                text("SELECT COALESCE(sum(keys), 0) FROM ops.key_pepper_counts() WHERE pepper_id = :p"), {"p": pepper}
+                            )
+                        ).scalar_one()
+                    )
+                return int((await conn.execute(text("SELECT ops.expire_keys_on_pepper(:p)"), {"p": pepper})).scalar_one())
+        finally:
+            await engine.dispose()
+
+    n = asyncio.run(run())
+    typer.echo(f"{n} keys " + ("expired" if confirm else "would be expired (use --confirm)"))
+
+
+def _bad(message: str) -> int:
+    typer.echo(f"error: {message}", err=True)
+    return 1

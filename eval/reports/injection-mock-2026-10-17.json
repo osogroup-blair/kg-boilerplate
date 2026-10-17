@@ -1,0 +1,11 @@
+{
+  "mode": "mock",
+  "date": "2026-10-17",
+  "summary": {
+    "payloads": 45,
+    "tests_passed": 6,
+    "failures": 0
+  },
+  "pytest": "6 passed in 21.07s",
+  "problems": []
+}

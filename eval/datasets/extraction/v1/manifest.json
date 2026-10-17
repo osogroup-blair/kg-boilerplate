@@ -1,0 +1,38 @@
+{
+  "cases": [
+    "backdated",
+    "bad_json",
+    "cyclist",
+    "evt003",
+    "manager",
+    "newco",
+    "s_johnson"
+  ],
+  "frozen_on": "2026-10-17",
+  "note": "P4's scenarios (the gold entry of each scenario fixture)",
+  "ontology": "v1.0.0",
+  "provenance": "synthetic only: no real person's data",
+  "seed": 7,
+  "sources": {
+    "eval/extraction/gold.py": "7d4206de2e58980e75eb78974df98e9df87a5265397a43bb98c80cc9adc326ae",
+    "tools/mock_router/fixtures/scenarios/backdated_board.json": "9735c64e8a93aa8cef098f59fbe747b92c08027d14e9f147289dd8a53ea389ed",
+    "tools/mock_router/fixtures/scenarios/bad_json.json": "93940bd65960b7206f73c78f11974220b193813abec400ef83c5d4356956e4cb",
+    "tools/mock_router/fixtures/scenarios/cyclist_sarah.json": "3f786f9761deafb79b97c33e9d6b39e4de645ccfdabbd5b48d0b9745ad177373",
+    "tools/mock_router/fixtures/scenarios/memory_bad_json.json": "4f351e8ea0527b2f448c6d757f8f157159f0f08f1b79e9c26371c8c6b347f246",
+    "tools/mock_router/fixtures/scenarios/memory_cyclist.json": "270e7b61ac5c8df202966334472bf66b6bfd06698452315c56b5609f091b7f4f",
+    "tools/mock_router/fixtures/scenarios/memory_escalation.json": "5ddbbcfc28076014704f4762f88e3b9a1f6f560480793bb5d8d3406246eb2cd5",
+    "tools/mock_router/fixtures/scenarios/memory_evt003.json": "be8424bcdd473f2184c316f9294619e6fe715fd91d6958cfd5ab32dba9669f60",
+    "tools/mock_router/fixtures/scenarios/memory_evt004.json": "48dc630a3b3c51332b30a895a84a6265c017e77b6d428c82c01e617530e4032b",
+    "tools/mock_router/fixtures/scenarios/memory_injection.json": "0e3a4527ce8512bd3fe9c7fc14d17d9bff2943ca8b78c6f128e0f8ce2d89e166",
+    "tools/mock_router/fixtures/scenarios/memory_research.json": "2aee0036ea948effeb6fba777f3e1965fb3be34ddbe2d7882f310fe88eb91483",
+    "tools/mock_router/fixtures/scenarios/memory_trivial.json": "b98d5626cffe45844e5ce8e2b981574141e376002f33b3a7ffcd57e6951a00dd",
+    "tools/mock_router/fixtures/scenarios/memory_unmapped.json": "9f6c7cb476c414b2c9039a2be8fa5da37f7b36c5e43ab0b42a4656a5cb5c36c5",
+    "tools/mock_router/fixtures/scenarios/michael_manager.json": "42894c907301c3b62e2d254b77622930346a9c11bc558c937bab2c1ccd50eabf",
+    "tools/mock_router/fixtures/scenarios/michael_orbit.json": "c7c801a9fd5c0c49e072dacdec9f7c89ae6e5e51b6e71edc95be043b31a3d2c8",
+    "tools/mock_router/fixtures/scenarios/s_johnson_ref.json": "4ba868dfcf24e227e080416dc37503df89082e38f37f1e3dd9eaab02e86b9bc4",
+    "tools/mock_router/fixtures/scenarios/sarah_evt003.json": "d6c21c160b5020bd47d38685393cafd27481b09f0cfa1621ea9f8d49c013b7bc",
+    "tools/mock_router/fixtures/scenarios/sarah_newco.json": "aeef92f0c9b6072048a433ff5bc8b90515ff78d0c7a7837ac77d4e4039730a44"
+  },
+  "suite": "extraction",
+  "version": "v1"
+}

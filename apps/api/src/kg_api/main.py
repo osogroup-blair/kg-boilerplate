@@ -38,7 +38,7 @@ from prometheus_client import start_http_server
 
 from kg_api.deps import guard
 from kg_api.errors import install_error_handlers
-from kg_api.middleware import MaintenanceMiddleware, RequestMiddleware
+from kg_api.middleware import MaintenanceMiddleware, RequestMiddleware, SecurityHeadersMiddleware
 from kg_api.routers import ALL_ROUTERS
 from kg_api.state import AppState
 
@@ -99,7 +99,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         if not ok:
             log.warning("neo4j_unreachable_at_startup")  # readiness reports it; the API still starts (no index build here, L12)
         sink.start()
-        signer = LocalSigner(settings.auth_jwt_secret.get_secret_value(), settings.auth_jwt_ttl_seconds)
+        signer = LocalSigner(settings.jwt_ring(), settings.auth_jwt_ttl_seconds)
         oidc = None
         if settings.auth_oidc_enabled:
             oidc = OidcVerifier(
@@ -120,6 +120,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
             oidc=oidc,
             production=settings.is_production,
             allow_breakglass=settings.allow_breakglass_keys,
+            previous_pepper=settings.auth_key_pepper_previous.get_secret_value() or None,
         )
         knowledge = build_knowledge(engine, graph, router.config, service="kg-api", settings=settings)
         memory = build_memory(settings, knowledge, router.gateway, router.config, service="kg-api")
@@ -179,7 +180,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         )
         check_route_policies(app)
         if serve_metrics and not _metrics_started.is_set():
-            start_http_server(settings.metrics_port_api, registry=metrics.REGISTRY)
+            start_http_server(settings.metrics_port_api, addr=settings.metrics_host, registry=metrics.REGISTRY)
             _metrics_started.set()
         log.info("api_started", env=settings.env, router_mode=settings.oso_router_mode)
         try:
@@ -209,7 +210,9 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         description="Versioned /v1 API. Every route declares an authorization policy; errors use one envelope.",
     )
     app.add_middleware(MaintenanceMiddleware, mode=settings.maintenance_mode)
-    app.add_middleware(RequestMiddleware, max_body_bytes=settings.max_body_bytes)
+    app.add_middleware(RequestMiddleware, max_body_bytes=settings.max_body_bytes, default_body_bytes=settings.max_body_bytes_default)
+    if settings.security_headers:
+        app.add_middleware(SecurityHeadersMiddleware, hsts=production)
     if settings.cors_allow_origins:
         app.add_middleware(
             CORSMiddleware,

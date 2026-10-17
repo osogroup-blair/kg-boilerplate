@@ -59,9 +59,9 @@ class SubjectResolver:
                 if (
                     await conn.execute(
                         text(
-                            "SELECT 1 FROM deletion_suppressions WHERE workspace_id = :ws AND kind = 'external_id' AND value_hmac = :h AND lifted_at IS NULL"
+                            "SELECT 1 FROM deletion_suppressions WHERE workspace_id = :ws AND kind = 'external_id' AND value_hmac = ANY(:h) AND lifted_at IS NULL"
                         ),
-                        {"ws": ws, "h": digest},
+                        {"ws": ws, "h": self._hasher.ref_all(ws, ref.type, ref.system, ref.value)},
                     )
                 ).first():
                     raise SubjectSuppressed()  # the identifier of a deleted subject is not recorded again (409 subject_suppressed)

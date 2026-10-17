@@ -1,0 +1,121 @@
+{
+  "datasets": {
+    "problems": []
+  },
+  "date": "2026-10-17",
+  "git": {
+    "commit": "d2d9a82c0a024c5c99d617e1d96a2a9b5d838b42",
+    "describe": "v0.8.0-offline-2-gd2d9a82",
+    "dirty": true
+  },
+  "metrics": {
+    "authorization.cases": 911.0,
+    "authorization.deleted_leaks": 0.0,
+    "authorization.foreign_mutations": 0.0,
+    "authorization.frozen_leaks": 0.0,
+    "authorization.leakage": 0.0,
+    "authorization.policy_mismatches": 0.0,
+    "authorization.probes": 941.0,
+    "authorization.server_errors": 0.0,
+    "conflicts.cases": 151.0,
+    "conflicts.cases_authority": 125.0,
+    "conflicts.cases_external_ids": 6.0,
+    "conflicts.cases_name": 20.0,
+    "conflicts.mismatches": 0.0,
+    "consolidation.bad_accepted": 0.0,
+    "consolidation.crossed_scope": 0.0,
+    "consolidation.escalations_escaped": 0.0,
+    "consolidation.good_refused": 0.0,
+    "consolidation.merged_distinct": 0.0,
+    "consolidation.merged_distinct_escaped": 0.0,
+    "consolidation.missed_duplicates": 0.0,
+    "consolidation.ok": 1.0,
+    "context.attribution": 1.0,
+    "context.budget_adherence": 1.0,
+    "context.cases": 16.0,
+    "context.evidence_recall_cases_1_8": 1.0,
+    "context.irrelevant_inclusion": 0.0,
+    "context.latency_p95": 0.124,
+    "context.leakage": 0.0,
+    "context.required_stable": 1.0,
+    "context.status_ok": 1.0,
+    "context.structure_intact": 1.0,
+    "context.temporal_correctness": 1.0,
+    "context.tokens_per_call": 236.8,
+    "context.unavailable_ok": 1.0,
+    "context.wrongly_included": 0.0,
+    "extraction.chat_calls_per_episode": 3.71,
+    "extraction.cross_workspace_links": 0.0,
+    "extraction.entities_ok": 1.0,
+    "extraction.fact_precision": 1.0,
+    "extraction.fact_recall": 1.0,
+    "extraction.identity_correct": 1.0,
+    "extraction.latency_p95": 1.32,
+    "extraction.missed_reverts": 0.0,
+    "extraction.reverts_ok": 1.0,
+    "extraction.reviews_ok": 1.0,
+    "extraction.scenarios": 7.0,
+    "extraction.stage_outcomes_ok": 1.0,
+    "extraction.status_correct": 1.0,
+    "extraction.tokens_per_episode": 4145.6,
+    "extraction.unquarantined_unparseable": 0.0,
+    "extraction.valid_time_correct": 1.0,
+    "injection.failures": 0.0,
+    "injection.payloads": 45.0,
+    "injection.tests_passed": 6.0,
+    "memory.candidate_precision": 1.0,
+    "memory.candidate_recall": 1.0,
+    "memory.distractor_in_top3": 0.0,
+    "memory.drop_reasons_ok": 1.0,
+    "memory.escalation_violations": 0.0,
+    "memory.latency_p95": 0.87,
+    "memory.model_calls_per_event": 0.88,
+    "memory.procedural_auto_activations": 0.0,
+    "memory.recall_at_3": 1.0,
+    "memory.reviews_ok": 1.0,
+    "memory.scenarios": 8.0,
+    "memory.scope_violations": 0.0,
+    "memory.stage_outcomes_ok": 1.0,
+    "memory.tokens_per_event": 512.9,
+    "memory.unmapped_subject_leaks": 0.0
+  },
+  "mode": "mock",
+  "ok": true,
+  "suites": {
+    "authorization": {
+      "exit": 0,
+      "report": "eval/reports/authorization-mock-2026-10-17.json",
+      "seconds": 12.9
+    },
+    "conflicts": {
+      "exit": 0,
+      "report": "eval/reports/conflicts-mock-2026-10-17.json",
+      "seconds": 1.5
+    },
+    "consolidation": {
+      "exit": 0,
+      "report": "eval/reports/consolidation-mock-2026-10-17.json",
+      "seconds": 1.9
+    },
+    "context": {
+      "exit": 0,
+      "report": "eval/reports/context-mock-2026-10-17.json",
+      "seconds": 10.7
+    },
+    "extraction": {
+      "exit": 0,
+      "report": "eval/reports/extraction-mock-2026-10-17.json",
+      "seconds": 17.4
+    },
+    "injection": {
+      "exit": 0,
+      "report": "eval/reports/injection-mock-2026-10-17.json",
+      "seconds": 24.5
+    },
+    "memory": {
+      "exit": 0,
+      "report": "eval/reports/memory-mock-2026-10-17.json",
+      "seconds": 16.9
+    }
+  }
+}

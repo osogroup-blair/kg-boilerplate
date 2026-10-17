@@ -36,6 +36,12 @@ def derive_summary(content: str, limit: int = 160) -> str:
 def candidate_hmac(
     hasher: ContentHasher, ws: uuid.UUID, mem_type: str, content: str, subject_ids: list[uuid.UUID], scopes: list[tuple[str, str]]
 ) -> str:
+    return candidate_hmacs(hasher, ws, mem_type, content, subject_ids, scopes)[0]
+
+
+def candidate_hmacs(
+    hasher: ContentHasher, ws: uuid.UUID, mem_type: str, content: str, subject_ids: list[uuid.UUID], scopes: list[tuple[str, str]]
+) -> list[str]:
     """Keyed hash of (type, normalised content, subjects, scopes). Scopes are part of it so that the same words written to a private scope and to a shared one
     are two memories, and so a duplicate check can never reveal a memory the writer could not already see."""
     doc = {
@@ -44,7 +50,7 @@ def candidate_hmac(
         "s": sorted(str(s) for s in subject_ids),
         "sc": sorted(f"{k}:{r}" for k, r in scopes),
     }
-    return hasher.digest(ws, json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode())
+    return hasher.digest_all(ws, json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode())
 
 
 def vector_literal(vector: list[float]) -> str:

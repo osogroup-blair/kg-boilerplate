@@ -1,0 +1,1892 @@
+{
+ "cases": [
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-001",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-002",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-003",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-004",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-005",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-006",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-007",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-008",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-009",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-010",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-011",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-012",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-013",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-014",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-015",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-016",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-017",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-018",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-019",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-020",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-021",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-022",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-023",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-024",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-025",
+   "incoming": "authoritative_system",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-026",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-027",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-028",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-029",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-030",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-031",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-032",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-033",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-034",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-035",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-036",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-037",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-038",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-039",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-040",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-041",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-042",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-043",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-044",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-045",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-046",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-047",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-048",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-049",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-050",
+   "incoming": "admin_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-051",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-052",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-053",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-054",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-055",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-056",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-057",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-058",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-059",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-060",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-061",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-062",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-063",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-064",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-065",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-066",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-067",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-068",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-069",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-070",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-071",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-072",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-073",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-074",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-075",
+   "incoming": "user_asserted",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-076",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-077",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-078",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-079",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-080",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-081",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-082",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-083",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-084",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-085",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-086",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-087",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-088",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-089",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-090",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-091",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-092",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-093",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-094",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-095",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-096",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-097",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "requires_correction",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-098",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-099",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-100",
+   "incoming": "conversation_report",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-101",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-102",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-103",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-104",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "authoritative_system",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-105",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-106",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-107",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-108",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-109",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "admin_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-110",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-111",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-112",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-113",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-114",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "user_asserted",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-115",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-116",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-117",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "proposed"
+   },
+   "id": "conf-118",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-119",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "conversation_report",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-120",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-121",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "rule_overlap"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 1,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-122",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_dated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "equal_authority_conflict",
+    "ends": 0,
+    "review": "contradiction",
+    "status": "disputed"
+   },
+   "id": "conf-123",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_undated"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-124",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "disjoint"
+  },
+  {
+   "existing": "agent_generated",
+   "expect": {
+    "code": "no_conflict",
+    "ends": 0,
+    "review": null,
+    "status": "active"
+   },
+   "id": "conf-125",
+   "incoming": "agent_generated",
+   "kind": "authority",
+   "overlap": "invalidated_disjoint"
+  },
+  {
+   "a": "Sarah Johnson",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-001",
+   "kind": "name"
+  },
+  {
+   "a": "sarah johnson",
+   "b": "SARAH JOHNSON",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-002",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah Johnson",
+   "b": "S. Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-003",
+   "kind": "name"
+  },
+  {
+   "a": "S. Johnson",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-004",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-005",
+   "kind": "name"
+  },
+  {
+   "a": "Johnson",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-006",
+   "kind": "name"
+  },
+  {
+   "a": "Jos\u00e9 Garc\u00eda",
+   "b": "Jose Garcia",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-007",
+   "kind": "name"
+  },
+  {
+   "a": "Zo\u00eb Kravitz",
+   "b": "Zoe Kravitz",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-008",
+   "kind": "name"
+  },
+  {
+   "a": "M\u00fcller",
+   "b": "Muller",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-009",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah  Johnson",
+   "b": "Sarah Johnson.",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-010",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah Johnson",
+   "b": "Sara Johnson",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-011",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah Johnson",
+   "b": "Sarah Jones",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-012",
+   "kind": "name"
+  },
+  {
+   "a": "Michael",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-013",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah Johnson",
+   "b": "Johnson Sarah",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-014",
+   "kind": "name"
+  },
+  {
+   "a": "Tom Reed",
+   "b": "Tim Reed",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-015",
+   "kind": "name"
+  },
+  {
+   "a": "Priya Raman",
+   "b": "Priya Raman Iyer",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-016",
+   "kind": "name"
+  },
+  {
+   "a": "A. Johnson",
+   "b": "Sarah Johnson",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-017",
+   "kind": "name"
+  },
+  {
+   "a": "S. Johnson",
+   "b": "Sam Johnson",
+   "expect": {
+    "compatible": true
+   },
+   "id": "name-018",
+   "kind": "name"
+  },
+  {
+   "a": "",
+   "b": "Sarah",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-019",
+   "kind": "name"
+  },
+  {
+   "a": "Sarah",
+   "b": "",
+   "expect": {
+    "compatible": false
+   },
+   "id": "name-020",
+   "kind": "name"
+  },
+  {
+   "a": {
+    "hr": "E-1"
+   },
+   "b": {
+    "hr": "E-2"
+   },
+   "expect": {
+    "conflict": true
+   },
+   "id": "ext-001",
+   "kind": "external_ids"
+  },
+  {
+   "a": {
+    "hr": "E-1"
+   },
+   "b": {
+    "hr": "E-1"
+   },
+   "expect": {
+    "conflict": false
+   },
+   "id": "ext-002",
+   "kind": "external_ids"
+  },
+  {
+   "a": {
+    "hr": "E-1"
+   },
+   "b": {
+    "crm": "C-9"
+   },
+   "expect": {
+    "conflict": false
+   },
+   "id": "ext-003",
+   "kind": "external_ids"
+  },
+  {
+   "a": {},
+   "b": {
+    "hr": "E-1"
+   },
+   "expect": {
+    "conflict": false
+   },
+   "id": "ext-004",
+   "kind": "external_ids"
+  },
+  {
+   "a": {
+    "crm": "C-1",
+    "hr": "E-1"
+   },
+   "b": {
+    "crm": "C-2",
+    "hr": "E-1"
+   },
+   "expect": {
+    "conflict": true
+   },
+   "id": "ext-005",
+   "kind": "external_ids"
+  },
+  {
+   "a": {
+    "crm": "C-1",
+    "hr": "E-1"
+   },
+   "b": {
+    "hr": "E-1"
+   },
+   "expect": {
+    "conflict": false
+   },
+   "id": "ext-006",
+   "kind": "external_ids"
+  }
+ ],
+ "provenance": "synthetic only",
+ "seed": 7,
+ "suite": "conflicts",
+ "version": "v1"
+}

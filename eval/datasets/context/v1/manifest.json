@@ -1,0 +1,30 @@
+{
+  "cases": [
+    "C01_current_employer",
+    "C02_historical_employer",
+    "C03_aspiration_and_conflicting_evidence",
+    "C04_shared_agent_finding",
+    "C05_unrelated_preference_distractor",
+    "C06_private_memory_not_allowed",
+    "C07_insufficient_evidence",
+    "C08_backdated_update",
+    "C09_budget_250_vs_1200",
+    "C10_graph_backend_missing",
+    "C11_vector_backend_missing",
+    "C12_foreign_workspace",
+    "C13_injection_in_a_memory",
+    "C14_summarized_faithfulness",
+    "C15_hidden_person_is_denied",
+    "C16_hidden_relationship_is_absent"
+  ],
+  "frozen_on": "2026-10-17",
+  "note": "P6's 16 frozen cases; the authorization, deleted-subject and corrected-fact cases live in their own suites",
+  "ontology": "v1.3.0 + v1.4.0 (subject ACLs)",
+  "provenance": "synthetic only: no real person's data",
+  "seed": 7,
+  "sources": {
+    "eval/context/benchmark.yaml": "ad88b364a7d50a49d2487d6dcd69bade24b10894f70bb1befdf8f68b72b88af5"
+  },
+  "suite": "context",
+  "version": "v1"
+}

@@ -11,7 +11,7 @@ suppressed (a name is not an identity, KGR-02), and an admin can lift a suppress
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from kg_common.errors import Conflict, NotFound, SubjectSuppressed
 from kg_common.ids import uuid7
@@ -103,8 +103,11 @@ class Holds:
 
 
 class Suppressions:
-    def __init__(self, ref_hmac: RefHasher):
+    def __init__(self, ref_hmac: RefHasher, ref_hmac_all: Callable[[uuid.UUID, str, str, str], list[str]] | None = None):
         self._hmac = ref_hmac
+        self._hmac_all = (
+            ref_hmac_all  # P9: every version of the content-HMAC ring, so a suppression recorded before a rotation still blocks after it
+        )
 
     def digest(self, ws: uuid.UUID, type_key: str, system: str, value: str) -> str:
         return self._hmac(ws, type_key, system, value)
@@ -126,7 +129,7 @@ class Suppressions:
 
     async def check(self, conn: AsyncConnection, ws: uuid.UUID, ids: Iterable[tuple[str, str, str]]) -> None:
         """Raises `SubjectSuppressed` when any of these identifiers stands suppressed."""
-        digests = [self.digest(ws, t, s, v) for t, s, v in ids]
+        digests = [d for t, s, v in ids for d in (self._hmac_all(ws, t, s, v) if self._hmac_all else [self.digest(ws, t, s, v)])]
         if not digests:
             return
         hit = (

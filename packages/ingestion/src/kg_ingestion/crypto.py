@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from kg_common.errors import PlatformError
+from kg_common.secrets import SecretRing
 from kg_common.settings import Settings
 
 KID = re.compile(r"^[A-Za-z0-9_.-]{1,32}$")
@@ -106,25 +107,47 @@ class PayloadCipher:
 
 
 class ContentHasher:
-    def __init__(self, secret: str | bytes):
-        self._master = secret.encode() if isinstance(secret, str) else secret
+    """Keyed hashes over a secret RING (P9 rotation). New hashes use the ACTIVE version; every check of a hash that was stored earlier tries every version in the ring
+    (`*_all` returns the active one first), so adding a version, making it active and later removing the old one never makes a stored hash unrecognisable (idempotent replay,
+    memory dedupe, the suppression of a deleted subject's identifiers)."""
+
+    def __init__(self, secret: str | bytes | SecretRing):
+        if isinstance(secret, SecretRing):
+            self._ring = secret
+        else:
+            self._ring = SecretRing({"v1": secret.encode() if isinstance(secret, str) else secret}, "v1")
 
     @classmethod
     def from_settings(cls, settings: Settings) -> ContentHasher:
-        return cls(settings.content_hmac_secret.get_secret_value())
+        return cls(settings.content_hmac_ring())
 
-    def _key(self, workspace_id: uuid.UUID) -> bytes:
-        return HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=f"kg-content-hmac|{workspace_id}".encode()).derive(self._master)
+    @property
+    def versions(self) -> list[str]:
+        return self._ring.versions
+
+    @staticmethod
+    def _key(workspace_id: uuid.UUID, master: bytes) -> bytes:
+        return HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=f"kg-content-hmac|{workspace_id}".encode()).derive(master)
 
     def digest(self, workspace_id: uuid.UUID, data: bytes) -> str:
-        return hmac.new(self._key(workspace_id), data, hashlib.sha256).hexdigest()
+        return hmac.new(self._key(workspace_id, self._ring.current), data, hashlib.sha256).hexdigest()
+
+    def digest_all(self, workspace_id: uuid.UUID, data: bytes) -> list[str]:
+        """The digest under every version still in the ring, the active one first."""
+        return [hmac.new(self._key(workspace_id, secret), data, hashlib.sha256).hexdigest() for _, secret in self._ring.ordered()]
 
     def digest_json(self, workspace_id: uuid.UUID, value: Any) -> str:
         return self.digest(workspace_id, canonical_json(value))
 
+    def digest_json_all(self, workspace_id: uuid.UUID, value: Any) -> list[str]:
+        return self.digest_all(workspace_id, canonical_json(value))
+
     def ref(self, workspace_id: uuid.UUID, ref_type: str, system: str, value: str) -> str:
         """Keyed hash of an external identifier, so an unresolved reference can be matched later without storing the value in the clear."""
         return self.digest(workspace_id, f"ref|{ref_type}|{system}|{value}".encode())
+
+    def ref_all(self, workspace_id: uuid.UUID, ref_type: str, system: str, value: str) -> list[str]:
+        return self.digest_all(workspace_id, f"ref|{ref_type}|{system}|{value}".encode())
 
 
 def canonical_json(value: Any) -> bytes:

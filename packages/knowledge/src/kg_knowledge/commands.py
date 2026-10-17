@@ -137,15 +137,26 @@ class CommandPipeline:
     def __init__(self, specs: SpecCache):
         self._specs = specs
         self._ref_hmac: Callable[[uuid.UUID, str, str, str], str] | None = None
+        self._ref_hmac_all: Callable[[uuid.UUID, str, str, str], list[str]] | None = None
 
-    def set_ref_hmac(self, fn: Callable[[uuid.UUID, str, str, str], str]) -> None:
+    def set_ref_hmac(
+        self, fn: Callable[[uuid.UUID, str, str, str], str], fn_all: Callable[[uuid.UUID, str, str, str], list[str]] | None = None
+    ) -> None:
         """P8: the composition root gives the pipeline the keyed hash of an external identifier, so it can refuse one whose subject was deleted (ADR-045)."""
         self._ref_hmac = fn
+        self._ref_hmac_all = fn_all  # P9: every version of the content-HMAC ring
 
     async def _guard_suppressed(self, cc: CommandContext, type_key: str, ids: tuple[tuple[str, str], ...]) -> None:
         if self._ref_hmac is None or not ids:
             return
-        digests = [self._ref_hmac(cc.ctx.workspace_id, type_key, system, value) for system, value in ids]
+        ws = cc.ctx.workspace_id
+        digests = [
+            d
+            for system, value in ids
+            for d in (
+                self._ref_hmac_all(ws, type_key, system, value) if self._ref_hmac_all else [self._ref_hmac(ws, type_key, system, value)]
+            )
+        ]
         hit = (
             await cc.conn.execute(
                 text(

@@ -11,7 +11,7 @@ PYSRC := packages apps sdk tests scripts
 
 .PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check \
-        backup-init backup backup-verify backup-prune restore-rehearsal reconcile
+        backup-init backup backup-verify backup-prune restore-rehearsal reconcile eval-all eval-gate eval-gate-live eval-conflicts eval-authorization eval-injection eval-freeze
 
 sync:                ## install the Python workspace (exact versions from uv.lock)
 	$(UV) sync --frozen
@@ -102,6 +102,36 @@ eval-consolidation-live: ## the same synthesis groups answered by the REAL route
 eval-simulation-live: ## ontology simulation sanity through the REAL router: well-formed report, cost within 0.2x-5x of the estimate, nothing left behind (user action; needs OSO_ROUTER_API_KEY; costs model calls)
 	OSO_ROUTER_MODE=live $(RUN) python -m eval.simulation.run_eval --mode live
 
+eval-conflicts:      ## conflicts + identity: 151 frozen cases through the pure policy code (offline, no stack): every mismatch is a failure
+	$(RUN) python -m eval.conflicts.run_eval
+
+eval-authorization:  ## authorization: ~900 generated probes (every route x caller class, foreign administrator, frozen and deleted subject): policy mismatches, leakage and 5xx must all be 0
+	$(RUN) python -m eval.authorization.run_eval
+
+eval-injection:      ## injection: the frozen SEC-04 / AT-15 corpus through every ingress; every failed check is a failure
+	$(RUN) python -m eval.injection.run_eval
+
+eval-freeze:         ## (re)freeze the hash-locked datasets: eval/datasets/<suite>/v1/manifest.json (an owner act; then `python -m eval.gate --write-baseline`)
+	$(RUN) python -m eval.conflicts.generate
+	$(RUN) python -m eval.authorization.generate
+	$(RUN) python -m eval.datasets freeze
+
+eval-all:            ## every suite against the strict mock (offline, deterministic) -> eval/reports/<date>/all.json
+	$(RUN) python -m eval.all
+
+eval-gate:           ## compare the newest eval-all with eval/baselines/release.json: strict metrics must be exact, the others may not regress past tolerance
+	$(RUN) python -m eval.gate
+
+scan:                ## dependency, image, filesystem and secret scanning + SBOMs; HIGH/CRITICAL blocks unless an unexpired exception exists (docs/security/scan-exceptions.yaml)
+	$(RUN) python scripts/scan.py
+
+scan-third-party:    ## the same, plus the Postgres and Neo4j images (their findings are the vendors', tracked in the dependency-refresh runbook)
+	$(RUN) python scripts/scan.py --third-party
+
+eval-gate-live:      ## the same gate against the REAL router (user action; costs model calls): the record CI requires for a change to an alias, a price, a prompt, a ranker/packer version or a Graphiti pin
+	OSO_ROUTER_MODE=live $(RUN) python -m eval.all --mode live
+	$(RUN) python -m eval.gate --live
+
 logs:
 	$(KG_COMPOSE) logs -f --tail=100
 
@@ -110,7 +140,7 @@ ps:
 
 # ---- tests (the host-run suites need `make stack-up`; the targets fail loudly if it is missing) ----------------------------------------
 test:                ## unit + offline contract tests (no stack needed)
-	$(RUN) pytest packages apps sdk tools/mock_router/tests tools/backup/tests -q
+	$(RUN) pytest packages apps sdk tools/mock_router/tests tools/backup/tests eval/tests -q
 
 test-int:            ## integration tests against postgres + neo4j + mock router
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/integration -q
@@ -188,7 +218,7 @@ test-e2e:            ## Playwright: P1 smoke, P2 ADM-01, P3 ADM-06, P4 ADM-02, P
 check: lint typecheck test-all test-admin   ## everything except the Playwright smoke (run `make test-e2e` with the stack up)
 
 # ---- Phase 0 spike targets ----------------------------------------------------------------------------------------------------------
-.PHONY: tools spike-up spike-offline spike-report spike-down verify-router mock-router test-mock sync-catalog
+.PHONY: scan scan-third-party tools spike-up spike-offline spike-report spike-down verify-router mock-router test-mock sync-catalog
 
 tools:               ## install uv into .tools/uvenv if it is not on PATH (needs python3 >= 3.9; uv then fetches Python 3.12)
 	@command -v uv >/dev/null 2>&1 || test -x $(CURDIR)/.tools/uvenv/bin/uv || (python3 -m venv .tools/uvenv && .tools/uvenv/bin/pip install -q uv)

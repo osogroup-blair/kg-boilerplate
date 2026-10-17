@@ -17,6 +17,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from kg_common.secrets import SecretRing
+
 FILE = "deletions.jsonl"
 GENESIS = "0" * 64
 
@@ -30,8 +32,12 @@ def _canon(entry: dict[str, Any]) -> bytes:
 
 
 class DeletionJournal:
-    def __init__(self, directory: str | Path, secret: bytes):
-        self._dir, self._secret = Path(directory), secret
+    """`secret` is the content-HMAC ring (P9): a line is signed with the ACTIVE version, records its `kid`, and is verified with the version it names (a line written before
+    rotation existed has no kid and was signed with `v1`). Removing a version from the ring while lines still name it breaks verification, on purpose and loudly."""
+
+    def __init__(self, directory: str | Path, secret: bytes | SecretRing):
+        self._ring = secret if isinstance(secret, SecretRing) else SecretRing({"v1": secret}, "v1")
+        self._dir = Path(directory)
         self._dir.mkdir(parents=True, exist_ok=True)
         self._path = self._dir / FILE
 
@@ -39,8 +45,11 @@ class DeletionJournal:
     def path(self) -> Path:
         return self._path
 
-    def _mac(self, prev: str, entry: dict[str, Any]) -> str:
-        return hmac.new(self._secret, prev.encode() + b"|" + _canon(entry), hashlib.sha256).hexdigest()
+    def _mac(self, prev: str, entry: dict[str, Any], kid: str | None = None) -> str:
+        secret = self._ring.get(kid or self._ring.active)
+        if secret is None:
+            raise JournalCorrupt(f"the journal names key version '{kid}', which is no longer in the ring")
+        return hmac.new(secret, prev.encode() + b"|" + _canon(entry), hashlib.sha256).hexdigest()
 
     def _lines(self) -> list[dict[str, Any]]:
         if not self._path.exists():
@@ -79,7 +88,11 @@ class DeletionJournal:
                 "suppression_hmacs": sorted(suppression_hmacs),
                 "prev": prev,
             }
-            entry["mac"] = self._mac(prev, entry)
+            if self._ring.active != "v1":
+                entry["kid"] = (
+                    self._ring.active
+                )  # version v1 is the default: lines written before rotation existed (or under v1) carry no kid and keep their exact bytes
+            entry["mac"] = self._mac(prev, entry, self._ring.active)
             fd = os.open(self._path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
             try:
                 os.write(fd, _canon(entry) + b"\n")
@@ -94,7 +107,7 @@ class DeletionJournal:
         prev = GENESIS
         for n, entry in enumerate(self._lines(), start=1):
             body = {k: v for k, v in entry.items() if k != "mac"}
-            if entry.get("seq") != n or entry.get("prev") != prev or entry.get("mac") != self._mac(prev, body):
+            if entry.get("seq") != n or entry.get("prev") != prev or entry.get("mac") != self._mac(prev, body, entry.get("kid", "v1")):
                 raise JournalCorrupt(f"the deletion journal breaks at line {n}")
             prev = entry["mac"]
         return n if prev != GENESIS else 0

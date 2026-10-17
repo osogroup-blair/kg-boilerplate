@@ -1,0 +1,23 @@
+{
+  "_note": "PROVISIONAL: shapes from the router docs, not measured. Replace with the profile captured by the live session (tools/live_session, step g).",
+  "chat": {
+    "oso/general": {
+      "p50_ms": 1500,
+      "p95_ms": 5000
+    },
+    "oso/fast": {
+      "p50_ms": 450,
+      "p95_ms": 1400
+    },
+    "oso/code": {
+      "p50_ms": 1800,
+      "p95_ms": 6000
+    }
+  },
+  "embedding": {
+    "oso/embedding": {
+      "p50_ms": 70,
+      "p95_ms": 220
+    }
+  }
+}

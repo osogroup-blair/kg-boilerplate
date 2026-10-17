@@ -34,8 +34,16 @@ class Authenticator:
         oidc: OidcVerifier | None = None,
         production: bool = False,
         allow_breakglass: bool = False,
+        previous_pepper: str | None = None,
     ):
         self._engine, self._pepper, self._signer = engine, pepper, signer
+        self._prev = (
+            previous_pepper or None
+        )  # P9 rotation: a key hashed under this pepper is accepted once and re-hashed under the current one
+        self._pepper_id, self._prev_id = (
+            keys.pepper_fingerprint(pepper),
+            keys.pepper_fingerprint(previous_pepper) if previous_pepper else None,
+        )
         self._oidc, self._production, self._allow_breakglass = oidc, production, allow_breakglass
         self._dummy_hash = keys.hash_key(pepper, "kgk_none_none")
         self._last_touch: dict[uuid.UUID, float] = {}
@@ -71,21 +79,48 @@ class Authenticator:
         prefix = keys.parse_prefix(presented)
         async with system_session(self._engine) as conn:
             row = (await conn.execute(text("SELECT * FROM auth.lookup_credential(:p)"), {"p": prefix or "invalid"})).first()
-        # Always hash and compare, even for an unknown prefix, so timing does not reveal which prefixes exist.
-        candidate = keys.hash_key(self._pepper, presented)
-        ok = keys.constant_time_equal(candidate, row.key_hash if row else self._dummy_hash)
+        # Always hash and compare, even for an unknown prefix, so timing does not reveal which prefixes exist. Which pepper to use is the row's label (P9): the current one, the
+        # previous one during a rotation window, or either for a key minted before keys were labelled.
+        label = row.pepper_id if row else None
+        trial: list[str] = []
+        if label == self._pepper_id:
+            trial = [self._pepper]
+        elif self._prev is not None and label == self._prev_id:
+            trial = [self._prev]
+        elif label == keys.UNLABELED:
+            trial = [self._pepper, *([self._prev] if self._prev else [])]
+        ok = False
+        for pepper in trial or [self._pepper]:
+            candidate = keys.hash_key(pepper, presented)
+            if keys.constant_time_equal(candidate, row.key_hash if row and trial else self._dummy_hash):
+                ok = bool(trial)
+                break
         if prefix is None:
             raise self._fail("malformed")
         if row is None:
             raise self._fail("unknown_key")
         if not ok:
-            raise self._fail("bad_secret")
+            raise self._fail("bad_secret" if trial else "pepper_retired")
         self._check_status(row)
+        if label != self._pepper_id:
+            await self._rehash(row.key_id, str(label), presented)
         principal = self._principal(row, key_id=row.key_id, method=AuthMethod.API_KEY)
         if self._production and principal.kind is PrincipalKind.USER:
             await self._breakglass(principal)
         await self._touch(row.key_id)
         return principal
+
+    async def _rehash(self, key_id: uuid.UUID, old_label: str, presented: str) -> None:
+        """The key authenticated under an older pepper (or none was labelled): store its hash under the CURRENT pepper, once. Best effort: the next use tries again."""
+        try:
+            async with system_session(self._engine) as conn:
+                await conn.execute(
+                    text("SELECT auth.rehash_key(:k, :old, :h, :new)"),
+                    {"k": key_id, "old": old_label, "h": keys.hash_key(self._pepper, presented), "new": self._pepper_id},
+                )
+            metrics.key_rehashes_total.inc()
+        except Exception:
+            log.warning("key_rehash_failed")
 
     async def _breakglass(self, principal: Principal) -> None:
         """P9: in production a HUMAN's API key is the break-glass path (OIDC is the front door). It works only while ALLOW_BREAKGLASS_KEYS is true, and each use is audited."""

@@ -341,6 +341,58 @@ GRANT EXECUTE ON FUNCTION ops.rate_hit(text, integer, integer), ops.slot_acquire
     ops.graph_namespace_overrides(), ops.graph_namespaces_of(uuid), ops.reconcile_drift(), ops.backup_status(integer), ops.eval_status(integer), ops.secret_status(),
     ops.backup_ages(), ops.claim_reconcile_scan(double precision), ops.reindex_stats(), ops.retired_namespaces_due(integer) TO kg_app;
 
+-- ---- pepper rotation: the label of the pepper a key hash was made with, and a one-time re-hash on the next use ----------------------------------------------------
+ALTER TABLE api_keys ADD COLUMN pepper_id text NOT NULL DEFAULT 'unlabeled' CHECK (pepper_id ~ '^[A-Za-z0-9_.-]{1,16}$');
+
+DROP FUNCTION auth.lookup_credential(text);
+CREATE FUNCTION auth.lookup_credential(p_prefix text)
+RETURNS TABLE (key_id uuid, key_hash text, principal_id uuid, workspace_id uuid, kind text, handle text, principal_status text,
+               key_expires_at timestamptz, key_revoked_at timestamptz, key_expired boolean, workspace_status text, roles text[], pepper_id text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+    SELECT k.id, k.key_hash, p.id, p.workspace_id, p.kind, p.handle, p.status, k.expires_at, k.revoked_at,
+           (k.expires_at IS NOT NULL AND k.expires_at <= now()), w.status,
+           COALESCE((SELECT array_agg(r.role ORDER BY r.role) FROM public.role_assignments r WHERE r.principal_id = p.id), ARRAY[]::text[]), k.pepper_id
+    FROM public.api_keys k
+    JOIN public.principals p ON p.id = k.principal_id AND p.workspace_id = k.workspace_id
+    JOIN public.workspaces w ON w.id = p.workspace_id
+    WHERE k.prefix = p_prefix
+$$;
+REVOKE ALL ON FUNCTION auth.lookup_credential(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION auth.lookup_credential(text) TO kg_app;
+
+CREATE FUNCTION auth.rehash_key(p_key_id uuid, p_old_pepper_id text, p_hash text, p_pepper_id text) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+DECLARE n integer;
+BEGIN
+    UPDATE public.api_keys SET key_hash = p_hash, pepper_id = p_pepper_id WHERE id = p_key_id AND pepper_id = p_old_pepper_id;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RETURN n = 1;
+END $$;
+REVOKE ALL ON FUNCTION auth.rehash_key(uuid, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION auth.rehash_key(uuid, text, text, text) TO kg_app;
+
+-- how many live keys are still on each pepper (labels only), and the forced expiry at the end of a rotation window: keys still on that pepper stop working NOW, with an audit row per workspace
+CREATE FUNCTION ops.key_pepper_counts() RETURNS TABLE (pepper_id text, keys bigint)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+    SELECT k.pepper_id, count(*)::bigint FROM public.api_keys k WHERE k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at > now()) GROUP BY k.pepper_id
+$$;
+
+CREATE FUNCTION ops.expire_keys_on_pepper(p_pepper_id text) RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+DECLARE n integer; w record;
+BEGIN
+    FOR w IN SELECT k.workspace_id, count(*) AS c FROM public.api_keys k
+              WHERE k.pepper_id = p_pepper_id AND k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at > now()) GROUP BY k.workspace_id LOOP
+        INSERT INTO public.audit_log (id, workspace_id, action, resource_type, outcome, metadata)
+        VALUES (gen_random_uuid(), w.workspace_id, 'secret.keys_expired', 'api_key', 'allowed', jsonb_build_object('secret_kind', 'auth_pepper', 'count', w.c));
+    END LOOP;
+    UPDATE public.api_keys SET expires_at = now() WHERE pepper_id = p_pepper_id AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now());
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RETURN n;
+END $$;
+REVOKE ALL ON FUNCTION ops.key_pepper_counts(), ops.expire_keys_on_pepper(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ops.key_pepper_counts(), ops.expire_keys_on_pepper(text) TO kg_app;
+
 -- ---- OIDC: the one entry point from verified claims to a principal ------------------------------------------------------------------------------------
 CREATE FUNCTION auth.oidc_resolve(p_issuer text, p_subject text, p_groups text[], p_workspace_slug text, p_display_name text)
 RETURNS TABLE (principal_id uuid, workspace_id uuid, kind text, handle text, principal_status text, workspace_status text, roles text[], provisioned boolean)
@@ -405,13 +457,25 @@ GRANT SELECT, INSERT, UPDATE ON workspace_graph_namespaces, reindex_runs, reconc
 PURGE_FN = re.compile(r"CREATE FUNCTION ops\.purge_workspace_rows.*?END \$\$;", re.S)
 
 
-def _m0008() -> Any:
-    path = Path(__file__).with_name("0008_governance.py")
-    spec = importlib.util.spec_from_file_location("kg_migration_0008", path)
+def _module(file: str, name: str) -> Any:
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(file))
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _m0008() -> Any:
+    return _module("0008_governance.py", "kg_migration_0008")
+
+
+def _lookup_credential_0001() -> str:
+    """The original auth.lookup_credential (without the pepper label), read from migration 0001 so the downgrade restores exactly it."""
+    match = re.search(
+        r"CREATE FUNCTION auth\.lookup_credential.*?\$\$;", _module("0001_foundation.py", "kg_migration_0001").FUNCTIONS_SQL, re.S
+    )
+    assert match is not None
+    return match.group(0)
 
 
 def _0008_purge_function() -> str:
@@ -479,6 +543,11 @@ def downgrade() -> None:
             "Cancel them first, or pass --force-drop-release to drop the records anyway."
         )
     op.execute(_commands_down())
+    op.execute(
+        "DROP FUNCTION IF EXISTS auth.lookup_credential(text);\n" + _lookup_credential_0001() + "\n"
+        "REVOKE ALL ON FUNCTION auth.lookup_credential(text) FROM PUBLIC;\nGRANT EXECUTE ON FUNCTION auth.lookup_credential(text) TO kg_app;\n"
+        "ALTER TABLE api_keys DROP COLUMN IF EXISTS pepper_id;"
+    )
     op.execute(_0008_purge_function().replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1))
     for table, _events, _kind in NOTIFY_ON:
         op.execute(f"DROP TRIGGER IF EXISTS kg_invalidate_{table} ON {table}")
@@ -486,6 +555,9 @@ def downgrade() -> None:
         """
 DROP FUNCTION IF EXISTS public.kg_notify_invalidate();
 DROP FUNCTION IF EXISTS auth.oidc_resolve(text, text, text[], text, text);
+DROP FUNCTION IF EXISTS ops.expire_keys_on_pepper(text);
+DROP FUNCTION IF EXISTS ops.key_pepper_counts();
+DROP FUNCTION IF EXISTS auth.rehash_key(uuid, text, text, text);
 DROP FUNCTION IF EXISTS ops.retired_namespaces_due(integer);
 DROP FUNCTION IF EXISTS ops.reindex_stats();
 DROP FUNCTION IF EXISTS ops.claim_reconcile_scan(double precision);

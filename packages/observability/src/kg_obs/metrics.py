@@ -237,3 +237,9 @@ backup_age_seconds = Gauge("backup_age_seconds", "Age of the newest completed ba
 canary_builds_total = Counter("canary_builds_total", "Synthetic canary context builds by outcome", ["outcome"], registry=REGISTRY)
 canary_last_success_unixtime = Gauge("canary_last_success_unixtime", "Unix time of the last successful canary build", registry=REGISTRY)
 maintenance_refusals_total = Counter("maintenance_refusals_total", "Writes refused while MAINTENANCE_MODE=read_only", registry=REGISTRY)
+key_rehashes_total = Counter(
+    "key_rehashes_total",
+    "API keys re-hashed under the current pepper after authenticating under an older one (the pepper rotation drain)",
+    registry=REGISTRY,
+)
+secret_ring_versions = Gauge("secret_ring_versions", "Versions held in a secret ring (1 = nothing rotating)", ["ring"], registry=REGISTRY)

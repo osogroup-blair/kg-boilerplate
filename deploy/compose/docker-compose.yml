@@ -81,6 +81,7 @@ services:
     environment:
       MOCK_ROUTER_API_KEY: ${MOCK_ROUTER_API_KEY:-mock-key}
       MOCK_ROUTER_MAX_CLASSIFICATION: restricted
+      MOCK_ROUTER_LATENCY_PROFILE: ${KG_MOCK_LATENCY_PROFILE:-}   # P9 load baselines: a response-time model (see tools/mock_router/latency.provisional.json); empty = instant
     ports: ["127.0.0.1:${KG_MOCK_PORT:-8782}:8781"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8781/health').status==200 else 1)"]

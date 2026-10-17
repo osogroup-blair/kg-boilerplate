@@ -34,7 +34,7 @@ from kg_cli.context_cmds import context_app
 from kg_cli.deletion_cmds import deletions_app
 from kg_cli.memory_cmds import memories_app, scopes_app
 from kg_cli.principals_cmds import principals_app
-from kg_cli.release_cmds import reconcile_command, reindex_app
+from kg_cli.release_cmds import reconcile_command, reindex_app, secrets_app
 from kg_cli.seed import publish_ontology, seed_demo, workspace_id_for, write_credentials
 
 app = typer.Typer(no_args_is_help=True, help="Knowledge & Memory Platform operator CLI")
@@ -60,6 +60,7 @@ app.add_typer(
 )
 app.add_typer(principals_app, name="principals", help="Agents & Access: register, update, keys, grants, revoke, activity")
 app.command("reconcile")(reconcile_command)
+app.add_typer(secrets_app, name="secrets", help="Secret rotation: status, generate, record, force the end of a pepper window")
 app.add_typer(reindex_app, name="reindex", help="Flow F: rebuild the graph in a separate namespace, cut over, roll back")
 CREDENTIALS = REPO_ROOT / ".local" / "dev-credentials.json"
 

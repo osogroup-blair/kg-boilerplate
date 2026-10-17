@@ -1,0 +1,13 @@
+{
+  "mode": "mock",
+  "date": "2026-10-17",
+  "summary": {
+    "cases": 151,
+    "mismatches": 0,
+    "cases_authority": 125,
+    "cases_name": 20,
+    "cases_external_ids": 6
+  },
+  "mismatches": [],
+  "problems": []
+}

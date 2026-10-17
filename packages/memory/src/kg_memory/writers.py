@@ -282,7 +282,10 @@ class MemoryWriter:
         extra_payload: dict[str, Any] | None = None,
     ) -> Written:
         """Dedupe, insert, ledger, review, audit and jobs for ONE new memory, in the caller's transaction."""
-        nm.hmac = store.candidate_hmac(self._hasher, ws, nm.type, nm.content, nm.subject_ids, nm.scopes)
+        all_hmacs = store.candidate_hmacs(
+            self._hasher, ws, nm.type, nm.content, nm.subject_ids, nm.scopes
+        )  # the active version first; older ones still count as duplicates
+        nm.hmac = all_hmacs[0]
         nm.status = decision.status
         await lock_key(conn, ws, "memhmac", nm.hmac)  # two writers of the same words serialise here, so the dedupe check below cannot race
         if decision.status == "rejected":
@@ -291,9 +294,9 @@ class MemoryWriter:
         existing = (
             await conn.execute(
                 text(
-                    "SELECT id, status, revision FROM curated_memories WHERE workspace_id = :ws AND candidate_hmac = :h AND status IN ('proposed','active') FOR UPDATE"
+                    "SELECT id, status, revision FROM curated_memories WHERE workspace_id = :ws AND candidate_hmac = ANY(:h) AND status IN ('proposed','active') FOR UPDATE"
                 ),
-                {"ws": ws, "h": nm.hmac},
+                {"ws": ws, "h": all_hmacs},
             )
         ).first()
         command_id = uuid7()

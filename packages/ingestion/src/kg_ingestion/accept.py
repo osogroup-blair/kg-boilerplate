@@ -65,7 +65,10 @@ class AcceptService:
         raw_bytes = canonical_json(raw_doc)
         if len(raw_bytes) > self._max:
             raise PayloadTooLarge(f"content exceeds {self._max} bytes", details={"max_bytes": self._max})
-        digest = self._hasher.digest_json(ws, body.request_document())
+        digests = self._hasher.digest_json_all(
+            ws, body.request_document()
+        )  # the active version first; a request stored under an older version still matches
+        digest = digests[0]
 
         await advisory_lock(conn, ws, f"ixn:{body.source_system}", key)
         existing = (
@@ -78,7 +81,7 @@ class AcceptService:
             )
         ).first()
         if existing is not None:
-            if existing.request_hmac != digest:
+            if existing.request_hmac not in digests:
                 raise IdempotencyMismatch()
             return AcceptResult(existing.id, False, existing.processing_status)
 

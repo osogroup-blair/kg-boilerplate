@@ -26,9 +26,20 @@ def envelope_bytes(code: str, message: str, request_id: str) -> bytes:
     ).encode()
 
 
+LARGE_BODY_PREFIXES = (
+    "/v1/interactions",
+    "/v1/ontologies",
+)  # the routes that legitimately take a large document (an event's content, an ontology YAML)
+
+
 class RequestMiddleware:
-    def __init__(self, app: ASGIApp, *, max_body_bytes: int):
+    def __init__(self, app: ASGIApp, *, max_body_bytes: int, default_body_bytes: int | None = None):
         self.app, self.max_body_bytes = app, max_body_bytes
+        self.default_body_bytes = min(default_body_bytes or max_body_bytes, max_body_bytes)
+
+    def limit_for(self, path: str) -> int:
+        """A body limit per route class (P9): large only where a large document is the point."""
+        return self.max_body_bytes if path.startswith(LARGE_BODY_PREFIXES) else self.default_body_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -51,18 +62,19 @@ class RequestMiddleware:
             await send(message)
 
         received = {"n": 0}
+        limit = self.limit_for(scope.get("path", ""))
 
         async def limited_receive() -> Message:
             message = await receive()
             if message["type"] == "http.request":
                 received["n"] += len(message.get("body", b""))
-                if received["n"] > self.max_body_bytes:
+                if received["n"] > limit:
                     raise _BodyTooLarge()
             return message
 
         try:
             length = headers.get("content-length")
-            if length and length.isdigit() and int(length) > self.max_body_bytes:
+            if length and length.isdigit() and int(length) > limit:
                 raise _BodyTooLarge()
             await self.app(scope, limited_receive, send_wrapper)
         except _BodyTooLarge:
@@ -130,3 +142,38 @@ class MaintenanceMiddleware:
             }
         )
         await send({"type": "http.response.body", "body": body})
+
+
+class SecurityHeadersMiddleware:
+    """Headers every response carries (phase-9 WP6). The API serves JSON only, so its CSP is the strictest there is; the admin console's CSP (no inline scripts, no framing, the IdP
+    as the only extra connect target) is set by the proxy that serves its static files (deploy/compose/Caddyfile). HSTS only when the request came over TLS."""
+
+    STATIC = [
+        (b"x-content-type-options", b"nosniff"),
+        (b"referrer-policy", b"no-referrer"),
+        (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"),
+        (b"cross-origin-resource-policy", b"same-site"),
+        (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+        (b"x-frame-options", b"DENY"),
+    ]
+
+    def __init__(self, app: ASGIApp, *, hsts: bool):
+        self.app, self.hsts = app, hsts
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        https = scope.get("scheme") == "https" or Headers(scope=scope).get("x-forwarded-proto") == "https"
+
+        async def wrapped(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                h = MutableHeaders(scope=message)
+                for k, v in self.STATIC:
+                    if k.decode() not in h:
+                        h[k.decode()] = v.decode()
+                if self.hsts and https:
+                    h["strict-transport-security"] = "max-age=63072000; includeSubDomains"
+            await send(message)
+
+        await self.app(scope, receive, wrapped)

@@ -1,0 +1,16 @@
+# gitleaks configuration (phase-9 WP6). The default rules stay on; only the documented development placeholders and built artefacts are allowed.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "documented development defaults, test fixtures and built artefacts"
+paths = [
+  '''apps/admin/dist/''',
+  '''apps/admin/node_modules/''',
+]
+regexes = [
+  '''dev-only-[a-z0-9-]+''',
+  '''ZGV2LW9ubHktcGF5bG9hZC1rZXktMzItYnl0ZXMtISE=''',
+  '''selftest-SECRET-key-0123456789''',
+  '''test-[a-z-]+-0123456789[a-z0-9]*''',
+]

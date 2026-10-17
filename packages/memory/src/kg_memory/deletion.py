@@ -87,8 +87,8 @@ def build_deletion(
     writer: MemoryWriter,
 ) -> DeletionServices:
     directory = Path(settings.deletion_journal_dir) if settings.deletion_journal_dir else REPO_ROOT / ".local" / "deletion-journal"
-    journal = DeletionJournal(directory, settings.content_hmac_secret.get_secret_value().encode())
-    suppressions = Suppressions(hasher.ref)
+    journal = DeletionJournal(directory, settings.content_hmac_ring())
+    suppressions = Suppressions(hasher.ref, hasher.ref_all)
     faults.install(lambda stage, point: job_faults.current().hit(stage, point))
     purger = GraphPurger(engine, graph, knowledge.projector, knowledge.lock) if graph is not None else None
     service = DeletionService(
@@ -101,7 +101,7 @@ def build_deletion(
         cooling_hours=settings.workspace_deletion_cooling_hours,
         enabled=settings.deletion_api_enabled,
     )
-    knowledge.pipeline.set_ref_hmac(hasher.ref)
+    knowledge.pipeline.set_ref_hmac(hasher.ref, hasher.ref_all)
     handler = DeletionExceptionHandler(service, writer)
     knowledge.reviews.register_handler("deletion_exception", handler)
     return DeletionServices(service=service, holds=Holds(), suppressions=suppressions, journal=journal, graph=purger, handler=handler)

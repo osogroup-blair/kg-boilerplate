@@ -170,7 +170,7 @@ def deletions_journal(
 
     journal = DeletionJournal(
         Path(s.deletion_journal_dir) if s.deletion_journal_dir else REPO_ROOT / ".local" / "deletion-journal",
-        s.content_hmac_secret.get_secret_value().encode(),
+        s.content_hmac_ring(),
     )
     try:
         lines = journal.verify()

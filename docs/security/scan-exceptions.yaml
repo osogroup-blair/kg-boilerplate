@@ -1,0 +1,7 @@
+# Dated exceptions for `make scan` (phase-9 WP6). A HIGH/CRITICAL finding blocks the release unless its id is listed here with an owner, a reason and an
+# expiry date. An expired exception fails the scan again. Nothing here is permanent: every entry is a promise to revisit.
+exceptions: []
+#  - id: CVE-0000-00000
+#    owner: blair@oso.group
+#    expires: 2026-12-31
+#    reason: not reachable (the vulnerable function is never called); upgrade tracked in ...

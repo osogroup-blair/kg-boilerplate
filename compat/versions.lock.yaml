@@ -246,3 +246,33 @@ p8_additions:
     journal: "DELETION_JOURNAL_DIR/deletions.jsonl, HMAC-chained, ids and suppression HMACs only (ADR-045); required in production"
     egress: "workspace setting = deny list unioned with the platform's; cache WORKSPACE_EGRESS_TTL_SECONDS (30 s default) (ADR-047)"
     simulation: "staging group ws-<uuid>-sim-<run12> on the same Neo4j database, removed by the run and by a delayed job (ADR-046)"
+
+# Phase 9 additions (2026-10-17). Release-hardening tooling. The scanners and the backup tool are NOT runtime dependencies: they run from pinned images / `uv tool run` and are recorded here so
+# a scan result can be reproduced. New workspace package: kg-reconcile (drift detection, repair, Flow F reindex).
+p9_additions:
+  workspace_packages: {kg-reconcile: "packages/reconcile"}
+  migrations:
+    head: "0009_release"
+  scanners:
+    pip_audit: "2.10.1"            # uv tool run --from pip-audit==2.10.1 (locked set exported with `uv export --frozen --no-dev`)
+    cyclonedx_bom: "7.5.0"         # SBOMs for the Python environment (cyclonedx-py); `npm sbom` for the admin dependencies; trivy for images
+    npm_audit: "npm audit --omit=dev (apps/admin)"
+    trivy:
+      image: "aquasec/trivy:latest"
+      digest: "aquasec/trivy@sha256:2416d1f74045b57274df1a340eee6b510cacd73c66a6ccb8da092b117eb7d222"
+      version: "0.76.0"
+    gitleaks:
+      image: "zricethezav/gitleaks:latest"
+      digest: "zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f"
+      version: "v8.30.1"
+      config: ".gitleaks.toml (documented development placeholders only)"
+    ruff: "S rules (bandit) via the project's lint config"
+  scan_policy: "HIGH/CRITICAL blocks unless docs/security/scan-exceptions.yaml holds an owned, unexpired exception; report eval/reports/<date>/scan.json; SBOMs in eval/reports/sbom/"
+  backup_tools_image:
+    tag: "kg-backup-tools:p9"
+    base: "pgvector/pgvector:pg17 (same digest as services.postgres) + age; apt upgrade applied, gosu removed so the image scans clean"
+    age: "1.1.1"
+  limiter:
+    backend: "postgres (ops.rate_hit / ops.slot_acquire, UNLOGGED counters) or memory; fail-closed for context builds"
+  rotation:
+    secrets: "SecretRing (version:secret) for JWT (kid), content HMAC and the key pepper; pepper dual-verify via api_keys.pepper_id"

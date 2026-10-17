@@ -85,14 +85,15 @@ async def create_key(
     key_id = uuid7()
     await conn.execute(
         text("""
-        INSERT INTO api_keys (id, workspace_id, principal_id, prefix, key_hash, created_by, expires_at)
-        VALUES (:id, :ws, :p, :prefix, :hash, :by, CASE WHEN CAST(:ttl AS integer) IS NULL THEN NULL ELSE now() + make_interval(secs => :ttl) END)"""),
+        INSERT INTO api_keys (id, workspace_id, principal_id, prefix, key_hash, pepper_id, created_by, expires_at)
+        VALUES (:id, :ws, :p, :prefix, :hash, :pid, :by, CASE WHEN CAST(:ttl AS integer) IS NULL THEN NULL ELSE now() + make_interval(secs => :ttl) END)"""),
         {
             "id": key_id,
             "ws": ctx.workspace_id,
             "p": principal_id,
             "prefix": minted.prefix,
             "hash": minted.key_hash,
+            "pid": minted.pepper_id,
             "by": created_by,
             "ttl": expires_in_seconds,
         },

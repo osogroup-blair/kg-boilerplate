@@ -212,7 +212,7 @@ class Worker:
             shutdown_grace=s.worker_shutdown_grace_seconds,
         )
         if self.serve_metrics:
-            start_http_server(s.metrics_port_worker, registry=metrics.REGISTRY)
+            start_http_server(s.metrics_port_worker, addr=s.metrics_host, registry=metrics.REGISTRY)
         # The dispatcher starts first and never waits for Neo4j: a worker that (re)starts during a graph outage must still normalize interactions, and its
         # projection jobs simply back off until the graph is back (AT-02). Indices (L12) are built once, retried on every heartbeat until they exist.
         if s.maintenance_mode == "read_only":

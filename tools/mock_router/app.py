@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
+import random
 import re
 import time
 import uuid
@@ -211,10 +213,33 @@ def _alias_stats(alias: str) -> dict:
     }
 
 
+class LatencyModel:
+    """A response-time model for the load baselines (phase-9 WP4): per alias, a lognormal fitted to a p50 and a p95 in milliseconds. `MOCK_ROUTER_LATENCY_PROFILE` is a JSON file
+    {"chat": {"oso/general": {"p50_ms": 1200, "p95_ms": 4000}, ...}, "embedding": {"oso/embedding": {...}}}. The real numbers come from the live session (WP1 step g);
+    until then the shipped provisional profile (tools/mock_router/latency.provisional.json) is used and any report made with it says so. Off (no sleep) when unset."""
+
+    def __init__(self, profile: dict | None, seed: int = 7):
+        self.profile, self.rng = profile or {}, random.Random(seed)
+
+    @classmethod
+    def from_env(cls) -> LatencyModel:
+        path = os.environ.get("MOCK_ROUTER_LATENCY_PROFILE")
+        return cls(json.loads(Path(path).read_text()) if path else None)
+
+    def sample_seconds(self, kind: str, alias: str) -> float:
+        row = self.profile.get(kind, {}).get(alias)
+        if not row:
+            return 0.0
+        p50, p95 = float(row["p50_ms"]), float(row["p95_ms"])
+        sigma = math.log(max(p95, p50 * 1.0001) / p50) / 1.645
+        return max(0.0, self.rng.lognormvariate(math.log(p50), sigma) / 1000.0)
+
+
 def create_app(config: MockConfig | None = None) -> FastAPI:
     cfg = config or MockConfig.from_env()
     app = FastAPI(title="Mock Oso Model Router", docs_url=None, redoc_url=None, openapi_url=None)
     store = FixtureStore(cfg.fixtures_dir)
+    latency = LatencyModel.from_env()
     faults: deque[dict] = deque()
     request_log: list[dict] = []
     app.state.cfg, app.state.faults, app.state.request_log = cfg, faults, request_log
@@ -308,6 +333,9 @@ def create_app(config: MockConfig | None = None) -> FastAPI:
                 return JSONResponse({"unexpected": True, "choices": "not-a-list"})
             if f["code"] != "slow":
                 raise_for_fault(f["code"])
+
+        if (pause := latency.sample_seconds("chat", req.model)) > 0:
+            await asyncio.sleep(pause)
 
         # ---- classification (routing.* wins over metadata.*, router schema.ts comment) ----
         routing, meta = req.routing or Routing(), req.metadata or Metadata()
@@ -421,6 +449,8 @@ def create_app(config: MockConfig | None = None) -> FastAPI:
             if f["code"] != "slow":
                 raise_for_fault(f["code"])
 
+        if (pause := latency.sample_seconds("embedding", req.model)) > 0:
+            await asyncio.sleep(pause)
         inputs = [req.input] if isinstance(req.input, str) else req.input
         limit = CATALOG["models"][target]["context_window"]  # 8192 advertised by the deployment; the model itself handles 512
         total, vectors, truncated = 0, [], False

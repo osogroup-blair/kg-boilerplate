@@ -492,8 +492,8 @@ class Registration:
         row = (
             await self._conn.execute(
                 text(
-                    "INSERT INTO api_keys (id, workspace_id, principal_id, prefix, key_hash, created_by, name, expires_at) "
-                    "VALUES (:id, :ws, :p, :prefix, :hash, :by, :name, CASE WHEN CAST(:ttl AS integer) IS NULL THEN NULL ELSE now() + make_interval(secs => :ttl) END) "
+                    "INSERT INTO api_keys (id, workspace_id, principal_id, prefix, key_hash, pepper_id, created_by, name, expires_at) "
+                    "VALUES (:id, :ws, :p, :prefix, :hash, :pid, :by, :name, CASE WHEN CAST(:ttl AS integer) IS NULL THEN NULL ELSE now() + make_interval(secs => :ttl) END) "
                     "RETURNING created_at, expires_at"
                 ),
                 {
@@ -502,6 +502,7 @@ class Registration:
                     "p": principal_id,
                     "prefix": minted.prefix,
                     "hash": minted.key_hash,
+                    "pid": minted.pepper_id,
                     "by": self._actor.principal_id,
                     "name": name,
                     "ttl": expires_in_seconds,
