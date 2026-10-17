@@ -23,6 +23,7 @@ members = [
     "kg-ontology",
     "kg-platform",
     "kg-platform-sdk",
+    "kg-reconcile",
     "kg-worker",
 ]
 
@@ -746,6 +747,7 @@ dependencies = [
     { name = "kg-modelgw" },
     { name = "kg-obs" },
     { name = "kg-ontology" },
+    { name = "kg-reconcile" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
@@ -767,6 +769,7 @@ requires-dist = [
     { name = "kg-modelgw", editable = "packages/modelgw" },
     { name = "kg-obs", editable = "packages/observability" },
     { name = "kg-ontology", editable = "packages/ontology" },
+    { name = "kg-reconcile", editable = "packages/reconcile" },
     { name = "starlette", specifier = "==1.7.0" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
@@ -790,6 +793,7 @@ dependencies = [
     { name = "kg-modelgw" },
     { name = "kg-obs" },
     { name = "kg-ontology" },
+    { name = "kg-reconcile" },
     { name = "typer" },
 ]
 
@@ -809,6 +813,7 @@ requires-dist = [
     { name = "kg-modelgw", editable = "packages/modelgw" },
     { name = "kg-obs", editable = "packages/observability" },
     { name = "kg-ontology", editable = "packages/ontology" },
+    { name = "kg-reconcile", editable = "packages/reconcile" },
     { name = "typer" },
 ]
 
@@ -939,20 +944,24 @@ version = "0.1.0"
 source = { editable = "packages/governance" }
 dependencies = [
     { name = "cryptography" },
+    { name = "httpx" },
     { name = "kg-common" },
     { name = "kg-db" },
     { name = "kg-domain" },
     { name = "kg-obs" },
+    { name = "psycopg", extra = ["binary"] },
     { name = "pyjwt" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cryptography", specifier = "==50.0.2" },
+    { name = "httpx", specifier = "==0.28.1" },
     { name = "kg-common", editable = "packages/common" },
     { name = "kg-db", editable = "packages/db" },
     { name = "kg-domain", editable = "packages/domain" },
     { name = "kg-obs", editable = "packages/observability" },
+    { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "pyjwt", specifier = "==2.15.1" },
 ]
 
@@ -1194,6 +1203,7 @@ dependencies = [
     { name = "kg-obs" },
     { name = "kg-ontology" },
     { name = "kg-platform-sdk" },
+    { name = "kg-reconcile" },
     { name = "kg-worker" },
 ]
 
@@ -1231,6 +1241,7 @@ requires-dist = [
     { name = "kg-obs", editable = "packages/observability" },
     { name = "kg-ontology", editable = "packages/ontology" },
     { name = "kg-platform-sdk", editable = "sdk/python" },
+    { name = "kg-reconcile", editable = "packages/reconcile" },
     { name = "kg-worker", editable = "apps/worker" },
 ]
 
@@ -1264,6 +1275,37 @@ requires-dist = [
 ]
 
 [[package]]
+name = "kg-reconcile"
+version = "0.1.0"
+source = { editable = "packages/reconcile" }
+dependencies = [
+    { name = "kg-common" },
+    { name = "kg-db" },
+    { name = "kg-domain" },
+    { name = "kg-governance" },
+    { name = "kg-graph" },
+    { name = "kg-ingestion" },
+    { name = "kg-jobs" },
+    { name = "kg-knowledge" },
+    { name = "kg-memory" },
+    { name = "kg-obs" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "kg-common", editable = "packages/common" },
+    { name = "kg-db", editable = "packages/db" },
+    { name = "kg-domain", editable = "packages/domain" },
+    { name = "kg-governance", editable = "packages/governance" },
+    { name = "kg-graph", editable = "packages/graph" },
+    { name = "kg-ingestion", editable = "packages/ingestion" },
+    { name = "kg-jobs", editable = "packages/jobs" },
+    { name = "kg-knowledge", editable = "packages/knowledge" },
+    { name = "kg-memory", editable = "packages/memory" },
+    { name = "kg-obs", editable = "packages/observability" },
+]
+
+[[package]]
 name = "kg-worker"
 version = "0.1.0"
 source = { editable = "apps/worker" }
@@ -1282,6 +1324,7 @@ dependencies = [
     { name = "kg-modelgw" },
     { name = "kg-obs" },
     { name = "kg-ontology" },
+    { name = "kg-reconcile" },
     { name = "uvicorn" },
 ]
 
@@ -1301,6 +1344,7 @@ requires-dist = [
     { name = "kg-modelgw", editable = "packages/modelgw" },
     { name = "kg-obs", editable = "packages/observability" },
     { name = "kg-ontology", editable = "packages/ontology" },
+    { name = "kg-reconcile", editable = "packages/reconcile" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
 

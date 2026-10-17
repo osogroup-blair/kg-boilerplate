@@ -5,6 +5,8 @@ requires-python = "==3.12.*"
 dependencies = [
   "pyjwt==2.15.1",
   "cryptography==50.0.2",
+  "httpx==0.28.1",
+  "psycopg[binary]==3.3.6",
   "kg-domain",
   "kg-db",
   "kg-common",

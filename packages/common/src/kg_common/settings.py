@@ -143,6 +143,36 @@ class Settings(BaseSettings):
         default=60.0, gt=0.0
     )  # a delayed job removes a staging namespace this long after a run started
 
+    # Release hardening (P9). The shared limiter and cache invalidation use Postgres (no broker); OIDC is for human users, API keys stay for agents, apps and break-glass.
+    limiter_backend: Literal["memory", "postgres"] = "memory"  # postgres: one budget across API replicas (unlogged counters, DB clock)
+    limiter_fail_mode: Literal["closed", "open"] = (
+        "closed"  # what an EXPENSIVE call (a context build) does when the shared limiter's database is unreachable
+    )
+    invalidation_listener: bool = (
+        True  # LISTEN kg_invalidate: settings, grants, revocations, the active ontology and namespaces take effect across processes at once
+    )
+    maintenance_mode: Literal["off", "read_only"] = (
+        "off"  # read_only: every write answers 503 (a restored environment before it is verified)
+    )
+    auth_oidc_enabled: bool = False
+    oidc_issuer: str = ""  # the IdP's issuer URL (its discovery document and JWKS are derived from it)
+    oidc_audience: str = ""  # the `aud` the access/ID token must carry (normally the console's client id)
+    oidc_client_id: str = ""
+    oidc_client_secret: SecretStr = SecretStr("")  # empty: a public client (PKCE only), which is what the console uses
+    oidc_algorithms: str = "RS256,ES256"  # pinned; "none" and HMAC algorithms are never accepted
+    oidc_workspace_claim: str = "kg_workspace"  # optional claim naming the workspace slug when the groups map into several
+    oidc_groups_claim: str = "groups"
+    oidc_jwks_url: str = ""  # empty: taken from the issuer's discovery document
+    oidc_jwks_ttl_seconds: float = Field(default=600.0, gt=0.0)
+    oidc_redirect_uris: list[str] = Field(default_factory=list)  # the exact redirect URIs the console may use
+    allow_breakglass_keys: bool = (
+        False  # production: API keys of human (user) principals work only while this is true, and each use is audited
+    )
+    reindex_retention_days: int = Field(default=14, ge=0, le=365)  # a retired graph namespace is kept this long for rollback, then cleared
+    reconcile_scan_hours: float = Field(default=24.0, ge=0.0)  # nightly check-only scan per workspace; 0 disables
+    canary_workspace: str = ""  # slug of the workspace whose context the canary builds every 5 minutes; empty disables
+    security_headers: bool = True
+
     # Test-only failure injection (P3 §5.7). Refused when ENV=production.
     kg_faults: str = ""  # "stage:point:count,..." e.g. "normalize:after_claim:3"
     kg_faults_dir: str = ""  # holds the persistent fire counters and an optional `spec` file the dev worker re-reads

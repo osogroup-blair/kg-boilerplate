@@ -18,6 +18,7 @@ dependencies = [
   "kg-ingestion",
   "kg-extraction",
   "kg-memory",
+  "kg-reconcile",
 ]
 
 [project.scripts]
@@ -44,3 +45,4 @@ kg-jobs = { workspace = true }
 kg-ingestion = { workspace = true }
 kg-extraction = { workspace = true }
 kg-memory = { workspace = true }
+kg-reconcile = { workspace = true }

@@ -216,6 +216,8 @@ async def test_every_row_level_table_is_either_gated_or_deliberately_not(app_eng
         "memory_embeddings",
         # P8: the deletion machinery itself (a request is a record; items and manifests are removed by the service; the guards above protect their state)
         *NEW_TABLES,
+        # P9: configuration and run records with their own lifecycle (the OIDC mapping and identities, the active graph namespace, reindex and reconcile runs); removed with the workspace
+        "oidc_group_mappings", "oidc_identities", "workspace_graph_namespaces", "reindex_runs", "reconcile_runs",
     }  # fmt: skip
     assert tables - gated - not_gated == set(), "an immutable table has no purge guard"
 

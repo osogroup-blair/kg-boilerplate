@@ -92,3 +92,41 @@ class RequestMiddleware:
                 client_request_ref=incoming if incoming and not is_uuid(incoming) else None,
             )
             context.clear()
+
+
+READ_ONLY_ALLOWED = frozenset(
+    {
+        "/v1/context/build",  # a build is a read of knowledge (its trace is bookkeeping)
+        "/v1/memories/search",
+        "/v1/graph/search",
+        "/v1/auth/token",
+        "/v1/auth/oidc/callback",
+        "/v1/auth/oidc/refresh",
+        "/v1/auth/oidc/logout",
+    }
+)
+_WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+class MaintenanceMiddleware:
+    """MAINTENANCE_MODE=read_only (phase-9 restore rehearsal): a restored environment answers reads and builds contexts, and refuses every other write with 503
+    `maintenance_read_only` until a person has verified it. Pure ASGI, so a refused write never reaches a handler (nothing is half-done)."""
+
+    def __init__(self, app: ASGIApp, *, mode: str):
+        self.app, self.read_only = app, mode == "read_only"
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if not self.read_only or scope["type"] != "http" or scope["method"] not in _WRITE_METHODS or scope["path"] in READ_ONLY_ALLOWED:
+            await self.app(scope, receive, send)
+            return
+        metrics.maintenance_refusals_total.inc()
+        request_id = Headers(scope=scope).get("x-request-id") or uuid7_str()
+        body = envelope_bytes("maintenance_read_only", "This environment is read-only while it is being verified", request_id)
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 503,
+                "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode()), (b"retry-after", b"60")],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})

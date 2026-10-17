@@ -16,9 +16,12 @@ from kg_db.engine import assert_role_is_safe, create_app_engine
 from kg_domain.envelope import ErrorEnvelope
 from kg_extraction.simulation import SimulationService
 from kg_governance.authn.jwt import LocalSigner
+from kg_governance.authn.oidc import OidcConfig, OidcVerifier
 from kg_governance.authn.resolver import Authenticator
 from kg_governance.authz.policy import unpoliced_routes
+from kg_governance.limiter import SharedLimiter
 from kg_governance.quotas import Quotas
+from kg_governance.runtime import build_invalidator, namespace_overrides
 from kg_governance.settings import SettingsService
 from kg_graph.service import GraphService
 from kg_ingestion.services import build_ingestion
@@ -30,11 +33,12 @@ from kg_modelgw.factory import build_router_stack
 from kg_obs import metrics
 from kg_obs.logging import configure_logging, get_logger
 from kg_obs.tracing import setup_tracing
+from kg_reconcile import Reconcile
 from prometheus_client import start_http_server
 
 from kg_api.deps import guard
 from kg_api.errors import install_error_handlers
-from kg_api.middleware import RequestMiddleware
+from kg_api.middleware import MaintenanceMiddleware, RequestMiddleware
 from kg_api.routers import ALL_ROUTERS
 from kg_api.state import AppState
 
@@ -81,7 +85,12 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         await assert_role_is_safe(engine)  # L1: refuse to start if RLS could be bypassed
         sink = DbCallSink(engine)
         router = build_router_stack(settings, service="kg-api", sink=sink)
-        graph = GraphService(settings, router.transport, router.config)
+        graph = GraphService(settings, router.transport, router.config, namespace_loader=lambda: namespace_overrides(engine))
+        try:
+            await graph.namespaces.refresh()
+        except Exception:
+            log.warning("graph_namespaces_unreadable_at_startup")  # the default namespace until the first refresh succeeds
+        shared = SharedLimiter(engine) if settings.limiter_backend == "postgres" else None
         try:
             ok = await graph.ping()
         except Exception:
@@ -91,18 +100,53 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
             log.warning("neo4j_unreachable_at_startup")  # readiness reports it; the API still starts (no index build here, L12)
         sink.start()
         signer = LocalSigner(settings.auth_jwt_secret.get_secret_value(), settings.auth_jwt_ttl_seconds)
-        authenticator = Authenticator(engine, pepper=settings.auth_key_pepper.get_secret_value(), signer=signer)
+        oidc = None
+        if settings.auth_oidc_enabled:
+            oidc = OidcVerifier(
+                OidcConfig(
+                    issuer=settings.oidc_issuer,
+                    audience=settings.oidc_audience or settings.oidc_client_id,
+                    algorithms=tuple(a.strip() for a in settings.oidc_algorithms.split(",") if a.strip()),
+                    groups_claim=settings.oidc_groups_claim,
+                    workspace_claim=settings.oidc_workspace_claim,
+                    jwks_url=settings.oidc_jwks_url,
+                    jwks_ttl_seconds=settings.oidc_jwks_ttl_seconds,
+                )
+            )
+        authenticator = Authenticator(
+            engine,
+            pepper=settings.auth_key_pepper.get_secret_value(),
+            signer=signer,
+            oidc=oidc,
+            production=settings.is_production,
+            allow_breakglass=settings.allow_breakglass_keys,
+        )
         knowledge = build_knowledge(engine, graph, router.config, service="kg-api", settings=settings)
         memory = build_memory(settings, knowledge, router.gateway, router.config, service="kg-api")
         ingestion = build_ingestion(settings)
         deletion = build_deletion(settings, engine, knowledge, graph, ingestion.cipher, ingestion.hasher, memory.writer)
         context = build_context(
-            settings, engine, knowledge, memory, router.gateway, router.config, ingestion.cipher, ingestion.hasher, service="kg-api"
+            settings,
+            engine,
+            knowledge,
+            memory,
+            router.gateway,
+            router.config,
+            ingestion.cipher,
+            ingestion.hasher,
+            service="kg-api",
+            shared_limiter=shared,
         )
         quotas = Quotas(
-            engine, default_requests_per_minute=settings.principal_requests_per_minute, flush_seconds=settings.principal_usage_flush_seconds
+            engine,
+            default_requests_per_minute=settings.principal_requests_per_minute,
+            flush_seconds=settings.principal_usage_flush_seconds,
+            shared=shared,
         )
         quotas.start()
+        invalidator = build_invalidator(settings, egress=router.narrowing, quotas=quotas, namespaces=graph.namespaces)
+        if invalidator is not None:
+            invalidator.start()
         app.state.kg = AppState(
             settings=settings,
             engine=engine,
@@ -115,6 +159,9 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
             memory=memory,
             context=context,
             quotas=quotas,
+            reconcile=Reconcile(engine, knowledge, graph, embedding_version=settings.memory_embedding_version),
+            shared_limiter=shared,
+            invalidator=invalidator,
             deletion=deletion,
             settings_service=SettingsService(list(router.config.egress.denied_classifications)),
             simulation=SimulationService(
@@ -137,6 +184,10 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         try:
             yield
         finally:
+            if invalidator is not None:
+                await invalidator.aclose()
+            if oidc is not None:
+                await oidc.aclose()
             await quotas.aclose()
             await sink.aclose()
             await graph.aclose()
@@ -156,6 +207,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
         responses=ERROR_RESPONSES,
         description="Versioned /v1 API. Every route declares an authorization policy; errors use one envelope.",
     )
+    app.add_middleware(MaintenanceMiddleware, mode=settings.maintenance_mode)
     app.add_middleware(RequestMiddleware, max_body_bytes=settings.max_body_bytes)
     if settings.cors_allow_origins:
         app.add_middleware(

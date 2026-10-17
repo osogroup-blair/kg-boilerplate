@@ -34,6 +34,7 @@ from kg_cli.context_cmds import context_app
 from kg_cli.deletion_cmds import deletions_app
 from kg_cli.memory_cmds import memories_app, scopes_app
 from kg_cli.principals_cmds import principals_app
+from kg_cli.release_cmds import reconcile_command
 from kg_cli.seed import publish_ontology, seed_demo, workspace_id_for, write_credentials
 
 app = typer.Typer(no_args_is_help=True, help="Knowledge & Memory Platform operator CLI")
@@ -58,6 +59,7 @@ app.add_typer(
     deletions_app, name="deletions", help="Deletion requests: list, show, cancel a workspace deletion, retry, journal, retention sweep"
 )
 app.add_typer(principals_app, name="principals", help="Agents & Access: register, update, keys, grants, revoke, activity")
+app.command("reconcile")(reconcile_command)
 CREDENTIALS = REPO_ROOT / ".local" / "dev-credentials.json"
 
 

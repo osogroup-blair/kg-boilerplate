@@ -19,6 +19,7 @@ COPY packages/ingestion/pyproject.toml packages/ingestion/pyproject.toml
 COPY packages/extraction/pyproject.toml packages/extraction/pyproject.toml
 COPY packages/memory/pyproject.toml packages/memory/pyproject.toml
 COPY packages/context/pyproject.toml packages/context/pyproject.toml
+COPY packages/reconcile/pyproject.toml packages/reconcile/pyproject.toml
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
 COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
 COPY apps/cli/pyproject.toml apps/cli/pyproject.toml

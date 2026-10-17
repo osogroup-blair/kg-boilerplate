@@ -12,6 +12,7 @@ from kg_domain.enums import PrincipalKind, Role
 class AuthMethod(StrEnum):
     API_KEY = "api_key"
     JWT = "jwt"
+    OIDC = "oidc"
 
 
 class Principal(BaseModel):

@@ -183,6 +183,46 @@ def deletions_journal(
             typer.echo(json.dumps(entry))
 
 
+@deletions_app.command("reapply")
+def deletions_reapply(
+    since: Annotated[
+        str, typer.Option(help="ISO time of the backup that was restored: every journal line completed at or after it is applied again")
+    ],
+    workspace: Annotated[str | None, typer.Option(help="only this workspace slug")] = None,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="verify the journal and list what would be removed; change nothing")] = False,
+    graph: Annotated[bool, typer.Option("--graph/--no-graph", help="also purge and scan Neo4j (needs the graph up; the default)")] = True,
+) -> None:
+    """After a restore: verify the deletion journal's HMAC chain, then re-apply every deletion completed since the backup (P9, ADR-045).
+
+    Idempotent, and it only ever removes data. Exit 0 when every line is applied (or was already), 1 when one needs a person, 2 when the journal does not verify."""
+    when = dt.datetime.fromisoformat(since)
+    when = when.astimezone(dt.UTC) if when.tzinfo else when.replace(tzinfo=dt.UTC)
+
+    async def go() -> int:
+        from kg_governance.deletion.reapply import Reapplier
+
+        s = get_settings()
+        engine = create_app_engine(s)
+        try:
+            async with deletion_runtime(engine, s, with_graph=graph) as (d, _):
+                try:
+                    results = await Reapplier(d.service, d.journal, engine).reapply(
+                        when, dry_run=dry_run, workspace_id=workspace_id_for(workspace) if workspace else None
+                    )
+                except JournalCorrupt as exc:
+                    typer.echo(f"error: {exc}", err=True)
+                    return 2
+            for r in results:
+                typer.echo(json.dumps(r.as_dict(), sort_keys=True))
+            attention = [r for r in results if r.outcome == "attention"]
+            typer.echo(json.dumps({"lines": len(results), "attention": len(attention), "dry_run": dry_run}, sort_keys=True))
+            return 1 if attention else 0
+        finally:
+            await engine.dispose()
+
+    _run(go())
+
+
 @deletions_app.command("retention-sweep")
 def deletions_retention_sweep() -> None:
     """Runs the retention sweep once, for every workspace that has something expired (the worker does this on a timer)."""

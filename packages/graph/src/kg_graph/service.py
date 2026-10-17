@@ -14,6 +14,7 @@ from neo4j.exceptions import ClientError
 
 from kg_graph.factory import build_graphiti
 from kg_graph.group import GroupId
+from kg_graph.namespaces import Loader, NamespaceRegistry
 from kg_graph.scoped import ScopedGraph
 
 log = get_logger("kg.graph")
@@ -36,8 +37,11 @@ _IDENT = re.compile(r"^[A-Za-z0-9_]{1,128}$")
 
 
 class GraphService:
-    def __init__(self, settings: Settings, transport: RouterTransport, config: ModelConfig):
+    def __init__(self, settings: Settings, transport: RouterTransport, config: ModelConfig, *, namespace_loader: Loader | None = None):
         self._graphiti: Graphiti = build_graphiti(settings, transport, config)
+        self.namespaces = NamespaceRegistry(
+            namespace_loader
+        )  # P9 (Flow F): the active namespace per workspace; empty = the default for everyone
 
     @property
     def _driver(self):  # type: ignore[no-untyped-def]
@@ -84,7 +88,17 @@ class GraphService:
         return ScopedGraph(self._graphiti, ctx, GroupId.for_simulation(ctx, run_id))
 
     def scoped(self, ctx: WorkspaceContext) -> ScopedGraph:
-        return ScopedGraph(self._graphiti, ctx)
+        """The workspace's ACTIVE namespace (its default group, or the one a reindex cutover activated)."""
+        active = self.namespaces.active(ctx)
+        return ScopedGraph(self._graphiti, ctx, GroupId.for_namespace(ctx, active) if active != ctx.group_id else None)
+
+    def building(self, ctx: WorkspaceContext, namespace: str) -> ScopedGraph:
+        """A reindex's BUILDING namespace. Only the reindex machinery asks for this; reads and the normal pipeline never see it (they call `scoped`)."""
+        return ScopedGraph(self._graphiti, ctx, GroupId.for_namespace(ctx, namespace))
+
+    def namespace_of(self, ctx: WorkspaceContext, namespace: str) -> ScopedGraph:
+        """Any namespace of the workspace by name (the retired one kept for rollback, when it is cleared or compared)."""
+        return self.building(ctx, namespace)
 
     async def aclose(self) -> None:
         await self._graphiti.close()  # type: ignore[no-untyped-call]

@@ -147,6 +147,56 @@ class Reconciler:
         if repair and touched:
             await self._orchestrator.advance(conn, ws, i.id)
 
+    async def requeue_stage(self, conn: AsyncConnection, ws: uuid.UUID, interaction_id: uuid.UUID, stage: str) -> bool:
+        """Runs one stage of a finished (or lost) interaction again: a new generation and a fresh job, the repair `terminal_job_open_stage` uses, for callers that found the
+        problem elsewhere (the unified `kg reconcile` finds a missing episode in the graph). False when the interaction or the stage is not there or a live job already exists."""
+        i = (
+            await conn.execute(
+                text("SELECT id, pipeline_version, ontology_version_id FROM interactions WHERE workspace_id = :ws AND id = :i FOR UPDATE"),
+                {"ws": ws, "i": interaction_id},
+            )
+        ).first()
+        st = (
+            await conn.execute(
+                text(
+                    "SELECT status, generation FROM interaction_stages WHERE workspace_id = :ws AND interaction_id = :i AND stage = :s FOR UPDATE"
+                ),
+                {"ws": ws, "i": interaction_id, "s": stage},
+            )
+        ).first()
+        if i is None or st is None or st.status in (RUNNING,) or st.status == "skipped_disabled":
+            return False
+        live = (
+            await conn.execute(
+                text(
+                    "SELECT 1 FROM outbox_jobs WHERE workspace_id = :ws AND subject_type = 'interaction' AND subject_id = :i AND stage = :s AND status IN ('pending','leased')"
+                ),
+                {"ws": ws, "i": interaction_id, "s": stage},
+            )
+        ).first()
+        if live is not None:
+            return False
+        generation = st.generation + 1
+        await conn.execute(
+            text(
+                "UPDATE interaction_stages SET generation = :g, status = 'pending', attempts = 0, last_error_category = NULL, last_error_code = NULL, "
+                "started_at = NULL, finished_at = NULL WHERE workspace_id = :ws AND interaction_id = :i AND stage = :s"
+            ),
+            {"g": generation, "ws": ws, "i": interaction_id, "s": stage},
+        )
+        await enqueue(
+            conn,
+            workspace_id=ws,
+            stage=stage,
+            subject_type="interaction",
+            subject_id=interaction_id,
+            dedupe_key=dedupe_key(interaction_id, stage, generation),
+            payload=job_payload(interaction_id, generation),
+            pipeline_version=i.pipeline_version,
+            ontology_version_id=i.ontology_version_id,
+        )
+        return True
+
     async def _commands(self, conn: AsyncConnection, ws: uuid.UUID, report: ReconcileReport, repair: bool) -> None:
         rows = (
             await conn.execute(

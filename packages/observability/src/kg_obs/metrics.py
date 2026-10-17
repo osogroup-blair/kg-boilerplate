@@ -207,3 +207,33 @@ retention_deleted_total = Counter(
     "retention_deleted_total", "Rows or contents removed by a retention job, by class", ["retention_class"], registry=REGISTRY
 )
 simulations_total = Counter("simulations_total", "Ontology simulations by outcome", ["outcome"], registry=REGISTRY)
+
+# ---- release hardening (P9). Closed label values only (a backend, an outcome, a kind, a class, a store): never an id. ----------------------------------------------------
+limiter_decisions_total = Counter(
+    "limiter_decisions_total", "Rate-limit decisions by limiter, backend and outcome", ["limiter", "backend", "outcome"], registry=REGISTRY
+)
+limiter_errors_total = Counter(
+    "limiter_errors_total",
+    "Shared limiter failures by what the platform did (failed_open / failed_closed)",
+    ["limiter", "mode"],
+    registry=REGISTRY,
+)
+cache_invalidations_total = Counter(
+    "cache_invalidations_total", "Cache invalidation notifications received, by kind", ["kind"], registry=REGISTRY
+)
+invalidation_listener_up = Gauge(
+    "invalidation_listener_up", "1 while this process holds its LISTEN connection for cache invalidation", registry=REGISTRY
+)
+oidc_logins_total = Counter("oidc_logins_total", "OIDC token verifications by outcome", ["outcome"], registry=REGISTRY)
+breakglass_uses_total = Counter(
+    "breakglass_uses_total", "API-key authentications in production while break-glass keys are allowed", registry=REGISTRY
+)
+reconcile_drift = Gauge(
+    "reconcile_drift", "Drift found by the latest completed reconcile scan, by class (all workspaces)", ["drift_class"], registry=REGISTRY
+)
+reconcile_repairs_total = Counter("reconcile_repairs_total", "Safe reconcile repairs applied, by class", ["drift_class"], registry=REGISTRY)
+reindex_runs = Gauge("reindex_runs", "Reindex runs by status (all workspaces)", ["status"], registry=REGISTRY)
+backup_age_seconds = Gauge("backup_age_seconds", "Age of the newest completed backup per store (-1: never)", ["store"], registry=REGISTRY)
+canary_builds_total = Counter("canary_builds_total", "Synthetic canary context builds by outcome", ["outcome"], registry=REGISTRY)
+canary_last_success_unixtime = Gauge("canary_last_success_unixtime", "Unix time of the last successful canary build", registry=REGISTRY)
+maintenance_refusals_total = Counter("maintenance_refusals_total", "Writes refused while MAINTENANCE_MODE=read_only", registry=REGISTRY)

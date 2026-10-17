@@ -10,6 +10,7 @@ import uuid
 from kg_common.settings import Settings
 from kg_db.engine import UnsafeDatabaseRole, assert_role_is_safe, create_app_engine
 from kg_db.session import system_session
+from kg_governance.runtime import build_invalidator, namespace_overrides
 from kg_graph.service import GraphService
 from kg_ingestion.crypto import ContentHasher, PayloadCipher
 from kg_jobs import faults
@@ -29,6 +30,7 @@ from sqlalchemy import text
 
 from kg_worker import __version__
 from kg_worker.jobs import build_registry
+from kg_worker.release_tasks import ReleaseTasks
 
 log = get_logger("kg.worker")
 EXIT_UNSAFE_ROLE = 3
@@ -177,7 +179,14 @@ class Worker:
             return EXIT_UNSAFE_ROLE
         sink = DbCallSink(engine)
         router = build_router_stack(s, service="kg-worker", sink=sink)
-        graph = GraphService(s, router.transport, router.config)
+        graph = GraphService(s, router.transport, router.config, namespace_loader=lambda: namespace_overrides(engine))
+        try:
+            await graph.namespaces.refresh()
+        except Exception:
+            log.warning("graph_namespaces_unreadable_at_startup")
+        invalidator = build_invalidator(s, egress=router.narrowing, namespaces=graph.namespaces)
+        if invalidator is not None:
+            invalidator.start()
         sink.start()
         knowledge = build_knowledge(engine, graph, router.config, service="kg-worker", settings=s)
         faults.configure(s.kg_faults, s.kg_faults_dir)  # test-only failure injection; a no-op unless KG_FAULTS / KG_FAULTS_DIR is set
@@ -187,6 +196,7 @@ class Worker:
         deletion = build_deletion(s, engine, knowledge, graph, cipher, hasher, memory.writer)
         registry = build_registry(engine, knowledge, graph, cipher, hasher, router.config, s, sink.flush, memory, router.gateway, deletion)
         self._sweeper = RetentionSweeper(engine, deletion.service, graph)
+        release = ReleaseTasks(s, engine, knowledge, graph)
         dispatcher = Dispatcher(
             OpsClient(engine),
             registry.as_mapping(),
@@ -202,7 +212,11 @@ class Worker:
             start_http_server(s.metrics_port_worker, registry=metrics.REGISTRY)
         # The dispatcher starts first and never waits for Neo4j: a worker that (re)starts during a graph outage must still normalize interactions, and its
         # projection jobs simply back off until the graph is back (AT-02). Indices (L12) are built once, retried on every heartbeat until they exist.
-        outbox = asyncio.get_running_loop().create_task(dispatcher.run(stop), name="outbox-dispatcher")
+        if s.maintenance_mode == "read_only":
+            log.warning("worker_read_only", detail="MAINTENANCE_MODE=read_only: the dispatcher is not started, no job runs")
+            outbox: asyncio.Task[object] = asyncio.get_running_loop().create_task(_idle(stop), name="outbox-dispatcher-idle")
+        else:
+            outbox = asyncio.get_running_loop().create_task(dispatcher.run(stop), name="outbox-dispatcher")
         await self._ensure_indices(graph, attempts=1)
         health = await router_health(s.router_origin, router.http, router.config)
         log.info(
@@ -222,8 +236,10 @@ class Worker:
                     await self._review_gauges(engine)
                     await self._memory_gauges(engine)
                     await self._principal_gauges(engine)
-                    await self._context_housekeeping(engine)
-                    await self._governance_housekeeping(engine)
+                    if s.maintenance_mode != "read_only":  # a restored environment under verification changes nothing by itself
+                        await self._context_housekeeping(engine)
+                        await self._governance_housekeeping(engine)
+                    await release.beat()
                     if not self.indices_ready:
                         await self._ensure_indices(graph, attempts=1)
                 except Exception as exc:
@@ -239,12 +255,19 @@ class Worker:
                 await self._beat(engine, status="stopped")
             except Exception:
                 log.warning("final_heartbeat_failed")
+            await release.aclose()
+            if invalidator is not None:
+                await invalidator.aclose()
             await sink.aclose()
             await graph.aclose()
             await router.aclose()
             await engine.dispose()
             log.info("worker_stopped", worker_id=self.worker_id)
         return 0
+
+
+async def _idle(stop: asyncio.Event) -> None:
+    await stop.wait()
 
 
 def install_signal_handlers(loop: asyncio.AbstractEventLoop, stop: asyncio.Event) -> None:

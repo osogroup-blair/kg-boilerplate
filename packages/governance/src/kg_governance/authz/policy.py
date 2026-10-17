@@ -64,6 +64,10 @@ class Action(enum.StrEnum):
     DELETION_READ = "deletion.read"
     GOVERNANCE_HOLD = "governance.hold"
     WORKSPACE_ADMIN = "workspace.admin"
+    # P9 (phase-9 plan §6). Cost views for operators and admins; reindexing and the OIDC group mapping are admin only. `operations.repair` is reused for reconcile repairs.
+    OPERATIONS_COST_READ = "operations.cost_read"
+    REINDEX_RUN = "reindex.run"
+    OIDC_MANAGE = "oidc.manage"
 
 
 # The matrix (phase-1 plan §6.3, extended by phase-2 and phase-3 plan §6.3). Later phases add actions; they never widen an existing cell silently
@@ -81,6 +85,7 @@ ROLE_ACTIONS: dict[Role, frozenset[Action]] = {
         Action.GRAPH_SEARCH,
         Action.CORRECTION_READ,
         Action.DELETION_READ,
+        Action.OPERATIONS_COST_READ,
     },
     Role.REVIEWER: _READ_KNOWLEDGE
     | {

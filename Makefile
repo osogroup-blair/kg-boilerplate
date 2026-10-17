@@ -10,7 +10,8 @@ RUN := $(UV) run
 PYSRC := packages apps sdk tests scripts
 
 .PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
-        test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check
+        test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check \
+        backup-init backup backup-verify backup-prune restore-rehearsal reconcile
 
 sync:                ## install the Python workspace (exact versions from uv.lock)
 	$(UV) sync --frozen
@@ -109,7 +110,7 @@ ps:
 
 # ---- tests (the host-run suites need `make stack-up`; the targets fail loudly if it is missing) ----------------------------------------
 test:                ## unit + offline contract tests (no stack needed)
-	$(RUN) pytest packages apps sdk tools/mock_router/tests -q
+	$(RUN) pytest packages apps sdk tools/mock_router/tests tools/backup/tests -q
 
 test-int:            ## integration tests against postgres + neo4j + mock router
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/integration -q
@@ -124,6 +125,31 @@ test-resilience:     ## failure injection (FI-01..12): crashes, SIGKILL, lease e
 	KG_REQUIRE_STACK=1 KG_RESILIENCE=1 $(RUN) pytest tests/resilience -q -p no:cacheprovider
 
 test-all: test test-int test-security test-contract
+
+# ---- backup, restore and reconciliation (P9) -------------------------------------------------------------------------------------------
+# Development keys live in .local/backup-keys (gitignored): `data.age` is the RECOVERY identity (keep it OFF the machine that makes backups in production), `escrow.age` is the key-escrow identity.
+BACKUP_DATA_PUB   = $$(grep 'public key' .local/backup-keys/data.age | cut -d' ' -f4)
+BACKUP_ESCROW_PUB = $$(grep 'public key' .local/backup-keys/escrow.age | cut -d' ' -f4)
+
+backup-init:         ## generate the development age identities (data recovery + key escrow) once
+	@mkdir -p .local/backup-keys
+	@test -f .local/backup-keys/data.age || $(RUN) python -m tools.backup keygen .local/backup-keys/data.age
+	@test -f .local/backup-keys/escrow.age || $(RUN) python -m tools.backup keygen .local/backup-keys/escrow.age
+
+backup: backup-init  ## encrypted backup set: Postgres, Neo4j (offline dump, ~20 s of graph downtime), configuration; keys to the escrow location (BACKUP_DIR, BACKUP_ESCROW_DIR)
+	BACKUP_RECIPIENTS="$${BACKUP_RECIPIENTS:-$(BACKUP_DATA_PUB)}" BACKUP_ESCROW_RECIPIENTS="$${BACKUP_ESCROW_RECIPIENTS:-$(BACKUP_ESCROW_PUB)}" $(RUN) python -m tools.backup backup
+
+backup-verify:       ## hashes of the newest backup set against its manifest
+	$(RUN) python -m tools.backup verify
+
+backup-prune:        ## remove backup sets older than BACKUP_RETENTION_DAYS (always keeps the newest three)
+	$(RUN) python -m tools.backup prune
+
+restore-rehearsal:   ## AT-18: restore the newest backup into the separate kg-restore project, replay the deletion journal, reconcile, verify, report RTO/RPO (eval/reports/restore-<date>.md)
+	$(RUN) python -m tools.backup rehearse --identity "$${BACKUP_IDENTITY:-.local/backup-keys/data.age}"
+
+reconcile:           ## drift between the ledger, the graph, the memory store and the deletion records: make reconcile WS=demo [ARGS="--repair"]
+	$(RUN) kg reconcile --workspace $(or $(WS),demo) $(ARGS)
 
 # ---- quality --------------------------------------------------------------------------------------------------------------------
 lint:                ## ruff (lint + format check), import-linter boundaries, eslint

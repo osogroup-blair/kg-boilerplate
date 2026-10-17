@@ -2,7 +2,7 @@
 
 Three limits, each from the principal's registration (null: the platform default):
 
-* requests per minute, on every authenticated endpoint: an in-process token bucket (the multi-replica limiter is P9);
+* requests per minute, on every authenticated endpoint: an in-process token bucket, or (LIMITER_BACKEND=postgres, P9) one fixed one-minute window shared by every replica;
 * context tokens per UTC day: the sum of `used_tokens` over the principal's context traces today, so a restart loses nothing;
 * interactions per UTC day: the count of its accepted interactions today.
 
@@ -31,6 +31,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from kg_governance.audit import AuditMetadata, AuditWriter
+from kg_governance.limiter import LimiterUnavailable, SharedLimiter
 from kg_governance.principals import QuotasOut, UsageDay, UsageOut
 
 log = get_logger("kg.quotas")
@@ -57,6 +58,7 @@ class _Bucket:
 class _Cached:
     quotas: QuotasOut
     at: float
+    workspace_id: uuid.UUID | None = None
 
 
 class Quotas:
@@ -70,6 +72,7 @@ class Quotas:
         flush_seconds: float = 10.0,
         cache_seconds: float = 5.0,
         clock: Callable[[], float] = time.monotonic,
+        shared: SharedLimiter | None = None,
     ):
         self._engine, self._default_rpm, self._flush_s, self._cache_s, self._clock = (
             engine,
@@ -78,6 +81,7 @@ class Quotas:
             cache_seconds,
             clock,
         )
+        self._shared = shared  # P9: one budget across replicas; None keeps the in-process bucket
         self._buckets: dict[uuid.UUID, _Bucket] = {}
         self._cache: dict[uuid.UUID, _Cached] = {}
         self._buffer: dict[tuple[uuid.UUID, uuid.UUID], int] = defaultdict(int)  # (workspace, principal) -> requests since the last flush
@@ -110,19 +114,27 @@ class Quotas:
             context_tokens_per_day=row.quota_context_tokens_per_day if row else None,
             interactions_per_day=row.quota_interactions_per_day if row else None,
         )
-        self._cache[principal.principal_id] = _Cached(quotas, now)
+        self._cache[principal.principal_id] = _Cached(quotas, now, principal.workspace_id)
         return quotas
 
     def forget(self, principal_id: uuid.UUID) -> None:
-        """A registration changed in this process: the next request reads it afresh (other processes catch up within the cache window)."""
+        """A registration changed in this process: the next request reads it afresh (other processes learn from the invalidation notification, or within the cache window)."""
         self._cache.pop(principal_id, None)
         self._buckets.pop(principal_id, None)
+
+    def forget_workspace(self, workspace_id: uuid.UUID | None) -> None:
+        """A principal, grant or key of this workspace changed somewhere (None: drop everything, e.g. after the listener reconnected)."""
+        for pid in [p for p, c in self._cache.items() if workspace_id is None or c.workspace_id == workspace_id]:
+            self.forget(pid)
 
     # ---- requests per minute ---------------------------------------------------------------------------------------------------------------
 
     async def admit_request(self, principal: Principal) -> None:
         limits = await self.limits(principal)
         rpm = limits.requests_per_minute or self._default_rpm
+        if self._shared is not None:
+            await self._admit_shared(principal, rpm)
+            return
         now = self._clock()
         b = self._buckets.get(principal.principal_id)
         if b is None or b.rate_per_minute != rpm:
@@ -133,6 +145,22 @@ class Quotas:
         if b.tokens < 1.0:
             await self._refused(principal, "requests_per_minute", math.ceil((1.0 - b.tokens) / rate))
         b.tokens -= 1.0
+        self._buffer[(principal.workspace_id, principal.principal_id)] += 1
+
+    async def _admit_shared(self, principal: Principal, rpm: int) -> None:
+        assert self._shared is not None
+        try:
+            decision = await self._shared.hit(f"rpm:{principal.principal_id}", window_seconds=60, limit=rpm)
+        except LimiterUnavailable:
+            # a cheap call fails OPEN: if the database is down nothing else answers either, and blocking every request on a counter helps nobody (expensive calls fail closed)
+            metrics.limiter_errors_total.labels(limiter="requests", mode="failed_open").inc()
+            self._buffer[(principal.workspace_id, principal.principal_id)] += 1
+            return
+        metrics.limiter_decisions_total.labels(
+            limiter="requests", backend="postgres", outcome="admitted" if decision.admitted else "refused"
+        ).inc()
+        if not decision.admitted:
+            await self._refused(principal, "requests_per_minute", decision.retry_after)
         self._buffer[(principal.workspace_id, principal.principal_id)] += 1
 
     async def _refused(self, principal: Principal, quota: str, retry_after: int) -> None:

@@ -1,5 +1,7 @@
 # Phase 1 stack. Host ports avoid the other Postgres containers on this machine (5432-5437, 5543 is the spike stack).
 # postgres 5544 · neo4j 7475/7688 · mock-router 8782 · api 8000 (+9100 metrics) · worker metrics 9101 · admin 5273 · mcp 8010 (profile agents)
+# P9: every host port and host directory is a variable, so the SAME file runs the restore rehearsal (`-p kg-restore`, ports 56xx / 87xx / 81xx, MAINTENANCE_MODE=read_only) and
+# the load baselines (`-p kg-perf`) beside the development stack: see tools/backup and eval/load. A second API replica is the profile `replicas` (the shared-limiter tests).
 name: kg
 
 x-python-env: &python-env
@@ -25,6 +27,10 @@ x-python-env: &python-env
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   GRAPHITI_TELEMETRY_ENABLED: "false"
+  # P9: one rate-limit budget across API replicas (Postgres counters), writes refused while a restored environment is being verified
+  LIMITER_BACKEND: ${LIMITER_BACKEND:-postgres}
+  MAINTENANCE_MODE: ${MAINTENANCE_MODE:-off}
+  RECONCILE_SCAN_HOURS: ${RECONCILE_SCAN_HOURS:-24}
 
 x-python-build: &python-build
   context: ../..
@@ -38,7 +44,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-kg_admin_dev}
       KG_OWNER_PASSWORD: ${KG_OWNER_PASSWORD:-kg_owner_dev}
       KG_APP_PASSWORD: ${KG_APP_PASSWORD:-kg_app_dev}
-    ports: ["127.0.0.1:5544:5432"]
+    ports: ["127.0.0.1:${KG_PG_PORT:-5544}:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
@@ -59,7 +65,7 @@ services:
       NEO4J_server_memory_heap_max__size: 640m
       NEO4J_server_memory_pagecache_size: 192m
       NEO4J_server_jvm_additional: "-XX:MaxDirectMemorySize=192m"
-    ports: ["127.0.0.1:7475:7474", "127.0.0.1:7688:7687"]
+    ports: ["127.0.0.1:${KG_NEO4J_HTTP_PORT:-7475}:7474", "127.0.0.1:${KG_NEO4J_BOLT_PORT:-7688}:7687"]
     volumes: ["neo4jdata:/data"]
     healthcheck:
       test: ["CMD-SHELL", "cypher-shell -u $${NEO4J_AUTH%%/*} -p $${NEO4J_AUTH#*/} 'RETURN 1' >/dev/null 2>&1 || exit 1"]
@@ -75,7 +81,7 @@ services:
     environment:
       MOCK_ROUTER_API_KEY: ${MOCK_ROUTER_API_KEY:-mock-key}
       MOCK_ROUTER_MAX_CLASSIFICATION: restricted
-    ports: ["127.0.0.1:8782:8781"]
+    ports: ["127.0.0.1:${KG_MOCK_PORT:-8782}:8781"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8781/health').status==200 else 1)"]
       interval: 3s
@@ -100,11 +106,37 @@ services:
       # P8: the out-of-band deletion journal (outside the database and its backups); the worker appends, the API and the CLI read. Production mounts a separate, append-only volume.
       DELETION_JOURNAL_DIR: ${DELETION_JOURNAL_DIR:-/journal}
       WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}   # development: a settings change reaches the worker within seconds (production keeps 30)
-    volumes: ["../../.local/deletion-journal:/journal"]
-    ports: ["127.0.0.1:8000:8000", "127.0.0.1:9100:9100"]
+    volumes: ["${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
+    ports: ["127.0.0.1:${KG_API_PORT:-8000}:8000", "127.0.0.1:${KG_API_METRICS_PORT:-9100}:9100"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       migrate: {condition: service_completed_successfully}
+      postgres: {condition: service_healthy}
+      neo4j: {condition: service_healthy}
+      mock-router: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  api2:
+    profiles: ["replicas"]
+    image: kg-python:dev
+    command: ["uvicorn", "kg_api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      <<: *python-env
+      SERVICE_NAME: kg-api2
+      # (the second replica of the API for the shared-limiter and invalidation tests; P8: the out-of-band deletion journal (outside the database and its backups); the worker appends, the API and the CLI read. Production mounts a separate, append-only volume.
+      DELETION_JOURNAL_DIR: ${DELETION_JOURNAL_DIR:-/journal}
+      WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}   # development: a settings change reaches the worker within seconds (production keeps 30)
+    volumes: ["${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
+    ports: ["127.0.0.1:${KG_API2_PORT:-8001}:8000", "127.0.0.1:${KG_API2_METRICS_PORT:-9102}:9100"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      api: {condition: service_healthy}
       postgres: {condition: service_healthy}
       neo4j: {condition: service_healthy}
       mock-router: {condition: service_healthy}
@@ -129,9 +161,9 @@ services:
       KG_FAULTS_DIR: ${KG_FAULTS_DIR:-/faults}
       DELETION_JOURNAL_DIR: ${DELETION_JOURNAL_DIR:-/journal}
       WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}
-    volumes: ["../../.local/faults:/faults", "../../.local/deletion-journal:/journal"]
+    volumes: ["${KG_FAULTS_HOST_DIR:-../../.local/faults}:/faults", "${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
     stop_grace_period: 30s
-    ports: ["127.0.0.1:9101:9101"]
+    ports: ["127.0.0.1:${KG_WORKER_METRICS_PORT:-9101}:9101"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       migrate: {condition: service_completed_successfully}

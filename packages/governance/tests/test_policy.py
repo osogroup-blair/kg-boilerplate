@@ -104,7 +104,16 @@ P8 = {
     Role.AGENT: set(),
     Role.READER: set(),
 }
-EXPECTED = {role: P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role] for role in Role}
+# P9 (phase-9 plan §6): cost views for admins and operators; reindexing and the OIDC group mapping are admin acts. Reconcile repairs reuse operations.repair.
+P9 = {
+    Role.WORKSPACE_ADMIN: {"operations.cost_read", "reindex.run", "oidc.manage"},
+    Role.OPERATOR: {"operations.cost_read"},
+    Role.REVIEWER: set(),
+    Role.APP_WRITER: set(),
+    Role.AGENT: set(),
+    Role.READER: set(),
+}
+EXPECTED = {role: P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role] | P9[role] for role in Role}
 
 
 def _p(*roles: Role) -> Principal:
@@ -131,13 +140,14 @@ def test_earlier_phase_cells_did_not_widen():
     for role, p1 in P1.items():
         have = {a.value for a in ROLE_ACTIONS[role]}
         assert p1 <= have and (P1[role] | P2[role]) <= have and (P1[role] | P2[role] | P3[role]) <= have
-        assert have - p1 == P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role]
-        assert have - (P1[role] | P2[role]) == P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role]
-        assert have - (P1[role] | P2[role] | P3[role]) == P4[role] | P5[role] | P6[role] | P7[role] | P8[role]
-        assert have - (P1[role] | P2[role] | P3[role] | P4[role]) == P5[role] | P6[role] | P7[role] | P8[role]
-        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role]) == P6[role] | P7[role] | P8[role]
-        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role]) == P7[role] | P8[role]
-        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role]) == P8[role]
+        assert have - p1 == P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role]) == P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role]) == P4[role] | P5[role] | P6[role] | P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role] | P4[role]) == P5[role] | P6[role] | P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role]) == P6[role] | P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role]) == P7[role] | P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role]) == P8[role] | P9[role]
+        assert have - (P1[role] | P2[role] | P3[role] | P4[role] | P5[role] | P6[role] | P7[role] | P8[role]) == P9[role]
 
 
 def test_only_admins_and_reviewers_decide_reviews_and_read_their_evidence():

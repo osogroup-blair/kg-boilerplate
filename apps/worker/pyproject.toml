@@ -17,6 +17,7 @@ dependencies = [
   "kg-ingestion",
   "kg-extraction",
   "kg-memory",
+  "kg-reconcile",
   "kg-context",
 ]
 
@@ -41,4 +42,5 @@ kg-jobs = { workspace = true }
 kg-ingestion = { workspace = true }
 kg-extraction = { workspace = true }
 kg-memory = { workspace = true }
+kg-reconcile = { workspace = true }
 kg-context = { workspace = true }

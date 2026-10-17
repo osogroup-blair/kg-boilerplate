@@ -30,9 +30,10 @@ def downgrade(
     force_drop_memories: bool = False,
     force_forget_privileges: bool = False,
     force_drop_governance: bool = False,
+    force_drop_release: bool = False,
 ) -> None:
     """`force_drop_extracted` lets 0004's downgrade delete extracted entities, facts and episodes, `force_drop_memories` lets 0005's delete curated memories, and
-    `force_forget_privileges` lets 0007's drop grants that carry `publish`, and `force_drop_governance` lets 0008's keep rows made by corrections as ordinary rows (each refuses otherwise)."""
+    `force_forget_privileges` lets 0007's drop grants that carry `publish`, and `force_drop_governance` lets 0008's keep rows made by corrections as ordinary rows, and `force_drop_release` lets 0009 drop reindex runs that are still building (each refuses otherwise)."""
     command.downgrade(
         _config(
             url,
@@ -40,6 +41,7 @@ def downgrade(
             force_drop_memories=force_drop_memories,
             force_forget_privileges=force_forget_privileges,
             force_drop_governance=force_drop_governance,
+            force_drop_release=force_drop_release,
         ),
         revision,
     )

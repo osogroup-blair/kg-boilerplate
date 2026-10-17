@@ -64,7 +64,7 @@ async def build_context(body: ContextBuildIn, state: StateDep, principal: Princi
     if acting is None:  # a Lab build is the admin looking through the agent's permissions, not the agent using its quota
         async with tenant_session(state.engine, WorkspaceContext.of(effective), effective.principal_id) as qconn:
             await state.quotas.admit_context(qconn, effective)
-    with ctx.limiter.admit(caller.principal_id, caller.workspace_id):
+    async with ctx.limiter.aadmit(caller.principal_id, caller.workspace_id):
         out = await ctx.service.build(effective, body, act_as_by=acting)
     return JSONResponse(out.model_dump(mode="json"), headers=NO_STORE)
 

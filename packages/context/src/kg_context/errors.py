@@ -27,6 +27,15 @@ class RateLimited(PlatformError):
         super().__init__(retryable=True, retry_after=max(1, retry_after))
 
 
+class RateLimiterUnavailable(PlatformError):
+    """The shared limiter could not be consulted and the operator chose to fail closed for context builds (LIMITER_FAIL_MODE=closed)."""
+
+    code, http_status, default_message = "limiter_unavailable", 503, "Context builds are paused while the rate limiter is unreachable"
+
+    def __init__(self) -> None:
+        super().__init__(retryable=True, retry_after=5)
+
+
 class ExceedsProfile(ValidationFailed):
     """A request tried to WIDEN a profile (a larger budget, a section it does not include, a compression it does not allow). Only the field names are returned."""
 

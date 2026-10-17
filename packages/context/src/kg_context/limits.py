@@ -1,4 +1,5 @@
-"""Per-principal rate limit and per-workspace concurrency for context builds (phase-6 plan §5.14). In-process: the multi-replica limiter is P9.
+"""Per-principal rate limit and per-workspace concurrency for context builds (phase-6 plan §5.14). `BuildLimiter` is in-process; `PgBuildLimiter` (P9, LIMITER_BACKEND=postgres)
+shares one budget across replicas. Both offer `aadmit`, an async context manager, which is what the API uses.
 
 A token bucket per principal (`CONTEXT_RATE_PER_MINUTE`, burst `CONTEXT_RATE_BURST`) and a cap on builds in flight per workspace. Either refusal is a 429 `rate_limited` with
 `retry_after`, counted without any identifier. The monotonic clock is injectable so the tests need no sleeping."""
@@ -9,13 +10,14 @@ import math
 import time
 import uuid
 from collections import defaultdict
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 
+from kg_governance.limiter import LimiterUnavailable, SharedLimiter
 from kg_obs import metrics
 
-from kg_context.errors import RateLimited
+from kg_context.errors import RateLimited, RateLimiterUnavailable
 
 
 @dataclass
@@ -56,3 +58,59 @@ class BuildLimiter:
             self._inflight[workspace_id] -= 1
             if self._inflight[workspace_id] <= 0:
                 self._inflight.pop(workspace_id, None)
+
+    @asynccontextmanager
+    async def aadmit(self, principal_id: uuid.UUID, workspace_id: uuid.UUID) -> AsyncIterator[None]:
+        with self.admit(principal_id, workspace_id):
+            yield
+
+
+class PgBuildLimiter:
+    """The same two limits, shared by every API replica through Postgres. The rate is a fixed one-minute window (`per_minute`) plus a short burst window (`burst` per 10 s);
+    the concurrency cap is a set of leases, so a replica that dies mid-build frees its slot. When the limiter's database cannot answer, a build is REFUSED by default
+    (`fail_closed`: a context build is the expensive call; the rate limit exists to protect the router and the databases) and admitted when the operator chose `open`."""
+
+    def __init__(
+        self,
+        shared: SharedLimiter,
+        per_minute: int,
+        burst: int,
+        workspace_concurrency: int,
+        *,
+        fail_closed: bool = True,
+        lease_seconds: int = 120,
+    ):
+        self._shared, self._per_minute, self._burst, self._cap = shared, per_minute, burst, workspace_concurrency
+        self._fail_closed, self._lease = fail_closed, lease_seconds
+
+    @asynccontextmanager
+    async def aadmit(self, principal_id: uuid.UUID, workspace_id: uuid.UUID) -> AsyncIterator[None]:
+        slot_key = f"ctx:slots:{workspace_id}"
+        holder: uuid.UUID | None = None
+        try:
+            holder = await self._shared.acquire(slot_key, cap=self._cap, lease_seconds=self._lease)
+            if holder is None:
+                metrics.context_rate_limited_total.inc()
+                metrics.limiter_decisions_total.labels(limiter="context", backend="postgres", outcome="refused_concurrency").inc()
+                raise RateLimited(1)
+            minute = await self._shared.hit(f"ctx:rpm:{principal_id}", window_seconds=60, limit=self._per_minute)
+            burst = await self._shared.hit(f"ctx:burst:{principal_id}", window_seconds=10, limit=self._burst)
+            if not minute.admitted or not burst.admitted:
+                metrics.context_rate_limited_total.inc()
+                metrics.limiter_decisions_total.labels(limiter="context", backend="postgres", outcome="refused_rate").inc()
+                raise RateLimited(minute.retry_after if not minute.admitted else burst.retry_after)
+            metrics.limiter_decisions_total.labels(limiter="context", backend="postgres", outcome="admitted").inc()
+        except LimiterUnavailable as exc:
+            if self._fail_closed:
+                metrics.limiter_errors_total.labels(limiter="context", mode="failed_closed").inc()
+                raise RateLimiterUnavailable() from exc
+            metrics.limiter_errors_total.labels(limiter="context", mode="failed_open").inc()
+        except RateLimited:
+            if holder is not None:
+                await self._shared.release(slot_key, holder)
+            raise
+        try:
+            yield
+        finally:
+            if holder is not None:
+                await self._shared.release(slot_key, holder)

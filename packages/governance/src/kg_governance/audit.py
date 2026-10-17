@@ -134,6 +134,17 @@ class AuditMetadata(BaseModel):
     consolidation_mode: Literal["reinforce", "synthesize"] | None = None
     simulation_id: uuid.UUID | None = None
     override_authority: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
+    # P9 (reconcile, reindex, backup, rotation, OIDC). Enums, ids and counts only: never a path, a key, a group name or a secret.
+    reconcile_class: str | None = Field(default=None, pattern=r"^[a-z][a-z_.]{0,63}$")
+    count_repaired: int | None = None
+    namespace: str | None = Field(default=None, pattern=r"^ws-[A-Za-z0-9_-]{1,80}$")
+    previous_namespace: str | None = Field(default=None, pattern=r"^ws-[A-Za-z0-9_-]{1,80}$")
+    reindex_id: uuid.UUID | None = None
+    mapping_id: uuid.UUID | None = None
+    backup_store: Literal["postgres", "neo4j", "config", "keys", "all"] | None = None
+    secret_kind: str | None = Field(default=None, pattern=r"^[a-z_]{1,32}$")
+    secret_version: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]{1,40}$")
+    count_reapplied: int | None = None
 
 
 Outcome = Literal["allowed", "denied", "error"]

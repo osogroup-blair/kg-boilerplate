@@ -10,6 +10,13 @@ from kg_domain.principal import WorkspaceContext
 _VALID = re.compile(r"^ws-[A-Za-z0-9_-]+$")
 
 
+def reindex_namespace(ctx: WorkspaceContext, n: int) -> str:
+    """The name of the n-th rebuild of a workspace's graph: `ws-<uuid>-r<n>` (n >= 1)."""
+    if n < 1 or n > 999_999:
+        raise ValueError("invalid reindex number")
+    return f"{ctx.group_id}-r{n}"
+
+
 class GroupId:
     __slots__ = ("value",)
     value: str
@@ -25,6 +32,18 @@ class GroupId:
             raise ValueError("invalid group id")
         gid = object.__new__(cls)
         object.__setattr__(gid, "value", ctx.group_id)
+        return gid
+
+    @classmethod
+    def for_namespace(cls, ctx: WorkspaceContext, namespace: str) -> GroupId:
+        """A named namespace of this workspace's graph (P9, Flow F): the workspace's own group or a reindex build `<group>-r<n>`. Anything else (another workspace's group,
+        a free-form string) is refused, so a namespace read from the database can never point outside the workspace."""
+        if not isinstance(ctx, WorkspaceContext):
+            raise TypeError("GroupId can only be built from a WorkspaceContext")
+        if namespace != ctx.group_id and not re.fullmatch(re.escape(ctx.group_id) + r"-r[0-9]{1,6}", namespace or ""):
+            raise ValueError("namespace does not belong to this workspace")
+        gid = object.__new__(cls)
+        object.__setattr__(gid, "value", namespace)
         return gid
 
     @classmethod
