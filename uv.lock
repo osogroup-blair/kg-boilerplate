@@ -1282,12 +1282,14 @@ dependencies = [
     { name = "kg-common" },
     { name = "kg-db" },
     { name = "kg-domain" },
+    { name = "kg-extraction" },
     { name = "kg-governance" },
     { name = "kg-graph" },
     { name = "kg-ingestion" },
     { name = "kg-jobs" },
     { name = "kg-knowledge" },
     { name = "kg-memory" },
+    { name = "kg-modelgw" },
     { name = "kg-obs" },
 ]
 
@@ -1296,12 +1298,14 @@ requires-dist = [
     { name = "kg-common", editable = "packages/common" },
     { name = "kg-db", editable = "packages/db" },
     { name = "kg-domain", editable = "packages/domain" },
+    { name = "kg-extraction", editable = "packages/extraction" },
     { name = "kg-governance", editable = "packages/governance" },
     { name = "kg-graph", editable = "packages/graph" },
     { name = "kg-ingestion", editable = "packages/ingestion" },
     { name = "kg-jobs", editable = "packages/jobs" },
     { name = "kg-knowledge", editable = "packages/knowledge" },
     { name = "kg-memory", editable = "packages/memory" },
+    { name = "kg-modelgw", editable = "packages/modelgw" },
     { name = "kg-obs", editable = "packages/observability" },
 ]
 

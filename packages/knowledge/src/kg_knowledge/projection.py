@@ -60,6 +60,7 @@ _RETRYABLE_NAMES = frozenset(
         "SessionExpired",
         "TransientError",
         "DatabaseUnavailable",
+        "DatabaseError",  # Neo4j could not write (a full disk surfaces as one): retryable and named for the operator, never a silent loss
         "ConnectionResetError",
         "APIConnectionError",
         "APITimeoutError",
@@ -112,7 +113,7 @@ def classify_error(exc: BaseException) -> tuple[str, bool]:
         if names & _RETRYABLE_NAMES:
             return (
                 "graph_unavailable"
-                if names & {"ServiceUnavailable", "SessionExpired", "TransientError", "DatabaseUnavailable"}
+                if names & {"ServiceUnavailable", "SessionExpired", "TransientError", "DatabaseUnavailable", "DatabaseError"}
                 else "router_unavailable"
             ), True
         if getattr(e, "code", None) == "Neo.ClientError.Schema.ConstraintValidationFailed":

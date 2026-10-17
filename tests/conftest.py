@@ -92,7 +92,13 @@ async def migrated_db() -> AsyncIterator[str]:
     require(OWNER_URL, "postgres")
     await asyncio.to_thread(
         lambda: migrate.downgrade(
-            OWNER_URL, "base", force_drop_extracted=True, force_drop_memories=True, force_forget_privileges=True, force_drop_governance=True
+            OWNER_URL,
+            "base",
+            force_drop_extracted=True,
+            force_drop_memories=True,
+            force_forget_privileges=True,
+            force_drop_governance=True,
+            force_drop_release=True,
         )
     )
     await asyncio.to_thread(migrate.upgrade, OWNER_URL, "head")

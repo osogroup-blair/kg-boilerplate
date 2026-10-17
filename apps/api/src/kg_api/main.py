@@ -33,7 +33,7 @@ from kg_modelgw.factory import build_router_stack
 from kg_obs import metrics
 from kg_obs.logging import configure_logging, get_logger
 from kg_obs.tracing import setup_tracing
-from kg_reconcile import Reconcile
+from kg_reconcile import Reconcile, ReindexService
 from prometheus_client import start_http_server
 
 from kg_api.deps import guard
@@ -160,6 +160,7 @@ def build_app(settings: Settings, *, serve_metrics: bool = False) -> FastAPI:
             context=context,
             quotas=quotas,
             reconcile=Reconcile(engine, knowledge, graph, embedding_version=settings.memory_embedding_version),
+            reindex=ReindexService(engine, graph, knowledge, ingestion.cipher, router.config, settings, service="kg-api"),
             shared_limiter=shared,
             invalidator=invalidator,
             deletion=deletion,

@@ -8,8 +8,6 @@ import math
 import os
 import shutil
 import subprocess
-import sys
-from pathlib import Path
 
 from .context import REQUIRED_ALIASES, ROOT, Ctx
 

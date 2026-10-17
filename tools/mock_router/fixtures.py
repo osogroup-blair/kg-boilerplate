@@ -13,14 +13,14 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def fixture_key(alias: str, messages: list[dict[str, str]], schema_name: Optional[str] = None) -> str:
+def fixture_key(alias: str, messages: list[dict[str, str]], schema_name: str | None = None) -> str:
     payload = {"alias": alias, "schema": schema_name or "", "messages": [{"role": m["role"], "content": _norm(m["content"])} for m in messages]}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
@@ -46,7 +46,7 @@ class FixtureStore:
                 elif "when" in entry:
                     self.rules.append(entry)
 
-    def lookup(self, key: str, alias: str, messages: list[dict[str, str]], schema_name: Optional[str]) -> Any:
+    def lookup(self, key: str, alias: str, messages: list[dict[str, str]], schema_name: str | None) -> Any:
         if key in self.keyed:
             return self.keyed[key]
         text = _norm(" ".join(m["content"] for m in messages)).lower()

@@ -27,7 +27,13 @@ from kg_graph.group import GroupId
 
 _LABEL = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
 # properties Graphiti (or the projector) owns on a node/edge; an attribute with one of these names would overwrite them
-_NODE_OWNED = frozenset({"uuid", "name", "group_id", "labels", "created_at", "summary", "name_embedding", "attributes"})
+_PARKED = (
+    "p_uuid",
+    "p_rev",
+    "p_episodes",
+    "p_entity_edges",
+)  # kg_graph.reindex: bookkeeping of a namespace that is being built or parked, never an attribute
+_NODE_OWNED = frozenset({"uuid", "name", "group_id", "labels", "created_at", "summary", "name_embedding", "attributes", *_PARKED})
 _EDGE_OWNED = frozenset(
     {
         "uuid",
@@ -42,6 +48,7 @@ _EDGE_OWNED = frozenset(
         "invalid_at",
         "reference_time",
         "attributes",
+        *_PARKED,
     }
     | {"source_uuid", "target_uuid", "source_node_uuid", "target_node_uuid"}
 )
@@ -206,7 +213,16 @@ class ScopedGraph:
             raise NotFound()
         return owner is not None
 
-    async def upsert_entity_node(self, *, uuid: str, name: str, type_key: str, attributes: dict[str, Any], created_at: dt.datetime) -> None:
+    async def upsert_entity_node(
+        self,
+        *,
+        uuid: str,
+        name: str,
+        type_key: str,
+        attributes: dict[str, Any],
+        created_at: dt.datetime,
+        embedding: Sequence[float] | None = None,
+    ) -> None:
         """Idempotent: the node becomes exactly this state (PJ-04). Embeds the name through the platform transport, so the caller must hold an egress
         context. A node cannot be saved without an embedding (PJ-02), so `local_only` data is never projected.
 
@@ -229,7 +245,10 @@ class ScopedGraph:
             summary=summary,
             attributes=attributes,
         )
-        await node.generate_name_embedding(self._g.embedder)
+        if embedding is not None:  # a reindex copies the vector it already paid for (the caller checked the name is the same)
+            node.name_embedding = [float(x) for x in embedding]
+        else:
+            await node.generate_name_embedding(self._g.embedder)
         await node.save(self._g.driver)
         if existed:
             await self._drop_other_labels(uuid, keep={"Entity", type_key})
@@ -257,6 +276,7 @@ class ScopedGraph:
         expired_at: dt.datetime | None,
         attributes: dict[str, Any],
         episodes: Sequence[str] = (),
+        embedding: Sequence[float] | None = None,
     ) -> None:
         if not _LABEL.fullmatch(name):
             raise ValidationFailed("invalid relationship type key")
@@ -285,7 +305,10 @@ class ScopedGraph:
             expired_at=expired_at,
             attributes=attributes,
         )
-        await edge.generate_embedding(self._g.embedder)
+        if embedding is not None:
+            edge.fact_embedding = [float(x) for x in embedding]
+        else:
+            await edge.generate_embedding(self._g.embedder)
         await edge.save(self._g.driver)
 
     # ---- reads for the projection check ----------------------------------------------------------------------------------------------------
@@ -491,6 +514,27 @@ class ScopedGraph:
         )
         return {r["u"]: tuple(float(x) for x in r["v"]) for r in rows}
 
+    async def read_node_vectors(self, uuids: Sequence[str]) -> dict[str, tuple[str, tuple[float, ...]]]:
+        """uuid -> (name, name vector) of this group's nodes: a reindex reuses a vector it already paid for when the name is the same."""
+        if not uuids:
+            return {}
+        rows = await self.run_cypher(
+            "MATCH (n:Entity {group_id: $group_id}) WHERE n.uuid IN $uuids AND n.name_embedding IS NOT NULL RETURN n.uuid AS u, n.name AS name, n.name_embedding AS v",
+            uuids=list(uuids),
+        )
+        return {r["u"]: (str(r["name"]), tuple(float(x) for x in r["v"])) for r in rows}
+
+    async def read_edge_vectors(self, uuids: Sequence[str]) -> dict[str, tuple[str, tuple[float, ...]]]:
+        """uuid -> (fact text, fact vector) of this group's edges."""
+        if not uuids:
+            return {}
+        rows = await self.run_cypher(
+            "MATCH (:Entity {group_id: $group_id})-[r:RELATES_TO]->(:Entity {group_id: $group_id}) WHERE r.group_id = $group_id AND r.uuid IN $uuids AND r.fact_embedding IS NOT NULL "
+            "RETURN r.uuid AS u, r.fact AS fact, r.fact_embedding AS v",
+            uuids=list(uuids),
+        )
+        return {r["u"]: (str(r["fact"]), tuple(float(x) for x in r["v"])) for r in rows}
+
     async def similar_nodes(
         self, label: str, embedding: Sequence[float], *, exclude: Sequence[str], min_score: float, limit: int = 5
     ) -> list[tuple[str, float]]:
@@ -692,13 +736,22 @@ class ScopedGraph:
         return int(rows[0]["n"])
 
     async def clear_staging_groups(self) -> int:
-        """A workspace deletion also removes the staging namespaces of its simulations (`<group>-sim-*`)."""
-        records, _, _ = await self._neo4j.client.execute_query(
-            "MATCH (n) WHERE n.group_id STARTS WITH $prefix WITH collect(n) AS ns FOREACH (x IN ns | DETACH DELETE x) RETURN size(ns) AS n",
-            parameters_={"prefix": f"{self.group_id.value}-sim-"},
+        """A workspace deletion also removes the staging namespaces of its simulations (`<group>-sim-*`) and every reindex namespace (`<group>-r<n>`), parked or live."""
+        total = 0
+        base = re.sub(r"-r[0-9]{1,6}$", "", self.group_id.value)  # the workspace's own group, whichever namespace is active
+        for prefix in (f"{base}-sim-", f"{base}-r"):
+            records, _, _ = await self._neo4j.client.execute_query(
+                "MATCH (n) WHERE n.group_id STARTS WITH $prefix WITH collect(n) AS ns FOREACH (x IN ns | DETACH DELETE x) RETURN size(ns) AS n",
+                parameters_={"prefix": prefix},
+                database_=self._db,
+            )
+            total += int(records[0]["n"]) if records else 0
+        records, _, _ = await self._neo4j.client.execute_query(  # the workspace's original group, when a reindex made another one active
+            "MATCH (n {group_id: $base}) WITH collect(n) AS ns FOREACH (x IN ns | DETACH DELETE x) RETURN size(ns) AS n",
+            parameters_={"base": base},
             database_=self._db,
         )
-        return int(records[0]["n"]) if records else 0
+        return total + (int(records[0]["n"]) if records else 0)
 
     # ---- search (P4 building block for P6): the platform recipe, never Graphiti's defaults (ADR-019) ---------------------------------------------
 

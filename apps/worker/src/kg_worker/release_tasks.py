@@ -17,7 +17,7 @@ from kg_graph.service import GraphService
 from kg_knowledge.services import KnowledgeServices
 from kg_obs import metrics
 from kg_obs.logging import get_logger
-from kg_reconcile import CLASSES, Reconcile
+from kg_reconcile import CLASSES, Reconcile, ReindexService
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -26,8 +26,9 @@ REINDEX_STATUSES = ("preview", "building", "catching_up", "ready", "activated", 
 
 
 class ReleaseTasks:
-    def __init__(self, settings: Settings, engine: AsyncEngine, knowledge: KnowledgeServices, graph: GraphService):
-        self._s, self._engine = settings, engine
+    def __init__(self, settings: Settings, engine: AsyncEngine, knowledge: KnowledgeServices, graph: GraphService, reindex: ReindexService):
+        self._s, self._engine, self._reindex = settings, engine, reindex
+        self._last_retire = 0.0
         self._reconcile = Reconcile(engine, knowledge, graph, embedding_version=settings.memory_embedding_version)
         self._scan: asyncio.Task[None] | None = None
         self._last_claim = 0.0
@@ -41,6 +42,11 @@ class ReleaseTasks:
             self._last_sweep = time.monotonic()
             async with system_session(self._engine) as conn:
                 await conn.execute(text("SELECT ops.rate_sweep(3600)"))
+        if time.monotonic() - self._last_retire >= 300.0:
+            self._last_retire = time.monotonic()
+            cleared = await self._reindex.clear_expired()
+            if cleared:
+                log.info("retired_namespaces_cleared", count=cleared)
         await self._maybe_scan()
 
     async def _gauges(self) -> None:

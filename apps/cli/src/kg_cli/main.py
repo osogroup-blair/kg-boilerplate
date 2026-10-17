@@ -34,7 +34,7 @@ from kg_cli.context_cmds import context_app
 from kg_cli.deletion_cmds import deletions_app
 from kg_cli.memory_cmds import memories_app, scopes_app
 from kg_cli.principals_cmds import principals_app
-from kg_cli.release_cmds import reconcile_command
+from kg_cli.release_cmds import reconcile_command, reindex_app
 from kg_cli.seed import publish_ontology, seed_demo, workspace_id_for, write_credentials
 
 app = typer.Typer(no_args_is_help=True, help="Knowledge & Memory Platform operator CLI")
@@ -60,6 +60,7 @@ app.add_typer(
 )
 app.add_typer(principals_app, name="principals", help="Agents & Access: register, update, keys, grants, revoke, activity")
 app.command("reconcile")(reconcile_command)
+app.add_typer(reindex_app, name="reindex", help="Flow F: rebuild the graph in a separate namespace, cut over, roll back")
 CREDENTIALS = REPO_ROOT / ".local" / "dev-credentials.json"
 
 
@@ -84,6 +85,10 @@ def db_downgrade(
     force_drop_governance: Annotated[
         bool, typer.Option("--force-drop-governance", help="keep rows made by corrections as ordinary rows so 0008 can be undone")
     ] = False,
+    force_drop_release: Annotated[
+        bool,
+        typer.Option("--force-drop-release", help="drop reindex runs that are still building so 0009 can be undone (refused otherwise)"),
+    ] = False,
 ) -> None:
     if get_settings().is_production:
         raise typer.Exit(_fail("refusing to downgrade in production"))
@@ -95,6 +100,7 @@ def db_downgrade(
             force_drop_memories=force_drop_memories,
             force_forget_privileges=force_forget_privileges,
             force_drop_governance=force_drop_governance,
+            force_drop_release=force_drop_release,
         )
     except RuntimeError as exc:
         raise typer.Exit(_fail(str(exc))) from exc

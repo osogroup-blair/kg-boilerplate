@@ -121,7 +121,7 @@ test-security:       ## tenant-isolation, revocation and policy-registry tests
 test-contract:       ## endpoint, gateway and boundary contracts + OpenAPI drift
 	KG_REQUIRE_STACK=1 $(RUN) pytest tests/contract tests/integration/test_api_contract.py packages/modelgw -q
 
-test-resilience:     ## failure injection (FI-01..12): crashes, SIGKILL, lease expiry, postgres restart, neo4j outage. Needs `make stack-up`; restarts compose services
+test-resilience:     ## failure injection (FI-01..23): crashes, SIGKILL, lease expiry, postgres and neo4j restarts, router outage and latency, killed replicas, clock skew. Needs `make stack-up`; restarts compose services
 	KG_REQUIRE_STACK=1 KG_RESILIENCE=1 $(RUN) pytest tests/resilience -q -p no:cacheprovider
 
 test-all: test test-int test-security test-contract

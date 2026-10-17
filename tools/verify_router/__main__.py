@@ -43,7 +43,9 @@ def run(ctx: Ctx, only: set[str] | None) -> int:
 
 def self_test(only: set[str] | None) -> int:
     import os
+
     import uvicorn
+
     from tools.mock_router.app import MockConfig, create_app
     key = "selftest-SECRET-key-0123456789"
     s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()

@@ -19,6 +19,7 @@ from kg_memory.consolidate import MemoryConsolidateJob
 from kg_memory.deletion_jobs import DeletionStageJob
 from kg_memory.extract import MemoryProposeJob
 from kg_memory.jobs import MemoryEmbedJob, MemoryExpireJob
+from kg_reconcile.reindex import ReindexJob
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ async def running_worker(
         "deletion_verify",
         "ontology_simulation",
         "simulation_cleanup",
+        "graph_reindex",
     ),
     lease_seconds: int = 10,
     concurrency: int = 4,
@@ -73,6 +75,7 @@ async def running_worker(
         "memory_consolidate": MemoryConsolidateJob(
             st.engine, st.router.gateway, st.memory.writer, st.knowledge.specs, st.router.config, st.settings, service="kg-api"
         ),
+        "graph_reindex": ReindexJob(st.reindex),
         "ontology_simulation": SimulationJob(st.simulation),
         "simulation_cleanup": SimulationCleanupJob(st.simulation),
         "deletion_plan": DeletionStageJob(st.engine, st.deletion.service, "deletion_plan"),

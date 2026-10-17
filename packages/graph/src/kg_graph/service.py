@@ -15,6 +15,7 @@ from neo4j.exceptions import ClientError
 from kg_graph.factory import build_graphiti
 from kg_graph.group import GroupId
 from kg_graph.namespaces import Loader, NamespaceRegistry
+from kg_graph.reindex import ReindexGraph
 from kg_graph.scoped import ScopedGraph
 
 log = get_logger("kg.graph")
@@ -99,6 +100,10 @@ class GraphService:
     def namespace_of(self, ctx: WorkspaceContext, namespace: str) -> ScopedGraph:
         """Any namespace of the workspace by name (the retired one kept for rollback, when it is cleared or compared)."""
         return self.building(ctx, namespace)
+
+    def reindexer(self, ctx: WorkspaceContext) -> ReindexGraph:
+        """The group-level operations of a blue/green rebuild (build under parked uuids, exchange, clear)."""
+        return ReindexGraph(self._graphiti, ctx)
 
     async def aclose(self) -> None:
         await self._graphiti.close()  # type: ignore[no-untyped-call]

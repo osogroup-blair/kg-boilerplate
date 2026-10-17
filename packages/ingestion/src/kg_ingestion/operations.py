@@ -7,7 +7,7 @@ import uuid
 
 from kg_common.errors import Conflict, NoActiveOntology, NotFound, ValidationFailed
 from kg_domain.principal import WorkspaceContext
-from kg_governance.audit import AuditMetadata, AuditWriter, PipelineStage
+from kg_governance.audit import AuditMetadata, AuditSink, AuditWriter, PipelineStage
 from kg_jobs import reads as job_reads
 from kg_jobs.outbox import enqueue
 from sqlalchemy import text
@@ -62,7 +62,7 @@ class OperationsService:
         self,
         conn: AsyncConnection,
         ctx: WorkspaceContext,
-        audit: AuditWriter,
+        audit: AuditSink,
         interaction_id: uuid.UUID,
         *,
         stage: str | None,

@@ -3,12 +3,11 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -49,10 +48,10 @@ class Ctx:
     def root_url(self) -> str:
         return self.base_url[: -len("/v1")] if self.base_url.endswith("/v1") else self.base_url
 
-    def headers(self, key: Optional[str] = None, rid: Optional[str] = None, **extra) -> dict:
+    def headers(self, key: str | None = None, rid: str | None = None, **extra) -> dict:
         return {"Authorization": f"Bearer {self.api_key if key is None else key}", "x-request-id": rid or str(uuid.uuid4()), **extra}
 
-    def chat(self, model: str, content: str = "Reply with the single word: ok", *, key: Optional[str] = None, rid: Optional[str] = None, **body) -> httpx.Response:
+    def chat(self, model: str, content: str = "Reply with the single word: ok", *, key: str | None = None, rid: str | None = None, **body) -> httpx.Response:
         payload = {"model": model, "messages": [{"role": "user", "content": content}], "max_tokens": body.pop("max_tokens", 16), "temperature": 0, **body}
         return self.client.post(f"{self.base_url}/chat/completions", headers=self.headers(key, rid), json=payload)
 

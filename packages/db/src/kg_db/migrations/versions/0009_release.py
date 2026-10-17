@@ -21,6 +21,7 @@ Downgrade refuses while a reindex is building (the building namespace would be o
 import importlib.util
 import re
 from pathlib import Path
+from typing import Any
 
 from alembic import context, op
 
@@ -326,12 +327,19 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
     SELECT r.status, count(*)::bigint FROM public.reindex_runs r GROUP BY r.status
 $$;
 
+-- retired namespaces past their retention (the worker clears them): a workspace id and a namespace name, nothing else
+CREATE FUNCTION ops.retired_namespaces_due(p_days integer) RETURNS TABLE (ws_id uuid, namespace text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public AS $$
+    SELECT n.workspace_id, n.namespace FROM public.workspace_graph_namespaces n
+     WHERE n.status = 'retired' AND n.cleared_at IS NULL AND n.retired_at < now() - make_interval(days => p_days)
+$$;
+
 REVOKE ALL ON FUNCTION ops.rate_hit(text, integer, integer), ops.slot_acquire(text, uuid, integer, integer), ops.slot_release(text, uuid), ops.rate_sweep(integer),
     ops.graph_namespace_overrides(), ops.graph_namespaces_of(uuid), ops.reconcile_drift(), ops.backup_status(integer), ops.eval_status(integer), ops.secret_status(),
-    ops.backup_ages(), ops.claim_reconcile_scan(double precision), ops.reindex_stats() FROM PUBLIC;
+    ops.backup_ages(), ops.claim_reconcile_scan(double precision), ops.reindex_stats(), ops.retired_namespaces_due(integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ops.rate_hit(text, integer, integer), ops.slot_acquire(text, uuid, integer, integer), ops.slot_release(text, uuid), ops.rate_sweep(integer),
     ops.graph_namespace_overrides(), ops.graph_namespaces_of(uuid), ops.reconcile_drift(), ops.backup_status(integer), ops.eval_status(integer), ops.secret_status(),
-    ops.backup_ages(), ops.claim_reconcile_scan(double precision), ops.reindex_stats() TO kg_app;
+    ops.backup_ages(), ops.claim_reconcile_scan(double precision), ops.reindex_stats(), ops.retired_namespaces_due(integer) TO kg_app;
 
 -- ---- OIDC: the one entry point from verified claims to a principal ------------------------------------------------------------------------------------
 CREATE FUNCTION auth.oidc_resolve(p_issuer text, p_subject text, p_groups text[], p_workspace_slug text, p_display_name text)
@@ -397,13 +405,18 @@ GRANT SELECT, INSERT, UPDATE ON workspace_graph_namespaces, reindex_runs, reconc
 PURGE_FN = re.compile(r"CREATE FUNCTION ops\.purge_workspace_rows.*?END \$\$;", re.S)
 
 
-def _0008_purge_function() -> str:
-    """The 0008 definition of ops.purge_workspace_rows, read from that migration so the two never drift."""
+def _m0008() -> Any:
     path = Path(__file__).with_name("0008_governance.py")
     spec = importlib.util.spec_from_file_location("kg_migration_0008", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def _0008_purge_function() -> str:
+    """The 0008 definition of ops.purge_workspace_rows, read from that migration so the two never drift."""
+    module = _m0008()
     match = PURGE_FN.search(module.OPS_SQL)
     assert match is not None
     return match.group(0)
@@ -419,12 +432,41 @@ def _purge_with_release_tables() -> str:
     )
 
 
+GRAPH_COMMANDS = "'graph.reindex_start','graph.namespace_activate','graph.namespace_rollback'"
+
+
+def _commands_up() -> str:
+    old = _m0008().COMMAND_TYPES_NEW
+    new = old[:-1] + "," + GRAPH_COMMANDS + ")"
+    return f"""
+ALTER TABLE commands DROP CONSTRAINT commands_command_type_check;
+ALTER TABLE commands ADD CONSTRAINT commands_command_type_check CHECK (command_type IN {new});
+ALTER TABLE commands DROP CONSTRAINT commands_ontology_required_check;
+ALTER TABLE commands ADD CONSTRAINT commands_ontology_required_check CHECK (
+    ontology_version_id IS NOT NULL OR command_type LIKE 'memory.%' OR command_type LIKE 'principal.%' OR command_type LIKE 'key.%' OR command_type LIKE 'grant.%'
+    OR command_type LIKE 'settings.%' OR command_type LIKE 'deletion.%' OR command_type LIKE 'correction.%' OR command_type LIKE 'graph.%');
+"""
+
+
+def _commands_down() -> str:
+    old = _m0008().COMMAND_TYPES_NEW
+    return f"""
+UPDATE commands SET command_type = 'settings.update' WHERE command_type LIKE 'graph.%';
+ALTER TABLE commands DROP CONSTRAINT commands_ontology_required_check;
+ALTER TABLE commands ADD CONSTRAINT commands_ontology_required_check CHECK (
+    ontology_version_id IS NOT NULL OR command_type LIKE 'memory.%' OR command_type LIKE 'principal.%' OR command_type LIKE 'key.%' OR command_type LIKE 'grant.%'
+    OR command_type LIKE 'settings.%' OR command_type LIKE 'deletion.%' OR command_type LIKE 'correction.%');
+ALTER TABLE commands DROP CONSTRAINT commands_command_type_check;
+ALTER TABLE commands ADD CONSTRAINT commands_command_type_check CHECK (command_type IN {old});
+"""  # noqa: S608 (constants from migration 0008)
+
+
 def _force() -> bool:
     return bool(context.config.attributes.get("force_drop_release"))
 
 
 def upgrade() -> None:
-    op.execute(UP_SQL + POLICY_SQL + NOTIFY_SQL + OPS_SQL + GRANTS_SQL)
+    op.execute(UP_SQL + POLICY_SQL + NOTIFY_SQL + OPS_SQL + GRANTS_SQL + _commands_up())
     op.execute(_purge_with_release_tables())
 
 
@@ -436,6 +478,7 @@ def downgrade() -> None:
             f"refusing to downgrade 0009: {building} reindex runs are building or ready to activate (their namespaces would be orphaned in Neo4j). "
             "Cancel them first, or pass --force-drop-release to drop the records anyway."
         )
+    op.execute(_commands_down())
     op.execute(_0008_purge_function().replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1))
     for table, _events, _kind in NOTIFY_ON:
         op.execute(f"DROP TRIGGER IF EXISTS kg_invalidate_{table} ON {table}")
@@ -443,6 +486,7 @@ def downgrade() -> None:
         """
 DROP FUNCTION IF EXISTS public.kg_notify_invalidate();
 DROP FUNCTION IF EXISTS auth.oidc_resolve(text, text, text[], text, text);
+DROP FUNCTION IF EXISTS ops.retired_namespaces_due(integer);
 DROP FUNCTION IF EXISTS ops.reindex_stats();
 DROP FUNCTION IF EXISTS ops.claim_reconcile_scan(double precision);
 DROP FUNCTION IF EXISTS ops.backup_ages();

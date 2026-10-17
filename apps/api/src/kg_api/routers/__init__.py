@@ -20,6 +20,7 @@ from kg_api.routers import (
     operations_jobs,
     operations_release,
     principals,
+    reindex,
     relationships,
     reviews,
 )
@@ -50,4 +51,5 @@ ALL_ROUTERS: list[APIRouter] = [
     oidc.router,
     oidc.mappings_router,
     operations_release.router,
+    reindex.router,
 ]

@@ -12,6 +12,7 @@ Anything NOT verified against the live router is listed in docs/router-contract.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -19,7 +20,7 @@ import time
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Union
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -45,7 +46,7 @@ ERROR_STATUS = {
 
 
 class GatewayError(Exception):
-    def __init__(self, code: str, message: str, headers: Optional[dict[str, str]] = None, details: Optional[dict] = None):
+    def __init__(self, code: str, message: str, headers: dict[str, str] | None = None, details: dict | None = None):
         self.code, self.message, self.headers, self.details = code, message, headers or {}, details
 
 
@@ -75,7 +76,7 @@ class SystemMsg(_Strip):
 
 class UserMsg(_Strip):
     role: Literal["user"]
-    content: Union[str, list[Union[TextPart, ImagePart]]]
+    content: str | list[TextPart | ImagePart]
 
 
 class ToolCallFn(_Strip):
@@ -91,8 +92,8 @@ class ToolCall(_Strip):
 
 class AssistantMsg(_Strip):
     role: Literal["assistant"]
-    content: Optional[str]
-    tool_calls: Optional[list[ToolCall]] = None
+    content: str | None
+    tool_calls: list[ToolCall] | None = None
 
 
 class ToolMsg(_Strip):
@@ -107,39 +108,39 @@ Message = Union[SystemMsg, UserMsg, AssistantMsg, ToolMsg]
 class JsonSchemaSpec(_Strip):
     name: str
     schema_: dict[str, Any] = Field(alias="schema")
-    strict: Optional[bool] = None
+    strict: bool | None = None
 
 
 class ResponseFormat(_Strip):
     type: Literal["text", "json_object", "json_schema"]
-    json_schema: Optional[JsonSchemaSpec] = None
+    json_schema: JsonSchemaSpec | None = None
 
 
 class Routing(_Strip):
-    privacy: Optional[Literal["local_only", "open_models_only", "cloud_allowed", "closed_allowed"]] = None
-    max_cost_usd: Optional[float] = Field(default=None, gt=0)
-    prefer: Optional[Literal["local"]] = None
-    data_classification: Optional[Literal["public", "internal", "confidential", "restricted", "local_only"]] = None
-    task_type: Optional[str] = None
-    fallback: Optional[bool] = None
-    simulate_failure: Optional[Literal["primary_timeout", "provider_unavailable", "rate_limited", "http_500", "circuit_breaker_open"]] = None
+    privacy: Literal["local_only", "open_models_only", "cloud_allowed", "closed_allowed"] | None = None
+    max_cost_usd: float | None = Field(default=None, gt=0)
+    prefer: Literal["local"] | None = None
+    data_classification: Literal["public", "internal", "confidential", "restricted", "local_only"] | None = None
+    task_type: str | None = None
+    fallback: bool | None = None
+    simulate_failure: Literal["primary_timeout", "provider_unavailable", "rate_limited", "http_500", "circuit_breaker_open"] | None = None
 
 
 class Metadata(BaseModel):
     model_config = ConfigDict(extra="allow")  # zod .passthrough()
-    application_id: Optional[str] = None
-    user_id: Optional[str] = None
-    conversation_id: Optional[str] = None
-    request_id: Optional[str] = None
-    task_type: Optional[str] = None
-    agent: Optional[str] = None
-    data_classification: Optional[Literal["public", "internal", "confidential", "restricted", "local_only"]] = None
-    simulate_failure: Optional[str] = None
+    application_id: str | None = None
+    user_id: str | None = None
+    conversation_id: str | None = None
+    request_id: str | None = None
+    task_type: str | None = None
+    agent: str | None = None
+    data_classification: Literal["public", "internal", "confidential", "restricted", "local_only"] | None = None
+    simulate_failure: str | None = None
 
 
 class ToolFn(_Strip):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     parameters: dict[str, Any]
 
 
@@ -152,23 +153,23 @@ class ChatRequest(_Strip):
     model: str = Field(min_length=1)
     messages: list[Message] = Field(min_length=1)
     stream: bool = False
-    temperature: Optional[float] = Field(default=None, ge=0, le=2)
-    top_p: Optional[float] = Field(default=None, ge=0, le=1)
-    max_tokens: Optional[int] = Field(default=None, gt=0)
-    max_completion_tokens: Optional[int] = Field(default=None, gt=0)
-    stop: Optional[list[str]] = None
-    tools: Optional[list[Tool]] = None
-    tool_choice: Optional[Any] = None
-    response_format: Optional[ResponseFormat] = None
-    user: Optional[str] = None
-    metadata: Optional[Metadata] = None
-    routing: Optional[Routing] = None
+    temperature: float | None = Field(default=None, ge=0, le=2)
+    top_p: float | None = Field(default=None, ge=0, le=1)
+    max_tokens: int | None = Field(default=None, gt=0)
+    max_completion_tokens: int | None = Field(default=None, gt=0)
+    stop: list[str] | None = None
+    tools: list[Tool] | None = None
+    tool_choice: Any | None = None
+    response_format: ResponseFormat | None = None
+    user: str | None = None
+    metadata: Metadata | None = None
+    routing: Routing | None = None
 
 
 class EmbeddingRequest(_Strip):
     model: str
-    input: Union[str, list[str]]
-    user: Optional[str] = None
+    input: str | list[str]
+    user: str | None = None
 
 
 # ---- runtime state ---------------------------------------------------------------------------------------------------
@@ -184,7 +185,7 @@ class MockConfig(BaseModel):
     strict_fixtures: bool = False
 
     @classmethod
-    def from_env(cls) -> "MockConfig":
+    def from_env(cls) -> MockConfig:
         return cls(
             api_key=os.environ.get("MOCK_ROUTER_API_KEY", "mock-key"),
             max_classification=os.environ.get("MOCK_ROUTER_MAX_CLASSIFICATION", "restricted"),
@@ -210,7 +211,7 @@ def _alias_stats(alias: str) -> dict:
     }
 
 
-def create_app(config: Optional[MockConfig] = None) -> FastAPI:
+def create_app(config: MockConfig | None = None) -> FastAPI:
     cfg = config or MockConfig.from_env()
     app = FastAPI(title="Mock Oso Model Router", docs_url=None, redoc_url=None, openapi_url=None)
     store = FixtureStore(cfg.fixtures_dir)
@@ -227,7 +228,7 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
         body: dict[str, Any] = {"error": {"message": err.message, "type": err.code, "code": err.code, "request_id": rid}}
         if err.details:
             body["error"]["details"] = err.details
-        return JSONResponse(body, status_code=ERROR_STATUS[err.code], headers={**err.headers, "x-request-id": rid})
+        return JSONResponse(body, status_code=ERROR_STATUS.get(err.code, 422), headers={**err.headers, "x-request-id": rid})
 
     def authenticate(request: Request) -> None:
         auth = request.headers.get("authorization", "")
@@ -265,7 +266,7 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
             first = e.errors()[0]
             raise GatewayError("invalid_request", f"{'.'.join(str(p) for p in first['loc'])}: {first['msg']}")
 
-    def pop_fault(kind: str) -> Optional[dict]:
+    def pop_fault(kind: str) -> dict | None:
         if faults and faults[0].get("endpoint", kind) in (kind, "any"):
             f = faults[0]
             f["count"] = f.get("count", 1) - 1
@@ -301,7 +302,12 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
         # injected faults (test-only queue) behave like provider failures after routing
         f = pop_fault("chat")
         if f:
-            raise_for_fault(f["code"])
+            if f.get("delay_ms"):  # P9 FI-17: a router that answers, slowly
+                await asyncio.sleep(float(f["delay_ms"]) / 1000.0)
+            if f["code"] == "malformed":  # P9 FI-23: a 200 whose body is not a chat completion
+                return JSONResponse({"unexpected": True, "choices": "not-a-list"})
+            if f["code"] != "slow":
+                raise_for_fault(f["code"])
 
         # ---- classification (routing.* wins over metadata.*, router schema.ts comment) ----
         routing, meta = req.routing or Routing(), req.metadata or Metadata()
@@ -408,7 +414,12 @@ def create_app(config: Optional[MockConfig] = None) -> FastAPI:
             raise GatewayError("unsupported_capability", f"No target for \"{req.model}\" supports all required capabilities [embedding]")
         f = pop_fault("embeddings")
         if f:
-            raise_for_fault(f["code"])
+            if f.get("delay_ms"):
+                await asyncio.sleep(float(f["delay_ms"]) / 1000.0)
+            if f["code"] == "malformed":
+                return JSONResponse({"unexpected": True, "data": "not-a-list"})
+            if f["code"] != "slow":
+                raise_for_fault(f["code"])
 
         inputs = [req.input] if isinstance(req.input, str) else req.input
         limit = CATALOG["models"][target]["context_window"]  # 8192 advertised by the deployment; the model itself handles 512

@@ -20,7 +20,7 @@ from kg_memory.services import MemoryServices
 from kg_modelgw.calllog import DbCallSink
 from kg_modelgw.factory import RouterStack
 from kg_modelgw.health import RouterHealth
-from kg_reconcile import Reconcile
+from kg_reconcile import Reconcile, ReindexService
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 
@@ -41,6 +41,7 @@ class AppState:
     settings_service: SettingsService
     simulation: SimulationService
     reconcile: Reconcile
+    reindex: ReindexService
     shared_limiter: SharedLimiter | None = None
     invalidator: Invalidator | None = None
     _router_health: tuple[float, RouterHealth] | None = field(default=None, repr=False)

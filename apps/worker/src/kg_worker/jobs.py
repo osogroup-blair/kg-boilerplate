@@ -22,6 +22,7 @@ from kg_memory.jobs import MemoryEmbedJob, MemoryExpireJob
 from kg_memory.services import MemoryServices
 from kg_modelgw.config import ModelConfig
 from kg_modelgw.gateway import ModelGateway
+from kg_reconcile.reindex import ReindexJob, ReindexService
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 
@@ -90,5 +91,6 @@ def build_registry(
     )
     registry.register(SimulationJob(simulation))
     registry.register(SimulationCleanupJob(simulation))
+    registry.register(ReindexJob(ReindexService(engine, graph, knowledge, cipher, config, settings, service="kg-worker")))
     registry.register(MemoryConsolidateJob(engine, gateway, memory.writer, knowledge.specs, config, settings, service="kg-worker"))
     return registry

@@ -42,6 +42,8 @@ POLICIES: dict[str, RetryPolicy] = {
     "memory_consolidate": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=300.0),
     "ontology_simulation": RetryPolicy(max_attempts=3, base_seconds=5.0, cap_seconds=120.0),
     "simulation_cleanup": RetryPolicy(max_attempts=5, base_seconds=2.0, cap_seconds=120.0),
+    # P9: a graph rebuild is resumable (every pass writes only what differs from Postgres), so it retries for a good while
+    "graph_reindex": RetryPolicy(max_attempts=6, base_seconds=5.0, cap_seconds=300.0),
     "deletion_plan": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),
     "deletion_purge": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),
     "deletion_verify": RetryPolicy(max_attempts=8, base_seconds=2.0, cap_seconds=300.0),

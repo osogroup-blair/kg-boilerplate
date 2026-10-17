@@ -25,6 +25,7 @@ from kg_modelgw.health import router_health
 from kg_obs import metrics
 from kg_obs.logging import configure_logging, get_logger
 from kg_obs.tracing import setup_tracing
+from kg_reconcile import ReindexService
 from prometheus_client import start_http_server
 from sqlalchemy import text
 
@@ -196,7 +197,9 @@ class Worker:
         deletion = build_deletion(s, engine, knowledge, graph, cipher, hasher, memory.writer)
         registry = build_registry(engine, knowledge, graph, cipher, hasher, router.config, s, sink.flush, memory, router.gateway, deletion)
         self._sweeper = RetentionSweeper(engine, deletion.service, graph)
-        release = ReleaseTasks(s, engine, knowledge, graph)
+        release = ReleaseTasks(
+            s, engine, knowledge, graph, ReindexService(engine, graph, knowledge, cipher, router.config, s, service="kg-worker")
+        )
         dispatcher = Dispatcher(
             OpsClient(engine),
             registry.as_mapping(),

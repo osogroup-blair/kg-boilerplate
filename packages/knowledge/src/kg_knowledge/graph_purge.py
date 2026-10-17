@@ -76,8 +76,41 @@ class GraphPurger:
                     for r in (await conn.execute(text("SELECT id FROM entities WHERE workspace_id = :ws"), {"ws": ctx.workspace_id})).all()
                 ]
             out.orphans_swept = await g.orphan_sweep(known)  # (f) scoped to this group, and never a node the platform owns
+            await self._clear_inactive_namespaces(ctx)  # P9: no other copy of the subject may outlive the purge
         log.info("graph_purged", episodes=out.episodes, nodes=out.nodes, edges=out.edges, summaries=out.summaries_cleared)
         return out
+
+    async def _clear_inactive_namespaces(self, ctx: WorkspaceContext) -> None:
+        """A reindex keeps the previous namespace for rollback and builds the next one beside the live one. Both are copies of the workspace's graph, so a deletion removes them
+        (rollback is forfeited and a build in progress fails with `deletion_during_build`): the purge is the deletion's promise, the rollback window is a convenience."""
+        async with tenant_session(self._engine, ctx) as conn:
+            rows = (
+                await conn.execute(
+                    text(
+                        "SELECT namespace FROM workspace_graph_namespaces WHERE workspace_id = :ws AND status IN ('building','retired') AND cleared_at IS NULL"
+                    ),
+                    {"ws": ctx.workspace_id},
+                )
+            ).all()
+        if not rows:
+            return
+        rg = self._graph.reindexer(ctx)
+        for r in rows:
+            await rg.clear(r.namespace)
+        async with tenant_session(self._engine, ctx) as conn:
+            await conn.execute(
+                text(
+                    "UPDATE workspace_graph_namespaces SET status = 'retired', retired_at = COALESCE(retired_at, now()), cleared_at = now() WHERE workspace_id = :ws AND namespace = ANY(:n)"
+                ),
+                {"ws": ctx.workspace_id, "n": [r.namespace for r in rows]},
+            )
+            await conn.execute(
+                text(
+                    "UPDATE reindex_runs SET status = 'failed', error_code = 'deletion_during_build', updated_at = now() "
+                    "WHERE workspace_id = :ws AND status IN ('building','catching_up','ready')"
+                ),
+                {"ws": ctx.workspace_id},
+            )
 
     async def scan(self, ctx: WorkspaceContext, *, terms: list[str], ids: list[str]) -> list[GraphResidual]:
         g = self._graph.scoped(ctx)
