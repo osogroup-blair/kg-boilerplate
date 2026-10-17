@@ -1,0 +1,17 @@
+[project]
+name = "kg-platform-sdk"
+version = "0.1.0"
+description = "Thin typed Python client for the Knowledge & Memory Platform HTTP API (models generated from OpenAPI)"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+  "httpx==0.28.1",
+  "pydantic==2.14.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kg_platform_sdk"]

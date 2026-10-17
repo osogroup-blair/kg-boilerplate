@@ -1,0 +1,119 @@
+# The example ontology at v1.4.0 (phase 7): v1.3.0 plus the two switches that make the multi-agent scenario real.
+#  * `Person.access: subject_scoped` (ADR-037): a Person, and every fact touching one, is visible only to principals granted that subject (admins and reviewers see all by role).
+#    Organization and Topic stay workspace-access, so an agent with no grants still sees Acme but not Sarah.
+#  * `memory_policies.semantic.agent_shared_requires_review: false` (ADR-038): an agent that holds the `publish` privilege on every target scope has its source-backed shared
+#    semantic finding activated at once (labelled agent_generated / unverified until a reviewer approves it). Procedural memory from an agent is ALWAYS reviewed (AT-14).
+#  * `planning.evidence_required: false`: the planning profile no longer excludes unverified findings by default; a request can still ask for `evidence_required: true`.
+# `kg seed demo --ontology examples/ontologies/personal-knowledge-agents.yaml` publishes it; rolling back is activating v1.3.0 (open access again, no migration).
+#
+# The blueprint's example ontology (06-reference/02 §A), extended for the platform (see personal-knowledge-memory.yaml for the type, relationship and memory-policy notes):
+ontology:
+  id: personal-knowledge
+  version: 1.4.0
+  mode: strict
+entity_types:
+  Person:
+    description: A human being
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+      aliases: [name]
+    allowed_classifications: [internal, confidential, restricted]
+    access: subject_scoped                  # P7: visible only to principals granted the subject (or by role: admin, reviewer)
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      birth_date: {type: date, required: false, sensitivity: restricted}
+  Organization:
+    description: A company or institution
+    identity:
+      key: platform_uuid
+      external_id_systems: [hr]
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Topic:
+    description: A subject someone can consider or discuss
+    identity: {key: platform_uuid}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+relationship_types:
+  WORKS_AT:
+    description: Employment
+    source: Person
+    target: Organization
+    temporal: true
+    fact_template: "{source} works at {target}{role?: as {role}}"
+    attributes:
+      role: {type: string, required: false, max_length: 200}
+    rules:
+      - require_source
+      - preserve_valid_time
+      - kind: succession
+        params: {match: [source, target]}
+        tests:
+          - name: a later role at the same organization succeeds the earlier one
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2022-01-10}
+            command: {valid_from: 2024-06-01, source_system: hr, source_ref: evt_x}
+            expect: accept
+          - name: a role starting before an existing one is out of order
+            given:
+              facts:
+                - {id: f1, target: t, valid_from: 2024-06-01}
+            command: {valid_from: 2022-01-10, source_system: hr, source_ref: evt_x}
+            expect: reject
+  CONSIDERING:
+    description: A person is weighing up a topic
+    source: Person
+    target: Topic
+    temporal: true
+    fact_template: "{source} is considering {target}"
+    rules:
+      - require_source
+      - require_review_if_inferred
+  KNOWS:
+    description: Acquaintance
+    source: Person
+    target: Person
+    temporal: true
+    fact_template: "{source} knows {target}"
+    rules: [require_source]
+context_profiles:
+  quick_answer:
+    expected_signals:
+      - {key: current_employer, label: current employer, for_types: [Person], satisfied_by: [{relationship: WORKS_AT, direction: out}]}
+  planning:
+    max_tokens: 1200
+    max_items: 30
+    include: [current_facts, relevant_facts, episodic, semantic, procedural, uncertainty]
+    evidence_required: false                    # P7: unverified agent findings are labelled, not excluded; ask per request for evidence_required: true
+    evidence_threshold: 0.0
+    compression: [structured, extractive]       # allowed modes; the first is the default (`summarized` is opt-in per profile)
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic, procedural], limit_per_type: 8}
+    weights: {relevance: 1.0, authority: 0.6, importance: 0.4, evidence: 0.3, proximity: 0.5, recency: 0.0, diversity: 0.3}
+    section_budget: {current_facts: 0.30, conflicts_unknowns: 0.15, instructions: 0.15, relevant: 0.40}   # SOFT shares; the required tier is packed first
+    history: when_relevant                      # never | when_relevant | always
+    current_facts: always                       # a subject's critical current facts are packed whatever the task says
+    required_current_k: 3
+    required_procedural_k: 1
+    expected_signals:                           # deterministic unknowns (no model decides what is missing)
+      - {key: current_employer, label: current employer, for_types: [Person], satisfied_by: [{relationship: WORKS_AT, direction: out}]}
+      - {key: financial_runway, label: financial runway, for_types: [Person], satisfied_by: [{memory_predicate: financial_runway}, {attribute: financial_runway}]}
+memory_policies:
+  default:
+    extraction: enabled                    # enabled | disabled: the memory_propose stage skips itself (no model call) when disabled
+    extraction_min_importance: 0.5         # an extracted candidate below this is dropped (below_importance)
+    max_memories_per_interaction: 3
+    auto_activate: [episodic, semantic]    # extracted / proposed memories of these types become active (unverified) when nothing conflicts
+    procedural_requires_review: true       # blueprint: inferred_shared_procedural: review_required
+    agent_shared_requires_review: true     # an agent's proposal to a shared scope waits for a reviewer
+    working_ttl_hours: 24
+    max_content_chars: 2000
+    default_extracted_scope: subject       # subject | workspace
+    excluded_classifications: [local_only] # never extracted
+    archive_after_days: null               # reserved for P8 retention
+  semantic:
+    agent_shared_requires_review: false    # P7: with the `publish` privilege on every target scope an agent's source-backed finding is active (unverified) at once
