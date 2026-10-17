@@ -1,0 +1,152 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {
+   "edges": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "SummarizedEntities",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {
+   "summaries": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "NodeResolutions",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {
+   "entity_resolutions": [
+    {
+     "id": 0,
+     "name": "Sarah Johnson",
+     "duplicate_candidate_id": 0
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "Person",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {}
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "MemoryCandidates",
+   "contains": [
+    "going back and forth about the software idea"
+   ]
+  },
+  "response": {
+   "candidates": [
+    {
+     "type": "episodic",
+     "content": "Sarah Johnson decided to resign from Acme and found a software company.",
+     "summary": "Sarah decided to leave Acme",
+     "subject_names": [
+      "Sarah Johnson"
+     ],
+     "importance": 0.9,
+     "reason_code": "career_decision",
+     "occurred_at": null,
+     "effective_from": null,
+     "related_fact_ids": []
+    },
+    {
+     "type": "episodic",
+     "content": "Sarah is unsure whether starting a software company is right for her.",
+     "summary": "Sarah is unsure about starting a software company",
+     "subject_names": [
+      "Sarah Johnson"
+     ],
+     "importance": 0.7,
+     "reason_code": "open_question",
+     "occurred_at": null,
+     "effective_from": null,
+     "related_fact_ids": []
+    }
+   ]
+  }
+ },
+ {
+  "memory_gold": {
+   "id": "mem_escalation",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: I keep going back and forth about the software idea and honestly I am not sure it is right for me."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "memories": [
+     {
+      "type": "episodic",
+      "subjects": [
+       "Sarah Johnson"
+      ],
+      "status": "active",
+      "evidence_status": "unverified",
+      "scope": "subject",
+      "must_contain": [
+       "unsure"
+      ],
+      "must_not_contain": [
+       "decided",
+       "resign"
+      ],
+      "linked_facts": []
+     }
+    ],
+    "drops": {
+     "escalated_claim": 1
+    },
+    "reviews": 0
+   }
+  }
+ }
+]

@@ -1,0 +1,26 @@
+# ADR-030: Memory extraction, creation policy and prompt safety
+
+**Status:** Accepted  **Decision refs:** ADR-012 (purposes, structured output, egress), ADR-026/027/028 (P4), blueprint 02-domain/04 (selection policy, prompt safety)  **Evidence:** `packages/memory/tests/test_policy.py` + `fixtures/policy/decisions.yaml`, `packages/memory/tests/test_extract.py`, `tests/integration/test_p5_extraction.py`, `make eval-memory`, demo-p5
+
+## Context
+A model can *propose* memories; it must not be able to decide what is remembered for whom, what is true, or what an agent will later be told to do. The blueprint also warns against turning a consideration into a decision and against minting a memory from every sentence.
+
+## Decision
+1. **`memory_propose` is a pipeline stage** (pipeline `p5.v1`) that depends on `normalize` **and `graph_ingest`**, so a memory can reference the facts the episode created instead of restating them. It is a model stage: consent and egress gating apply and `local_only` or denied consent is `skipped_by_policy` with **zero model calls**. A dead graph stage blocks it (the event is `partial`, replay graph first). Older events keep their recorded pipeline version; `kg interactions replay --upgrade-pipeline` (audited `interaction.pipeline_upgraded`) adds newly enabled stages to them.
+2. **Prompt `mem.v1`** is platform-owned and versioned (`prompt_version` is stored on every memory it produced). The system message fixes the instruction hierarchy, wraps content in delimiters and says it is untrusted *data*, and tells the model to extract only consequential reusable memories, to reference rather than restate graph facts (by handle `F1…`, never by raw id), to keep hedges, and to use **only the listed subjects**.
+3. **Structured output** `MemoryCandidates` (strict schema, every field required, no scope/status/authority field). The model has no way to choose a scope, a status or an authority.
+4. **The platform filters (pure, `select_candidates`).** A candidate is dropped, with a stable reason code, when: its type is `working` (`working_type`); it is empty or over the policy length (`empty`, `too_long`); its importance is below `extraction_min_importance` (`below_importance`); a subject name is not one of the entities already linked to the episode (`unmapped_subject`, R7: the model can never introduce a subject); a cited fact is not from this episode (`foreign_fact`); it has no subject and policy scopes to subjects (`no_subject`); it asserts a decision the source never made (`escalated_claim`, negations and hedges within six words cancel a decision word); it repeats another candidate (`duplicate_candidate`). The most important `max_memories_per_interaction` survive (`over_limit` for the rest).
+5. **Scopes come from policy, never from content.** `default_extracted_scope: subject` gives one `subject:<entity>` scope per subject; `workspace` is used only if the ontology says so. A prompt injection that asks for a workspace scope gets the policy default, at most as a *proposal*.
+6. **Authority and status (`decide`, pure, table-tested):**
+   * extracted: `conversation_report` (or `agent_generated` if an agent submitted the event), `evidence_status=unverified`; episodic and semantic **auto-activate** per `auto_activate`; **procedural is always proposed** with a `memory_proposal` review;
+   * explicit save by an app/admin: `user_asserted`/`admin_asserted`, `verified`, active (shared procedural by an app → proposed; by an admin → active);
+   * proposals: an app's activate by policy; an **agent's shared proposals always go to review** while `agent_shared_requires_review` holds, and an agent can **never** activate a procedural memory whatever the policy says (AT-14);
+   * private (agent/session-only) memory is the writer's own business: active.
+7. **Conflicts never override silently.** A new shared memory with the same `assertion` key `(subject, predicate)` but a different object as a *higher-authority active memory the writer can see* is `proposed` with a `memory_conflict` review; a reviewer may supersede only with authority at least equal to the existing memory.
+8. **Idempotency and crashes.** The stage writes memories, the stage result and `Orchestrator.advance` in ONE transaction. A crash before it re-runs the model and the keyed content hash prevents duplicates (FI-11); after it the stage is terminal and a re-run only acks, with no model call (FI-12). An unparseable answer is retried once then **dead-lettered** with `memory_extraction_unparseable` (quarantine).
+9. **Telemetry is ids, counts and codes.** The stage result holds memory ids, statuses, drop-reason counts and token counts; audit/log/metric labels are closed enums.
+
+## Consequences
+- The strict mock scenarios (`tools/mock_router/fixtures/scenarios/memory_*.json`) and `make eval-memory` pin every drop reason; `make eval-memory-live` records precision, recall, the three strict counters (escalations, unmapped-subject leaks, procedural auto-activations: all 0) and per-event cost.
+- The live `memory_extraction` alias stays provisional (`oso/general`) until `make verify-router` confirms GR-12.
+- The escalation heuristic is deliberately blunt (a regex plus a negation/hedge window): it errs towards dropping, the gold set measures it, and a reviewer sees what survived.

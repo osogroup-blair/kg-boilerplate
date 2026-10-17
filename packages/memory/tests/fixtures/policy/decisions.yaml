@@ -1,0 +1,56 @@
+# The pure memory decision table (kg_memory.policy.decide). One row per case; a meta-test requires every origin x type x actor combination that can occur to appear.
+# policy: default = platform defaults. `shared` = the memory has a workspace / subject / project scope. `conflict` = a higher-authority active memory disagrees.
+defaults: {origin: explicit, shared: true, conflict: false, policy: {}, publish: false}
+cases:
+  # ---- working memory: private only, never extracted ----
+  - {name: an agent keeps a working note, origin: working, type: working, actor: agent, shared: false, status: active, reason: working_private}
+  - {name: an app keeps a working note, origin: working, type: working, actor: app, shared: false, status: active, reason: working_private}
+  - {name: an admin keeps a working note, origin: working, type: working, actor: admin, shared: false, status: active, reason: working_private}
+  - {name: working memory cannot be shared, origin: working, type: working, actor: agent, shared: true, status: rejected, reason: working_must_be_private}
+  - {name: working memory is never extracted, origin: extracted, type: working, actor: system, shared: true, status: rejected, reason: working_not_extractable}
+  # ---- private durable memory: the writer's own business ----
+  - {name: an agent saves a private semantic note, origin: explicit, type: semantic, actor: agent, shared: false, status: active, reason: private_scope}
+  - {name: an agent saves a private procedural note, origin: explicit, type: procedural, actor: agent, shared: false, status: active, reason: private_scope}
+  # ---- explicit save ----
+  - {name: an app saves a shared episodic memory, origin: explicit, type: episodic, actor: app, status: active, reason: explicit_save}
+  - {name: an app saves a shared semantic preference, origin: explicit, type: semantic, actor: app, status: active, reason: explicit_save}
+  - {name: an app's shared procedural save waits for review, origin: explicit, type: procedural, actor: app, status: proposed, reason: procedural_requires_review, review: memory_proposal}
+  - {name: an admin's shared procedural save is trusted, origin: explicit, type: procedural, actor: admin, status: active, reason: trusted_procedural}
+  - {name: an admin saves a shared semantic memory, origin: explicit, type: semantic, actor: admin, status: active, reason: explicit_save}
+  - {name: an agent's shared explicit save would still be a proposal (the writer refuses it earlier), origin: explicit, type: semantic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: an agent's shared episodic explicit save would be a proposal too, origin: explicit, type: episodic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: an admin saves a shared episodic memory, origin: explicit, type: episodic, actor: admin, status: active, reason: explicit_save}
+  # ---- proposals ----
+  - {name: an app proposes a semantic memory and policy activates it, origin: proposal, type: semantic, actor: app, status: active, reason: auto_activate}
+  - {name: an app proposes an episodic memory and policy activates it, origin: proposal, type: episodic, actor: app, status: active, reason: auto_activate}
+  - {name: an app proposes a procedural memory, origin: proposal, type: procedural, actor: app, status: proposed, reason: procedural_requires_review, review: memory_proposal}
+  - {name: policy may let an app's procedural proposal through, origin: proposal, type: procedural, actor: app, status: active, reason: trusted_procedural, policy: {auto_activate: [episodic, semantic, procedural], procedural_requires_review: false}}
+  - {name: policy never lets an AGENT's procedural proposal through (AT-14), origin: proposal, type: procedural, actor: agent, status: proposed, reason: procedural_requires_review, review: memory_proposal, policy: {auto_activate: [episodic, semantic, procedural], procedural_requires_review: false}}
+  - {name: an agent's shared semantic proposal goes to review, origin: proposal, type: semantic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: an agent's shared episodic proposal goes to review, origin: proposal, type: episodic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: review for agents can be switched off for activating types, but the agent also needs publish, origin: proposal, type: semantic, actor: agent, status: proposed, reason: publish_privilege_required, review: memory_proposal, policy: {agent_shared_requires_review: false}}
+  - {name: an agent holding publish on every target scope activates under a permissive policy, origin: proposal, type: semantic, actor: agent, status: active, reason: agent_auto_activate, review: memory_proposal, publish: true, policy: {agent_shared_requires_review: false}}
+  - {name: the publish privilege does not beat a policy that requires review, origin: proposal, type: semantic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal, publish: true}
+  - {name: the publish privilege never activates an agent's procedural proposal (AT-14), origin: proposal, type: procedural, actor: agent, status: proposed, reason: procedural_requires_review, review: memory_proposal, publish: true, policy: {auto_activate: [episodic, semantic, procedural], procedural_requires_review: false, agent_shared_requires_review: false}}
+  - {name: an admin's proposal activates, origin: proposal, type: semantic, actor: admin, status: active, reason: admin_proposal}
+  - {name: an admin's episodic proposal activates, origin: proposal, type: episodic, actor: admin, status: active, reason: admin_proposal}
+  - {name: an admin proposing a procedural memory is trusted, origin: proposal, type: procedural, actor: admin, status: active, reason: trusted_procedural}
+  - {name: a type outside auto_activate is proposed, origin: proposal, type: episodic, actor: app, status: proposed, reason: not_auto_activated, review: memory_proposal, policy: {auto_activate: [semantic]}}
+  # ---- publish (a private memory shared as a proposal) ----
+  - {name: an agent publishes a note, origin: published, type: semantic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: an agent publishes a procedural note, origin: published, type: procedural, actor: agent, status: proposed, reason: procedural_requires_review, review: memory_proposal}
+  - {name: an app publishes a note, origin: published, type: semantic, actor: app, status: active, reason: auto_activate}
+  - {name: an app publishes an episodic note, origin: published, type: episodic, actor: app, status: active, reason: auto_activate}
+  - {name: an agent publishes an episodic note, origin: published, type: episodic, actor: agent, status: proposed, reason: agent_shared_requires_review, review: memory_proposal}
+  - {name: an app publishes a procedural note, origin: published, type: procedural, actor: app, status: proposed, reason: procedural_requires_review, review: memory_proposal}
+  # ---- extraction ----
+  - {name: an extracted episodic memory activates unverified, origin: extracted, type: episodic, actor: system, status: active, reason: auto_activate}
+  - {name: an extracted semantic memory activates unverified, origin: extracted, type: semantic, actor: system, status: active, reason: auto_activate}
+  - {name: an extracted procedural memory is ALWAYS proposed, origin: extracted, type: procedural, actor: system, status: proposed, reason: procedural_requires_review, review: memory_proposal}
+  - {name: even a policy that auto-activates procedural does not activate an extracted one, origin: extracted, type: procedural, actor: system, status: proposed, reason: procedural_requires_review, review: memory_proposal, policy: {auto_activate: [episodic, semantic, procedural], procedural_requires_review: false}}
+  - {name: a type outside auto_activate is proposed when extracted, origin: extracted, type: semantic, actor: system, status: proposed, reason: not_auto_activated, review: memory_proposal, policy: {auto_activate: [episodic]}}
+  # ---- conflicts with a higher authority ----
+  - {name: a conflicting extracted memory is proposed with a conflict review, origin: extracted, type: semantic, actor: system, conflict: true, status: proposed, reason: higher_authority_conflict, review: memory_conflict}
+  - {name: a conflicting proposal is proposed with a conflict review, origin: proposal, type: semantic, actor: app, conflict: true, status: proposed, reason: higher_authority_conflict, review: memory_conflict}
+  - {name: a conflicting explicit save is proposed too, origin: explicit, type: semantic, actor: app, conflict: true, status: proposed, reason: higher_authority_conflict, review: memory_conflict}
+  - {name: a conflict does not matter for a private note, origin: explicit, type: semantic, actor: agent, shared: false, conflict: true, status: active, reason: private_scope}

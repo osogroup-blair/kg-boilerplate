@@ -1,0 +1,72 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {
+   "extracted_entities": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {
+   "edges": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "SummarizedEntities",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {
+   "summaries": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "NodeResolutions",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {
+   "entity_resolutions": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "Person",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {}
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "MemoryCandidates",
+   "contains": [
+    "state licensing board handbook"
+   ]
+  },
+  "response": {
+   "candidates": []
+  }
+ }
+]

@@ -1,0 +1,99 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "Person",
+   "contains": [
+    "cycling club rode 40 km"
+   ]
+  },
+  "response": {}
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "NodeResolutions",
+   "contains": [
+    "cycling club rode 40 km"
+   ]
+  },
+  "response": {
+   "entity_resolutions": [
+    {
+     "id": 0,
+     "name": "Sarah Johnson",
+     "duplicate_candidate_id": 0
+    },
+    {
+     "id": 1,
+     "name": "Tom",
+     "duplicate_candidate_id": 0
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "MemoryCandidates",
+   "contains": [
+    "cycling club rode 40 km"
+   ]
+  },
+  "response": {
+   "candidates": [
+    {
+     "type": "episodic",
+     "content": "Sarah rode 40 km with Tom at the cycling club on Saturday.",
+     "summary": "Sarah went on a 40 km cycling club ride with Tom",
+     "subject_names": [
+      "Sarah Johnson"
+     ],
+     "importance": 0.55,
+     "reason_code": "leisure_activity",
+     "occurred_at": "2026-10-10T09:00:00Z",
+     "effective_from": null,
+     "related_fact_ids": []
+    }
+   ]
+  }
+ },
+ {
+  "memory_gold": {
+   "id": "mem_cyclist",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson from the cycling club rode 40 km with Tom on Saturday."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "memories": [
+     {
+      "type": "episodic",
+      "subjects": [
+       "Sarah Johnson"
+      ],
+      "status": "active",
+      "evidence_status": "unverified",
+      "scope": "subject",
+      "must_contain": [
+       "40 km",
+       "cycling"
+      ],
+      "must_not_contain": [
+       "business",
+       "Acme"
+      ],
+      "linked_facts": []
+     }
+    ],
+    "drops": {},
+    "reviews": 0
+   }
+  }
+ }
+]

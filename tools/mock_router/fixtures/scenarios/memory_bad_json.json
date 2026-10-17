@@ -1,0 +1,104 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEntities",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": {
+   "extracted_entities": [
+    {
+     "name": "Sarah Johnson",
+     "entity_type_id": 2,
+     "episode_indices": [
+      0
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "ExtractedEdges",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": {
+   "edges": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "SummarizedEntities",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": {
+   "summaries": []
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "NodeResolutions",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": {
+   "entity_resolutions": [
+    {
+     "id": 0,
+     "name": "Sarah Johnson",
+     "duplicate_candidate_id": 0
+    }
+   ]
+  }
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "Person",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": {}
+ },
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "MemoryCandidates",
+   "contains": [
+    "unparseable memory extraction"
+   ]
+  },
+  "response": "this is {not json at all"
+ },
+ {
+  "memory_gold": {
+   "id": "mem_bad_json",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: please add the unparseable memory extraction."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "dead",
+    "error_code": "memory_extraction_unparseable",
+    "memories": [],
+    "drops": {},
+    "reviews": 0
+   }
+  }
+ }
+]

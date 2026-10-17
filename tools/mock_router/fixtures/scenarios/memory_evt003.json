@@ -1,0 +1,71 @@
+[
+ {
+  "when": {
+   "alias": "oso/general",
+   "schema_name": "MemoryCandidates",
+   "contains": [
+    "considering entrepreneurship"
+   ]
+  },
+  "response": {
+   "candidates": [
+    {
+     "type": "episodic",
+     "content": "Sarah discussed a possible software business with Michael; she had not decided to leave Acme.",
+     "summary": "Sarah is considering entrepreneurship: a possible software business",
+     "subject_names": [
+      "Sarah Johnson"
+     ],
+     "importance": 0.8,
+     "reason_code": "notable_discussion",
+     "occurred_at": "2026-10-10T09:00:00Z",
+     "effective_from": null,
+     "related_fact_ids": [
+      "F1"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "memory_gold": {
+   "id": "mem_evt003",
+   "content": {
+    "kind": "message",
+    "content": "Sarah Johnson: I'm considering entrepreneurship, and Michael, who I've known for years, keeps encouraging me."
+   },
+   "subjects": [
+    "Sarah Johnson"
+   ],
+   "occurred_at": "2026-10-10T09:00:00Z",
+   "expect": {
+    "stage": "succeeded",
+    "memories": [
+     {
+      "type": "episodic",
+      "subjects": [
+       "Sarah Johnson"
+      ],
+      "status": "active",
+      "evidence_status": "unverified",
+      "scope": "subject",
+      "must_contain": [
+       "software business",
+       "Michael"
+      ],
+      "must_not_contain": [
+       "resigned",
+       "will leave",
+       "quit"
+      ],
+      "linked_facts": [
+       "CONSIDERING"
+      ]
+     }
+    ],
+    "drops": {},
+    "reviews": 0
+   }
+  }
+ }
+]
