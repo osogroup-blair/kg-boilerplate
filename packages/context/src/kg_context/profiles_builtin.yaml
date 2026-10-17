@@ -1,0 +1,89 @@
+# Built-in context profiles (phase 6, §5.2). An ontology's `context_profiles` entry of the same name overrides these field by field; a request can only NARROW the result.
+# Expected signals are domain knowledge and so live in the ontology, never here. Weights feed `ctx-rank.v1`; section_budget shares are SOFT (leftover flows on).
+
+quick_answer:
+  max_tokens: 300
+  max_items: 12
+  include: [current_facts, relevant_facts, episodic, semantic, uncertainty]
+  evidence_required: false
+  evidence_threshold: 0.15
+  compression: [structured, extractive]
+  graph: {enabled: true, hops: 1, limit: 8}
+  memory: {types: [episodic, semantic], limit_per_type: 4}
+  weights: {relevance: 1.0, authority: 0.5, importance: 0.3, evidence: 0.3, proximity: 0.6, recency: 0.0, diversity: 0.3}
+  section_budget: {current_facts: 0.40, conflicts_unknowns: 0.15, relevant: 0.45}
+  history: when_relevant
+  current_facts: relevant        # a subject's facts are packed when the task touches them
+  required_current_k: 2
+  required_procedural_k: 0
+  item_chars: 240
+
+planning:
+  max_tokens: 1200
+  max_items: 30
+  include: [current_facts, relevant_facts, episodic, semantic, procedural, uncertainty]
+  evidence_required: true
+  evidence_threshold: 0.0
+  compression: [structured, extractive, summarized]
+  graph: {enabled: true, hops: 1, limit: 20}
+  memory: {types: [episodic, semantic, procedural], limit_per_type: 8}
+  weights: {relevance: 1.0, authority: 0.6, importance: 0.4, evidence: 0.3, proximity: 0.5, recency: 0.0, diversity: 0.3}
+  section_budget: {current_facts: 0.30, conflicts_unknowns: 0.15, instructions: 0.15, relevant: 0.40}
+  history: when_relevant
+  current_facts: always
+  required_current_k: 3
+  required_procedural_k: 1
+  item_chars: 320
+  intent_terms: [decision, risk, trade-off, options, constraint, preference]   # a plan needs the person's decision style and constraints, whatever the topic
+
+research:
+  max_tokens: 2400
+  max_items: 50
+  include: [current_facts, relevant_facts, episodic, semantic, history, uncertainty]
+  evidence_required: true
+  evidence_threshold: 0.05
+  compression: [extractive, structured, summarized]
+  graph: {enabled: true, hops: 2, limit: 25}
+  memory: {types: [episodic, semantic], limit_per_type: 12}
+  weights: {relevance: 1.0, authority: 0.7, importance: 0.3, evidence: 0.8, proximity: 0.4, recency: 0.0, diversity: 0.5}
+  section_budget: {current_facts: 0.20, conflicts_unknowns: 0.15, relevant: 0.65}
+  history: when_relevant
+  current_facts: relevant
+  required_current_k: 2
+  required_procedural_k: 0
+  item_chars: 480
+
+review:
+  max_tokens: 1600
+  max_items: 40
+  include: [current_facts, relevant_facts, history, uncertainty]
+  evidence_required: false
+  evidence_threshold: 0.0
+  compression: [structured, extractive]
+  graph: {enabled: true, hops: 1, limit: 20}
+  memory: {types: [episodic, semantic], limit_per_type: 6}
+  weights: {relevance: 0.8, authority: 0.8, importance: 0.2, evidence: 0.8, proximity: 0.6, recency: 0.0, diversity: 0.2}
+  section_budget: {current_facts: 0.35, conflicts_unknowns: 0.35, relevant: 0.30}
+  history: always
+  current_facts: always          # a review starts from what is currently asserted, then looks for contradictions and provenance
+  required_current_k: 5
+  required_procedural_k: 0
+  item_chars: 360
+
+personal_assistant:
+  max_tokens: 800
+  max_items: 24
+  include: [current_facts, episodic, semantic, procedural, working, uncertainty]
+  evidence_required: false
+  evidence_threshold: 0.0
+  compression: [structured, extractive]
+  graph: {enabled: true, hops: 1, limit: 12}
+  memory: {types: [episodic, semantic, procedural, working], limit_per_type: 8}
+  weights: {relevance: 1.0, authority: 0.4, importance: 0.6, evidence: 0.2, proximity: 0.7, recency: 0.2, diversity: 0.3}
+  section_budget: {current_facts: 0.20, conflicts_unknowns: 0.10, instructions: 0.30, relevant: 0.40}
+  history: never
+  current_facts: relevant
+  required_current_k: 2
+  required_procedural_k: 2
+  item_chars: 280
+  intent_terms: [prefer, preference, style, habit]

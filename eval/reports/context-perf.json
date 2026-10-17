@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-15",
+  "router": "mock",
+  "mode": "structured",
+  "demo_workspace": {
+    "entities": 4,
+    "memories": "\u224810",
+    "builds_per_profile": 24,
+    "quick_answer": {
+      "builds": 24,
+      "wall_p50_ms": 56.4,
+      "wall_p95_ms": 154.3,
+      "server_p50_ms": 43.4,
+      "server_p95_ms": 98.9,
+      "tokens_mean": 162.5
+    },
+    "planning": {
+      "builds": 24,
+      "wall_p50_ms": 41.0,
+      "wall_p95_ms": 48.2,
+      "server_p50_ms": 31.1,
+      "server_p95_ms": 36.7,
+      "tokens_mean": 403.5
+    }
+  },
+  "synthetic_workspace": {
+    "entities": 5000,
+    "facts": 20000,
+    "memories": 50000,
+    "visible_to_the_agent": "~120 about the subject + 5,000 workspace-wide + 5,000 in its project",
+    "builds_per_profile": 24,
+    "quick_answer": {
+      "builds": 24,
+      "wall_p50_ms": 170.0,
+      "wall_p95_ms": 214.3,
+      "server_p50_ms": 151.1,
+      "server_p95_ms": 192.0,
+      "tokens_mean": 289
+    },
+    "planning": {
+      "builds": 24,
+      "wall_p50_ms": 595.2,
+      "wall_p95_ms": 1630.2,
+      "server_p50_ms": 520.0,
+      "server_p95_ms": 1572.3,
+      "tokens_mean": 1183.5
+    }
+  },
+  "note": "end to end through the API in one process, mock router, Neo4j holds only the demo world; p50/p95 are recorded for DEC-11, never gated tighter than 'not pathological'"
+}

@@ -1,0 +1,19 @@
+# ADR-034: Context traces are metadata; contexts are re-materialised; debug snapshots are opt-in, encrypted and expire
+
+**Status:** Accepted  **Decision refs:** CTX-03, AT-12, SEC-02, ADR-024  **Evidence:** `tests/integration/test_p6_traces.py`, `tests/security/test_context_leaks.py`
+
+## Context
+Explaining a build (why this item, why not that one) needs a record. Storing the package itself would keep content outside its owner's scopes and let a superseded, expired, revoked or deleted record resurface from a copy.
+
+## Decision
+1. **A trace is what the engine did, not what it said.** `context_traces`: the plan's shape, versions (ranker, tokenizer, compression, pipeline, embedding), non-content request parameters, authorised candidate counts per source, unavailable sources, pipeline watermarks, stage latencies and token accounting. `context_items`: one row per **authorised** candidate (kept or excluded) with kind, id, section, tier, score, feature vector, tokens, `included` and the exclusion reason. The task and the retrieval query are **keyed hashes** (`HMAC` under the per-workspace content key) plus the task's token count. No rendered text, no item text, no query is stored; a sentinel test finds none in the database, logs or metrics. A candidate the builder was not authorised to see is never a row (CTX-03): rows are written from the list the packer saw, which the scoped sources produced.
+2. **`GET /v1/context/{id}` re-materialises.** The package is rebuilt from the stored item ids under the **caller's current** authorisation and current state: a memory since superseded or expired, a fact since ended, a grant since revoked, a record since deleted is omitted and counted in `withdrawn`; its replacement is not swapped in. The text is regenerated (always `structured` or `extractive`; a summary is never stored). `rematerialized: true`.
+3. **Who sees a trace.** The principal that built it and workspace admins; everyone else gets the same 404 as an unknown id. A Lab build is stored under the **target** agent with `act_as_by` = the admin, so the inspector shows the target's candidates, never the admin's wider view.
+4. **Debug snapshots** (`debug_snapshot=true`) hold the task and the rendered text, for an administrator diagnosing a build. Opt-in per request, `context.debug` (admins), encrypted with the P3 payload cipher (AES-256-GCM, AAD `workspace|context|debug`), `expires_at` on the database clock (default 24 h, `CONTEXT_DEBUG_TTL_HOURS`, max 7 d). A read after expiry is a 404; `ops.purge_expired_context_debug()` removes the rows (the worker calls it every heartbeat). Creating and reading one is audited with ids only. *Deviation from the plan:* expiry is a purge function plus read-time expiry rather than a per-snapshot delayed outbox job, which would have needed a new job stage and subject type for no behavioural gain.
+5. **Retention.** Traces live `CONTEXT_TRACE_RETENTION_DAYS` (default 30); `ops.purge_expired_context_traces(interval)` (SECURITY DEFINER, returns a count) deletes them with their items; the worker runs it every ten minutes and `kg context purge-traces` runs it on demand. `kg_app` can INSERT and SELECT the trace tables and nothing else.
+6. **A trace that cannot be written never fails the build.** The response then carries `retrieval_trace_id: null` and `context_trace_write_failures_total` counts it.
+
+## Consequences
+- An inspector shows ids, scores and reasons; to read an item's words it uses the re-materialised package (or the memory/fact endpoints), each with its own authorisation.
+- "Used in contexts" for a memory is a count over `context_items` (`GET /v1/memories/{id}/usage`, admin only because it reveals what agents read).
+- Deleting a subject (P8) must purge `context_items` rows that name its records; the id-only design makes that a keyed delete.

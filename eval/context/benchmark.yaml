@@ -1,0 +1,216 @@
+# The frozen retrieval benchmark (phase-6 plan WP6; blueprint 03-runtime/03 "Evaluation set" and 05-delivery/02 "Retrieval evaluation methodology").
+#
+# Cases name WORLD KEYS, not ids: `eval/context/run_eval.py` builds Sarah's world fresh (commands, extraction, memory, embeddings) and resolves the keys at run time, so the
+# same benchmark runs against the mock router (offline, deterministic) and the real one (make eval-context-live).
+#   subjects  sarah | ghost (an entity with nothing known) | foreign (Sarah's id, asked from ANOTHER workspace)
+#   principal agent (the planning agent: Sarah + project newco-plan) | agent2 (the research agent: Sarah + project, owns a private note) | agent3 (no grants) | other (another workspace's agent)
+#   ids       fact:em / fact:swe / fact:newco_claim / memory:business / memory:pref / memory:guide / memory:finding / memory:cycling / memory:note
+#   recall    cases scored for evidence recall@k, irrelevant inclusion and temporal correctness (the proposed baselines of plan §10 apply to cases 1-8)
+# `forbid` ids/text must not be IN THE PACKAGE (relevance and correctness: the principal may see them, the task does not need them; the trace may list them as excluded).
+# `leak` ids/text must be NOWHERE the caller can look (package, citations, trace): authorisation. The research agent's private note is a leak for every principal but its owner.
+# `allow` ids are acceptable but not required (they do not count as irrelevant inclusion).
+cases:
+  - id: C01_current_employer
+    title: Sarah's current employer
+    principal: agent
+    task: Where does Sarah work
+    subjects: [sarah]
+    profile: quick_answer
+    max_tokens: 300
+    scored: true
+    expect: {status: [complete], ids: ["fact:em"], text: ["Acme", "Engineering Manager"]}
+    forbid: {ids: ["fact:swe"], text: ["Software Engineer"]}
+    allow: ["fact:newco_claim"]
+
+  - id: C02_historical_employer
+    title: Sarah's employer on 2023-01-01 (valid time)
+    principal: agent
+    task: Where does Sarah work
+    subjects: [sarah]
+    profile: quick_answer
+    max_tokens: 300
+    as_of: "2023-01-01"
+    scored: true
+    expect: {status: [complete], ids: ["fact:swe"], text: ["Software Engineer", "VERIFIED FACTS AS OF 2023-01-01"]}
+    forbid: {ids: ["fact:em"], text: ["Engineering Manager", "NewCo"]}
+
+  - id: C03_aspiration_and_conflicting_evidence
+    title: A business aspiration, with the unverified NewCo claim and the missing runway
+    principal: agent
+    task: Help Sarah assess the implications of starting a business
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    scored: true
+    expect:
+      status: [complete]
+      ids: ["fact:em", "memory:business", "memory:guide"]
+      text: ["considering entrepreneurship", "Unverified claim under review", "NewCo", "No verified financial runway for Sarah Johnson"]
+    forbid: {ids: ["memory:cycling"], text: ["- Sarah Johnson works at NewCo"]}   # the claim may be reported as a claim, never stated as a fact
+    allow: ["memory:pref", "memory:finding", "fact:newco_claim", "fact:considering", "fact:knows"]
+
+  - id: C04_shared_agent_finding
+    title: The approved project finding reaches the planning agent
+    principal: agent
+    task: What does NewCo need to operate
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    scored: true
+    expect: {status: [complete], ids: ["memory:finding"], text: ["state licence"]}
+    forbid: {text: ["private to the research agent"]}
+    allow: ["fact:em", "memory:business", "memory:guide", "memory:pref", "fact:newco_claim", "fact:considering", "fact:knows"]
+
+  - id: C05_unrelated_preference_distractor
+    title: A cycling question leaves the career and the preferences out
+    principal: agent
+    task: Which cycling club is Sarah in
+    subjects: [sarah]
+    profile: quick_answer
+    max_tokens: 300
+    scored: true
+    expect: {status: [complete], ids: ["memory:cycling"], text: ["cycling club"]}
+    forbid: {ids: ["memory:business", "memory:pref", "memory:guide", "fact:em"], text: ["Engineering Manager", "software business"]}
+
+  - id: C06_private_memory_not_allowed
+    title: A peer agent's private note is never in the planning agent's context
+    principal: agent
+    task: check NewCo licensing rules for the plan, private to the research agent
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    run_id: r1
+    scored: false
+    expect: {status: [complete]}
+    forbid: {text: ["private to the research agent"]}
+
+  - id: C07_insufficient_evidence
+    title: Nothing is known about this person
+    principal: agent
+    task: Where does Priya work
+    subjects: [ghost]
+    profile: planning
+    max_tokens: 600
+    scored: false
+    expect: {status: [insufficient_evidence], ids: [], text: ["No verified current employer for Priya Raman"]}
+    forbid: {ids: ["fact:em", "memory:business"], text: ["Acme"]}
+
+  - id: C08_backdated_update
+    title: Before the manager role was recorded the system did not know it (record time)
+    principal: agent
+    task: Where does Sarah work
+    subjects: [sarah]
+    profile: quick_answer
+    max_tokens: 300
+    known_at: "2020-01-01"
+    scored: true
+    expect: {status: [insufficient_evidence, partial], ids: []}
+    forbid: {ids: ["fact:em", "fact:swe"], text: ["Engineering Manager"]}
+
+  - id: C09_budget_250_vs_1200
+    title: The same task at 250 and at 1200 tokens
+    principal: agent
+    task: Help Sarah assess the implications of starting a business
+    subjects: [sarah]
+    profile: planning
+    project: newco-plan
+    budgets: [250, 1200]
+    scored: false
+    expect: {status: [complete], ids: ["fact:em"], required_stable: true}
+    forbid: {ids: ["memory:cycling"]}
+    allow: ["memory:business", "memory:guide", "memory:pref", "memory:finding", "fact:newco_claim", "fact:considering", "fact:knows"]
+
+  - id: C10_graph_backend_missing
+    title: Neo4j is down
+    principal: agent
+    task: Help Sarah assess the implications of starting a business
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    setup: graph_down
+    scored: false
+    expect: {status: [partial], ids: ["fact:em", "memory:business"], unavailable: ["graph"], text: ["Engineering Manager"]}
+    forbid: {ids: []}
+    allow: ["memory:guide", "memory:pref", "memory:finding", "fact:newco_claim", "fact:considering", "fact:knows"]
+
+  - id: C11_vector_backend_missing
+    title: The embedding router is down
+    principal: agent
+    task: Help Sarah assess the implications of starting a business
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    setup: vector_down
+    scored: false
+    expect: {status: [partial], ids: ["fact:em", "memory:business"], unavailable: ["memory_vector"]}
+    forbid: {ids: []}
+    allow: ["memory:guide", "memory:pref", "memory:finding", "fact:newco_claim", "fact:considering", "fact:knows"]
+
+  - id: C12_foreign_workspace
+    title: Another workspace asks for Sarah by id
+    principal: other
+    task: Help Sarah assess the implications of starting a business
+    subjects: [foreign]
+    profile: planning
+    max_tokens: 600
+    scored: false
+    expect: {status: [denied], ids: []}
+    forbid: {text: ["Sarah", "Acme"]}
+    leak: {text: ["Sarah", "Acme"]}
+
+  - id: C13_injection_in_a_memory
+    title: A memory that tries to take over the package
+    principal: agent
+    task: ledgers plan injection drill
+    subjects: [sarah]
+    profile: planning
+    max_tokens: 600
+    project: newco-plan
+    plant: injection
+    scored: false
+    expect: {status: [complete], structure_intact: true}
+    forbid: {text: ["<|im_start|>"]}   # (the word `deadbeef` may appear as inert text; it must never be a citation handle: structure_intact checks that)
+
+  - id: C14_summarized_faithfulness
+    title: A summarised context keeps every handle, caveat and fact
+    principal: agent
+    task: Where does Sarah work, and what is she considering about a business
+    subjects: [sarah]
+    profile: research
+    max_tokens: 1200
+    compression: summarized
+    scored: false
+    expect: {status: [complete], summary_faithful: true}
+
+  # ---- P7: subject ACLs (ontology v1.4.0, where Person is subject_scoped). These run in a SECOND workspace built for them (`world: acl`): Sarah WORKS_AT Acme, Sarah KNOWS Michael,
+  # `agent` is granted Sarah only and `agent3` nothing. They are unscored (the recall/precision baselines of cases 1-8 are unchanged) but strict: leakage 0, status as specified.
+  - id: C15_hidden_person_is_denied
+    title: With Person subject_scoped, an agent holding no grant on Sarah gets nothing about her
+    world: acl
+    principal: agent3
+    task: Where does Sarah work
+    subjects: [acl_sarah]
+    profile: quick_answer
+    max_tokens: 300
+    scored: false
+    expect: {status: [denied], ids: []}
+    forbid: {text: ["Sarah", "Acme", "Michael"]}
+    leak: {ids: ["fact:acl_works", "fact:acl_knows"], text: ["Sarah Johnson", "Michael", "Acme", "Engineering Manager"]}
+
+  - id: C16_hidden_relationship_is_absent
+    title: An agent granted Sarah only sees where she works, never that she knows Michael (one hidden end hides the whole fact)
+    world: acl
+    principal: agent
+    task: Where does Sarah work and who does she know
+    subjects: [acl_sarah, acl_michael]
+    profile: quick_answer
+    max_tokens: 300
+    scored: false
+    expect: {status: [complete], ids: ["fact:acl_works"], text: ["Acme", "Engineering Manager"]}
+    forbid: {text: ["Michael"]}
+    leak: {ids: ["fact:acl_knows"], text: ["Michael"]}
