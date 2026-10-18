@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.7",
-  "serialNumber": "urn:uuid:80ae4f7c-6ff1-4784-908f-604a202316d7",
+  "serialNumber": "urn:uuid:1244140d-f0bc-45ce-bd7e-c5298ea4c96f",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-17T22:04:51+00:00",
+    "timestamp": "2026-10-18T04:56:41+00:00",
     "tools": {
       "components": [
         {
@@ -122,7 +122,7 @@
   },
   "components": [
     {
-      "bom-ref": "43da4a56-ff53-4122-935a-866ec49a0a5c",
+      "bom-ref": "1bd59ccb-2c71-4dfa-afd1-6b277d89d6f7",
       "type": "operating-system",
       "name": "debian",
       "version": "12.15",
@@ -11365,7 +11365,7 @@
   ],
   "dependencies": [
     {
-      "ref": "43da4a56-ff53-4122-935a-866ec49a0a5c",
+      "ref": "1bd59ccb-2c71-4dfa-afd1-6b277d89d6f7",
       "dependsOn": [
         "pkg:deb/debian/age@1.1.1-1%2Bb3?arch=arm64&distro=debian-12.15",
         "pkg:deb/debian/apt@2.6.1?arch=arm64&distro=debian-12.15",
@@ -12472,7 +12472,7 @@
     {
       "ref": "pkg:oci/kg-backup-tools@sha256:38058fce1a5ce853492d475e69ed6fbfa5efbdcea25fa16ab4e5b08dede6d6d0?arch=arm64&repository_url=index.docker.io%2Flibrary%2Fkg-backup-tools",
       "dependsOn": [
-        "43da4a56-ff53-4122-935a-866ec49a0a5c"
+        "1bd59ccb-2c71-4dfa-afd1-6b277d89d6f7"
       ]
     }
   ],

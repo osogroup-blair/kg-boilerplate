@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:5de6942b-34a8-4b97-8b0d-2f2c12e50183",
+  "serialNumber": "urn:uuid:b925e217-bc1a-46d4-b164-705e46f1451d",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-17T22:04:21.627Z",
+    "timestamp": "2026-10-18T04:56:26.467Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -40,12 +40,12 @@
   },
   "components": [
     {
-      "bom-ref": "@radix-ui/primitive@1.1.7",
+      "bom-ref": "@radix-ui/primitive@1.2.0",
       "type": "library",
       "name": "@radix-ui/primitive",
-      "version": "1.1.7",
+      "version": "1.2.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/primitive@1.1.7",
+      "purl": "pkg:npm/%40radix-ui/primitive@1.2.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -55,7 +55,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/primitive/-/primitive-1.1.7.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/primitive/-/primitive-1.2.0.tgz"
         },
         {
           "type": "vcs",
@@ -73,7 +73,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "aea5a79bbea7613f07a0d36a123a6027b3f0fc3ac18f98814eb9843e8e874d7e7e549c8134ea9376fe20f3d1badc7b91e60d0068436801c1fb22ce5f176919f1"
+          "content": "280058f9530844f24bf95cb3bffdf7e451215d70ffc43bfc04c6f5925e3cfda5c964c1f42ed1c24f1e606b9467c5a10fde7647b664cb7f53fdbda9e6157e3a6f"
         }
       ],
       "licenses": [
@@ -130,12 +130,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-context@1.2.2",
+      "bom-ref": "@radix-ui/react-context@1.3.0",
       "type": "library",
       "name": "@radix-ui/react-context",
-      "version": "1.2.2",
+      "version": "1.3.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-context@1.2.2",
+      "purl": "pkg:npm/%40radix-ui/react-context@1.3.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -145,7 +145,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-context/-/react-context-1.2.2.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-context/-/react-context-1.3.0.tgz"
         },
         {
           "type": "vcs",
@@ -163,7 +163,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "4470941b02870ebd210c68385fb99ae091b8ffed76ab1c3cae487940a74395d942bed8daea7531d447fff0756b2737bcd6512c80b425aa3ce318d1da9ed82740"
+          "content": "bf901812870c21291b27ed5f4d7cd9a6216fecd46bdc3d968986cb20a7fe164989f1590fe9de74dde5769f7e0c16eb2c1d7635a5ca2adf27c98901fbedd73832"
         }
       ],
       "licenses": [
@@ -175,12 +175,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-dialog@1.2.0",
+      "bom-ref": "@radix-ui/react-dialog@1.3.1",
       "type": "library",
       "name": "@radix-ui/react-dialog",
-      "version": "1.2.0",
+      "version": "1.3.1",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-dialog@1.2.0",
+      "purl": "pkg:npm/%40radix-ui/react-dialog@1.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -190,7 +190,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-dialog/-/react-dialog-1.2.0.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-dialog/-/react-dialog-1.3.1.tgz"
         },
         {
           "type": "vcs",
@@ -208,7 +208,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "979097f0774d2fef5c738b3b1e4372a65ba6480dc5231ebcb20f5db6d0472abdbce9f441c2ad4c067883553788fed9287fddbf00f9ed310bc2d581b52a16f40a"
+          "content": "fb4138aaf553c23016adaf6c12127ef414ecbc7134d33914b8dc3554687b4be19cd7775f624f92d4f55075c8560e3f976078406a2ed9ec8a735d50c21ac0e996"
         }
       ],
       "licenses": [
@@ -220,12 +220,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-dismissable-layer@1.1.20",
+      "bom-ref": "@radix-ui/react-dismissable-layer@1.2.1",
       "type": "library",
       "name": "@radix-ui/react-dismissable-layer",
-      "version": "1.1.20",
+      "version": "1.2.1",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-dismissable-layer@1.1.20",
+      "purl": "pkg:npm/%40radix-ui/react-dismissable-layer@1.2.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -235,7 +235,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-dismissable-layer/-/react-dismissable-layer-1.1.20.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-dismissable-layer/-/react-dismissable-layer-1.2.1.tgz"
         },
         {
           "type": "vcs",
@@ -253,7 +253,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "df958746bc9c7e78f69b82ef3e228c28718b3376365af500ef8e029117718ecd411835f573c3d531f9a24864d4c271d16ea76d228c6f7984d7bdc252b7b55f81"
+          "content": "2887c3700b31fa8572945678c6bc952aeb0952b2cb8534267e7256e24c24e0a9b99b2be11c2ae3d38867596502d7aebec43e031dd1fcb501b2970617d61ebe3e"
         }
       ],
       "licenses": [
@@ -265,12 +265,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-focus-guards@1.1.6",
+      "bom-ref": "@radix-ui/react-focus-guards@1.2.0",
       "type": "library",
       "name": "@radix-ui/react-focus-guards",
-      "version": "1.1.6",
+      "version": "1.2.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-focus-guards@1.1.6",
+      "purl": "pkg:npm/%40radix-ui/react-focus-guards@1.2.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -280,7 +280,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-focus-guards/-/react-focus-guards-1.1.6.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-focus-guards/-/react-focus-guards-1.2.0.tgz"
         },
         {
           "type": "vcs",
@@ -298,7 +298,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "44d3898df64c4f204ceb162657721519790f8c885c040bafe3c3ce7af017c2b189864599f69d6b168212d49168a0fb93d7ddc066646c08f869a15271c7a38fa1"
+          "content": "30f9b94748911940eb0e73cdc662c192ff97ee93785cacedf8c6d6244b8942c1f73451f8a26adba57a6e73260208a4d2b7e9dafd9c46844590ad64d9d36f3970"
         }
       ],
       "licenses": [
@@ -310,12 +310,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-focus-scope@1.2.0",
+      "bom-ref": "@radix-ui/react-focus-scope@1.3.1",
       "type": "library",
       "name": "@radix-ui/react-focus-scope",
-      "version": "1.2.0",
+      "version": "1.3.1",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-focus-scope@1.2.0",
+      "purl": "pkg:npm/%40radix-ui/react-focus-scope@1.3.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -325,7 +325,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-focus-scope/-/react-focus-scope-1.2.0.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-focus-scope/-/react-focus-scope-1.3.1.tgz"
         },
         {
           "type": "vcs",
@@ -343,7 +343,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "2394bbbec00ea33c76956481032b978d6209fc0f2ac787e36efeb5d795a869161049bd7264369e347a275004335f213ca03fb4c212476d0465e07204da04345f"
+          "content": "ba078c85b5ede32e52d93d469c8a9b58328437deb63c3c275f57cdd1e28e3a07f97fadc38769a7f05d455324a5816d2217a1a256c445df60f3b832164d4c9026"
         }
       ],
       "licenses": [
@@ -400,12 +400,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-portal@1.1.18",
+      "bom-ref": "@radix-ui/react-portal@1.2.0",
       "type": "library",
       "name": "@radix-ui/react-portal",
-      "version": "1.1.18",
+      "version": "1.2.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-portal@1.1.18",
+      "purl": "pkg:npm/%40radix-ui/react-portal@1.2.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -415,7 +415,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-portal/-/react-portal-1.1.18.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-portal/-/react-portal-1.2.0.tgz"
         },
         {
           "type": "vcs",
@@ -433,7 +433,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "ca014827e41734a7fbd8002af31de1776dbec2cee962999cd52d04e245b425efaa0f8a846f716fc5e2954111ab54330e9106987ec07e42cf8a0e1f356b58003b"
+          "content": "4ad5fbc579da454e3556f16d326f73961546cfc5c5e869965935dfb6441a63eb6a5646ecfd1f54980a7998bcc71daa64e6133d44c650bceff7bacc883ff838da"
         }
       ],
       "licenses": [
@@ -490,12 +490,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-primitive@2.1.11",
+      "bom-ref": "@radix-ui/react-primitive@2.2.0",
       "type": "library",
       "name": "@radix-ui/react-primitive",
-      "version": "2.1.11",
+      "version": "2.2.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-primitive@2.1.11",
+      "purl": "pkg:npm/%40radix-ui/react-primitive@2.2.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -505,7 +505,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-primitive/-/react-primitive-2.1.11.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-primitive/-/react-primitive-2.2.0.tgz"
         },
         {
           "type": "vcs",
@@ -523,7 +523,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "47371a4b0e5a2a5d0e3e1049d706e894a485ea756f37ed28fd02de215abed3d9e988f7670a43e0832da4ea023ac9eb71978672ae504f60580207c050259c1771"
+          "content": "1c24d23cc36abf9e50934217e207896e9c976b39aaba57229b0bb28f14e42a2dbdbfe4196c6d99868f419db06ae184b63c5f8a94d6f6097a0bcfaeae5266e592"
         }
       ],
       "licenses": [
@@ -535,12 +535,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-slot@1.4.0",
+      "bom-ref": "@radix-ui/react-slot@1.5.0",
       "type": "library",
       "name": "@radix-ui/react-slot",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-slot@1.4.0",
+      "purl": "pkg:npm/%40radix-ui/react-slot@1.5.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -550,7 +550,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-slot/-/react-slot-1.4.0.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-slot/-/react-slot-1.5.0.tgz"
         },
         {
           "type": "vcs",
@@ -568,7 +568,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "22e3151d9f808797e472dbb75f7a9e16b57f66b05cb96b834c55143df4bf2f986fa138f3869fc7756184d780ac42899b3dd12276c6b7dc75656195e2e3d3d9d5"
+          "content": "b7261df5d74f5c0cac01b75b0fd798c60c29092bfa7f73e772a55234a405491e6570954bcf771bfe900d0e862b2e21c1a57bfbb24a2bb725201945ac62e3cf15"
         }
       ],
       "licenses": [
@@ -580,12 +580,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-use-callback-ref@1.1.4",
+      "bom-ref": "@radix-ui/react-use-callback-ref@1.1.5",
       "type": "library",
       "name": "@radix-ui/react-use-callback-ref",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-use-callback-ref@1.1.4",
+      "purl": "pkg:npm/%40radix-ui/react-use-callback-ref@1.1.5",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -595,7 +595,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-use-callback-ref/-/react-use-callback-ref-1.1.4.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-use-callback-ref/-/react-use-callback-ref-1.1.5.tgz"
         },
         {
           "type": "vcs",
@@ -613,7 +613,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "47a3946367b67c0e989fab3e552c7928157a371f0b40486ef9ccfb2c27a3d7cad0d472f283d3d20bd8cffd9371d28e850082bd734175907ca5cd2c4ab1d964ad"
+          "content": "6391817f834a7800e85c8d607a232532e3285114f793d322cf3cca8466ff9b9e47f786868a0674d4f22992fb0eea530bd77040e976005d227a8336bbbd39f99f"
         }
       ],
       "licenses": [
@@ -625,12 +625,12 @@
       ]
     },
     {
-      "bom-ref": "@radix-ui/react-use-controllable-state@1.2.6",
+      "bom-ref": "@radix-ui/react-use-controllable-state@1.3.0",
       "type": "library",
       "name": "@radix-ui/react-use-controllable-state",
-      "version": "1.2.6",
+      "version": "1.3.0",
       "scope": "required",
-      "purl": "pkg:npm/%40radix-ui/react-use-controllable-state@1.2.6",
+      "purl": "pkg:npm/%40radix-ui/react-use-controllable-state@1.3.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -640,7 +640,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@radix-ui/react-use-controllable-state/-/react-use-controllable-state-1.2.6.tgz"
+          "url": "https://registry.npmjs.org/@radix-ui/react-use-controllable-state/-/react-use-controllable-state-1.3.0.tgz"
         },
         {
           "type": "vcs",
@@ -658,7 +658,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "b84409193f7b640fd380ffc7c9dc38ee51eefbfbd08facffd2303e59e4db2b5a3d471e391889a3a43d2d7375b969ddc3e974d247a7b5c843b416f1aae9641f55"
+          "content": "4c070123b6f0da58d809bbf8fb3b9349deb3202bbca51b7a483376bc9fd9d3a2b631787a23d59815efc0f68be5143b51e475471a6e620f10e80019bffbe75b2a"
         }
       ],
       "licenses": [
@@ -807,14 +807,14 @@
       ]
     },
     {
-      "bom-ref": "@tanstack/query-core@5.104.2",
+      "bom-ref": "@tanstack/query-core@5.104.4",
       "type": "library",
       "name": "@tanstack/query-core",
-      "version": "5.104.2",
+      "version": "5.104.4",
       "scope": "required",
       "author": "tannerlinsley",
       "description": "The framework agnostic core that powers TanStack Query",
-      "purl": "pkg:npm/%40tanstack/query-core@5.104.2",
+      "purl": "pkg:npm/%40tanstack/query-core@5.104.4",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -824,7 +824,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@tanstack/query-core/-/query-core-5.104.2.tgz"
+          "url": "https://registry.npmjs.org/@tanstack/query-core/-/query-core-5.104.4.tgz"
         },
         {
           "type": "vcs",
@@ -842,7 +842,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "fea6ecc492b973755ed5a14850b59835c4f68de4540220f81cc13a12ed99769a1f1e8560023a644212e0e711ee3a80644cf41424b7cfef33b1cb4aac05ca9138"
+          "content": "9d4e18adbf128e7d037956fb3ca1bdba27a935abf2b37ca8c72d455f4855898e3f3fa360fe60637b648c97b8bdf35dabb721cab47caa89a0bfb5de86908f12b4"
         }
       ],
       "licenses": [
@@ -854,14 +854,14 @@
       ]
     },
     {
-      "bom-ref": "@tanstack/react-query@5.104.2",
+      "bom-ref": "@tanstack/react-query@5.104.4",
       "type": "library",
       "name": "@tanstack/react-query",
-      "version": "5.104.2",
+      "version": "5.104.4",
       "scope": "required",
       "author": "tannerlinsley",
       "description": "Hooks for managing, caching and syncing asynchronous and remote data in React",
-      "purl": "pkg:npm/%40tanstack/react-query@5.104.2",
+      "purl": "pkg:npm/%40tanstack/react-query@5.104.4",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -871,7 +871,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/@tanstack/react-query/-/react-query-5.104.2.tgz"
+          "url": "https://registry.npmjs.org/@tanstack/react-query/-/react-query-5.104.4.tgz"
         },
         {
           "type": "vcs",
@@ -889,7 +889,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "c4a9b358685a75b139c064bf6665d28512139c8f6822da31e463b5e0abc565ca37faf8530325d2d5ead8cc959d898dbcd336a90062571542fd9c78303fa495fe"
+          "content": "603e5092f50dcbc132dcb6cecb6bf02fdec98e86327300effbe7160226d37bef412d8be5ddcd3d5e9629e5d67655cc5c82ec280e1185faeb582586fbf51077eb"
         }
       ],
       "licenses": [
@@ -995,13 +995,13 @@
       ]
     },
     {
-      "bom-ref": "cytoscape@3.33.1",
+      "bom-ref": "cytoscape@3.34.4",
       "type": "library",
       "name": "cytoscape",
-      "version": "3.33.1",
+      "version": "3.34.4",
       "scope": "required",
       "description": "Graph theory (a.k.a. network) library for analysis and visualisation",
-      "purl": "pkg:npm/cytoscape@3.33.1",
+      "purl": "pkg:npm/cytoscape@3.34.4",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1011,7 +1011,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/cytoscape/-/cytoscape-3.33.1.tgz"
+          "url": "https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.4.tgz"
         },
         {
           "type": "vcs",
@@ -1029,7 +1029,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "8897384f0c803673864753a65a1b12f5ac914b7b3e5d0d7ce459ae1ce6d3843fb901e2426a40006d6bfc2a298c4edd3cc4208b3609de430169f894493abf6a19"
+          "content": "9ac63df6d318f2259383eb083c67d2a8370f34eb78c5c8febff2bfeea505682531c65aa73245182c18d15339fd5b9094fd1da1ae6b496b9f94b68beb10cd9cb6"
         }
       ],
       "licenses": [
@@ -1135,14 +1135,14 @@
       ]
     },
     {
-      "bom-ref": "lucide-react@1.55.0",
+      "bom-ref": "lucide-react@1.59.0",
       "type": "library",
       "name": "lucide-react",
-      "version": "1.55.0",
+      "version": "1.59.0",
       "scope": "required",
       "author": "Eric Fennis",
       "description": "A Lucide icon library package for React applications.",
-      "purl": "pkg:npm/lucide-react@1.55.0",
+      "purl": "pkg:npm/lucide-react@1.59.0",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -1152,7 +1152,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.55.0.tgz"
+          "url": "https://registry.npmjs.org/lucide-react/-/lucide-react-1.59.0.tgz"
         },
         {
           "type": "vcs",
@@ -1170,7 +1170,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "6d2a33407888dfff2aec9be0a2a55118e6148bb7d84f7b22019c2666c9638ec387d87baca7fd8e0dd15ffe5783f990bfdb229f9fbafca21eb27a8477213479bc"
+          "content": "e6a80ccb208f53a3af9caa4b4b6b7af77f99b62a80f28692c1e5a8528c2cd012c52857fa57be66e3e0a9b699a88591e90f922e3952015c70418afdafa4b266b7"
         }
       ],
       "licenses": [
@@ -1656,17 +1656,17 @@
     {
       "ref": "kg-admin@0.1.0",
       "dependsOn": [
-        "@radix-ui/react-dialog@1.2.0",
-        "@tanstack/react-query@5.104.2",
+        "@radix-ui/react-dialog@1.3.1",
+        "@tanstack/react-query@5.104.4",
         "clsx@2.1.1",
-        "cytoscape@3.33.1",
-        "lucide-react@1.55.0",
+        "cytoscape@3.34.4",
+        "lucide-react@1.59.0",
         "openapi-fetch@0.13.8",
         "react-router-dom@6.30.6"
       ]
     },
     {
-      "ref": "@radix-ui/primitive@1.1.7",
+      "ref": "@radix-ui/primitive@1.2.0",
       "dependsOn": []
     },
     {
@@ -1674,49 +1674,49 @@
       "dependsOn": []
     },
     {
-      "ref": "@radix-ui/react-context@1.2.2",
+      "ref": "@radix-ui/react-context@1.3.0",
       "dependsOn": []
     },
     {
-      "ref": "@radix-ui/react-dialog@1.2.0",
+      "ref": "@radix-ui/react-dialog@1.3.1",
       "dependsOn": [
         "aria-hidden@1.2.6",
         "react-remove-scroll@2.7.2",
-        "@radix-ui/primitive@1.1.7",
+        "@radix-ui/primitive@1.2.0",
         "@radix-ui/react-compose-refs@1.1.5",
-        "@radix-ui/react-context@1.2.2",
-        "@radix-ui/react-dismissable-layer@1.1.20",
-        "@radix-ui/react-focus-guards@1.1.6",
-        "@radix-ui/react-focus-scope@1.2.0",
+        "@radix-ui/react-context@1.3.0",
+        "@radix-ui/react-dismissable-layer@1.2.1",
+        "@radix-ui/react-focus-guards@1.2.0",
+        "@radix-ui/react-focus-scope@1.3.1",
         "@radix-ui/react-id@1.1.4",
-        "@radix-ui/react-portal@1.1.18",
+        "@radix-ui/react-portal@1.2.0",
         "@radix-ui/react-presence@1.1.11",
-        "@radix-ui/react-primitive@2.1.11",
-        "@radix-ui/react-slot@1.4.0",
-        "@radix-ui/react-use-controllable-state@1.2.6",
+        "@radix-ui/react-primitive@2.2.0",
+        "@radix-ui/react-slot@1.5.0",
+        "@radix-ui/react-use-controllable-state@1.3.0",
         "@radix-ui/react-use-layout-effect@1.1.4"
       ]
     },
     {
-      "ref": "@radix-ui/react-dismissable-layer@1.1.20",
+      "ref": "@radix-ui/react-dismissable-layer@1.2.1",
       "dependsOn": [
-        "@radix-ui/primitive@1.1.7",
+        "@radix-ui/primitive@1.2.0",
         "@radix-ui/react-compose-refs@1.1.5",
-        "@radix-ui/react-primitive@2.1.11",
-        "@radix-ui/react-use-callback-ref@1.1.4",
+        "@radix-ui/react-primitive@2.2.0",
+        "@radix-ui/react-use-callback-ref@1.1.5",
         "@radix-ui/react-use-effect-event@0.0.5"
       ]
     },
     {
-      "ref": "@radix-ui/react-focus-guards@1.1.6",
+      "ref": "@radix-ui/react-focus-guards@1.2.0",
       "dependsOn": []
     },
     {
-      "ref": "@radix-ui/react-focus-scope@1.2.0",
+      "ref": "@radix-ui/react-focus-scope@1.3.1",
       "dependsOn": [
         "@radix-ui/react-compose-refs@1.1.5",
-        "@radix-ui/react-primitive@2.1.11",
-        "@radix-ui/react-use-callback-ref@1.1.4"
+        "@radix-ui/react-primitive@2.2.0",
+        "@radix-ui/react-use-callback-ref@1.1.5"
       ]
     },
     {
@@ -1726,10 +1726,10 @@
       ]
     },
     {
-      "ref": "@radix-ui/react-portal@1.1.18",
+      "ref": "@radix-ui/react-portal@1.2.0",
       "dependsOn": [
-        "@radix-ui/react-primitive@2.1.11",
-        "@radix-ui/react-use-layout-effect@1.1.4"
+        "@radix-ui/react-use-layout-effect@1.1.4",
+        "@radix-ui/react-primitive@2.2.0"
       ]
     },
     {
@@ -1739,27 +1739,29 @@
       ]
     },
     {
-      "ref": "@radix-ui/react-primitive@2.1.11",
+      "ref": "@radix-ui/react-primitive@2.2.0",
       "dependsOn": [
-        "@radix-ui/react-slot@1.4.0"
+        "@radix-ui/react-slot@1.5.0"
       ]
     },
     {
-      "ref": "@radix-ui/react-slot@1.4.0",
+      "ref": "@radix-ui/react-slot@1.5.0",
       "dependsOn": [
         "@radix-ui/react-compose-refs@1.1.5"
       ]
     },
     {
-      "ref": "@radix-ui/react-use-callback-ref@1.1.4",
-      "dependsOn": []
+      "ref": "@radix-ui/react-use-callback-ref@1.1.5",
+      "dependsOn": [
+        "@radix-ui/react-use-layout-effect@1.1.4"
+      ]
     },
     {
-      "ref": "@radix-ui/react-use-controllable-state@1.2.6",
+      "ref": "@radix-ui/react-use-controllable-state@1.3.0",
       "dependsOn": [
-        "@radix-ui/primitive@1.1.7",
-        "@radix-ui/react-use-effect-event@0.0.5",
-        "@radix-ui/react-use-layout-effect@1.1.4"
+        "@radix-ui/react-use-layout-effect@1.1.4",
+        "@radix-ui/primitive@1.2.0",
+        "@radix-ui/react-use-effect-event@0.0.5"
       ]
     },
     {
@@ -1777,13 +1779,13 @@
       "dependsOn": []
     },
     {
-      "ref": "@tanstack/query-core@5.104.2",
+      "ref": "@tanstack/query-core@5.104.4",
       "dependsOn": []
     },
     {
-      "ref": "@tanstack/react-query@5.104.2",
+      "ref": "@tanstack/react-query@5.104.4",
       "dependsOn": [
-        "@tanstack/query-core@5.104.2"
+        "@tanstack/query-core@5.104.4"
       ]
     },
     {
@@ -1797,7 +1799,7 @@
       "dependsOn": []
     },
     {
-      "ref": "cytoscape@3.33.1",
+      "ref": "cytoscape@3.34.4",
       "dependsOn": []
     },
     {
@@ -1809,7 +1811,7 @@
       "dependsOn": []
     },
     {
-      "ref": "lucide-react@1.55.0",
+      "ref": "lucide-react@1.59.0",
       "dependsOn": []
     },
     {

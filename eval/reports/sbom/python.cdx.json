@@ -245,7 +245,7 @@
       "version": "2.21.0"
     },
     {
-      "bom-ref": "SQLAlchemy==2.1.4",
+      "bom-ref": "SQLAlchemy==2.1.5",
       "description": "Database Abstraction Library",
       "externalReferences": [
         {
@@ -294,9 +294,9 @@
           "value": "asyncio"
         }
       ],
-      "purl": "pkg:pypi/sqlalchemy@2.1.4",
+      "purl": "pkg:pypi/sqlalchemy@2.1.5",
       "type": "library",
-      "version": "2.1.4"
+      "version": "2.1.5"
     },
     {
       "bom-ref": "alembic==1.20.0",
@@ -968,7 +968,7 @@
       "version": "1.9.0"
     },
     {
-      "bom-ref": "fastapi==0.143.0",
+      "bom-ref": "fastapi==0.143.3",
       "description": "FastAPI framework, high performance, easy to learn, fast to code, ready for production",
       "externalReferences": [
         {
@@ -1006,9 +1006,9 @@
         }
       ],
       "name": "fastapi",
-      "purl": "pkg:pypi/fastapi@0.143.0",
+      "purl": "pkg:pypi/fastapi@0.143.3",
       "type": "library",
-      "version": "0.143.0"
+      "version": "0.143.3"
     },
     {
       "bom-ref": "genson==1.4.0",
@@ -2134,7 +2134,7 @@
       "version": "1.1.0"
     },
     {
-      "bom-ref": "neo4j==6.4.0",
+      "bom-ref": "neo4j==6.4.1",
       "description": "Neo4j Bolt driver for Python",
       "externalReferences": [
         {
@@ -2185,9 +2185,9 @@
         }
       ],
       "name": "neo4j",
-      "purl": "pkg:pypi/neo4j@6.4.0",
+      "purl": "pkg:pypi/neo4j@6.4.1",
       "type": "library",
-      "version": "6.4.0"
+      "version": "6.4.1"
     },
     {
       "bom-ref": "numpy==2.5.4",
@@ -2815,7 +2815,7 @@
       "version": "3.11"
     },
     {
-      "bom-ref": "pydantic==2.14.0",
+      "bom-ref": "pydantic==2.14.1",
       "description": "Data validation using Python type hints",
       "externalReferences": [
         {
@@ -2853,12 +2853,12 @@
         }
       ],
       "name": "pydantic",
-      "purl": "pkg:pypi/pydantic@2.14.0",
+      "purl": "pkg:pypi/pydantic@2.14.1",
       "type": "library",
-      "version": "2.14.0"
+      "version": "2.14.1"
     },
     {
-      "bom-ref": "pydantic-settings==2.15.0",
+      "bom-ref": "pydantic-settings==2.16.0",
       "description": "Settings management using Pydantic",
       "externalReferences": [
         {
@@ -2896,12 +2896,12 @@
         }
       ],
       "name": "pydantic-settings",
-      "purl": "pkg:pypi/pydantic-settings@2.15.0",
+      "purl": "pkg:pypi/pydantic-settings@2.16.0",
       "type": "library",
-      "version": "2.15.0"
+      "version": "2.16.0"
     },
     {
-      "bom-ref": "pydantic_core==2.50.0",
+      "bom-ref": "pydantic_core==2.50.1",
       "description": "Core functionality for Pydantic validation and serialization",
       "externalReferences": [
         {
@@ -2934,9 +2934,9 @@
         }
       ],
       "name": "pydantic_core",
-      "purl": "pkg:pypi/pydantic-core@2.50.0",
+      "purl": "pkg:pypi/pydantic-core@2.50.1",
       "type": "library",
-      "version": "2.50.0"
+      "version": "2.50.1"
     },
     {
       "bom-ref": "pytest==9.1.1",
@@ -3379,7 +3379,7 @@
       "version": "2026.9.1"
     },
     {
-      "bom-ref": "ruff==0.17.0",
+      "bom-ref": "ruff==0.17.1",
       "description": "An extremely fast Python linter and code formatter, written in Rust.",
       "externalReferences": [
         {
@@ -3412,9 +3412,9 @@
         }
       ],
       "name": "ruff",
-      "purl": "pkg:pypi/ruff@0.17.0",
+      "purl": "pkg:pypi/ruff@0.17.1",
       "type": "library",
-      "version": "0.17.0"
+      "version": "0.17.1"
     },
     {
       "bom-ref": "shellingham==1.5.4",
@@ -3548,7 +3548,7 @@
       "version": "3.5.0"
     },
     {
-      "bom-ref": "starlette==1.7.0",
+      "bom-ref": "starlette==1.8.0",
       "description": "The little ASGI library that shines.",
       "externalReferences": [
         {
@@ -3586,9 +3586,9 @@
         }
       ],
       "name": "starlette",
-      "purl": "pkg:pypi/starlette@1.7.0",
+      "purl": "pkg:pypi/starlette@1.8.0",
       "type": "library",
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     {
       "bom-ref": "structlog==26.1.0",
@@ -4077,12 +4077,12 @@
         "psycopg==3.3.6",
         "typing_extensions==4.16.0"
       ],
-      "ref": "SQLAlchemy==2.1.4"
+      "ref": "SQLAlchemy==2.1.5"
     },
     {
       "dependsOn": [
         "Mako==1.4.3",
-        "SQLAlchemy==2.1.4",
+        "SQLAlchemy==2.1.5",
         "typing_extensions==4.16.0"
       ],
       "ref": "alembic==1.20.0"
@@ -4104,7 +4104,7 @@
       "dependsOn": [
         "coverage==7.16.2",
         "mypy==2.4.0",
-        "ruff==0.17.0"
+        "ruff==0.17.1"
       ],
       "ref": "argcomplete==3.7.2"
     },
@@ -4171,8 +4171,8 @@
         "httpx==0.28.1",
         "inflect==7.5.0",
         "isort==8.0.1",
-        "pydantic==2.14.0",
-        "ruff==0.17.0",
+        "pydantic==2.14.1",
+        "ruff==0.17.1",
         "typing_extensions==4.16.0"
       ],
       "ref": "datamodel-code-generator==0.83.0"
@@ -4189,15 +4189,15 @@
         "opentelemetry-api==1.45.1",
         "opentelemetry-exporter-otlp-proto-http==1.45.1",
         "opentelemetry-sdk==1.45.1",
-        "pydantic-settings==2.15.0",
-        "pydantic==2.14.0",
+        "pydantic-settings==2.16.0",
+        "pydantic==2.14.1",
         "python-multipart==0.0.32",
-        "starlette==1.7.0",
+        "starlette==1.8.0",
         "typing-inspection==0.4.4",
         "typing_extensions==4.16.0",
         "uvicorn==0.54.0"
       ],
-      "ref": "fastapi==0.143.0"
+      "ref": "fastapi==0.143.3"
     },
     {
       "ref": "genson==1.4.0"
@@ -4210,17 +4210,17 @@
     },
     {
       "dependsOn": [
-        "neo4j==6.4.0",
+        "neo4j==6.4.1",
         "numpy==2.5.4",
         "openai==3.29.0",
         "opentelemetry-api==1.45.1",
         "opentelemetry-sdk==1.45.1",
         "posthog==7.67.0",
-        "pydantic==2.14.0",
+        "pydantic==2.14.1",
         "pytest-asyncio==1.4.0",
         "pytest==9.1.1",
         "python-dotenv==1.2.4",
-        "ruff==0.17.0",
+        "ruff==0.17.1",
         "tenacity==9.2.1"
       ],
       "ref": "graphiti-core==0.30.2"
@@ -4296,14 +4296,14 @@
         "hypothesis==6.169.0",
         "mypy==2.4.0",
         "pytest==9.1.1",
-        "ruff==0.17.0"
+        "ruff==0.17.1"
       ],
       "ref": "idna==3.20"
     },
     {
       "dependsOn": [
         "click==8.5.0",
-        "fastapi==0.143.0",
+        "fastapi==0.143.3",
         "grimp==3.17",
         "rich==15.0.0",
         "typing_extensions==4.16.0",
@@ -4349,7 +4349,7 @@
     },
     {
       "dependsOn": [
-        "fastapi==0.143.0",
+        "fastapi==0.143.3",
         "httpx==0.28.1",
         "kg-common==0.1.0",
         "kg-context==0.1.0",
@@ -4365,7 +4365,7 @@
         "kg-obs==0.1.0",
         "kg-ontology==0.1.0",
         "kg-reconcile==0.1.0",
-        "starlette==1.7.0",
+        "starlette==1.8.0",
         "uvicorn==0.54.0"
       ],
       "ref": "kg-api==0.1.0"
@@ -4394,8 +4394,8 @@
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "pydantic-settings==2.15.0",
-        "pydantic==2.14.0",
+        "pydantic-settings==2.16.0",
+        "pydantic==2.14.1",
         "tiktoken==0.14.0"
       ],
       "ref": "kg-common==0.1.0"
@@ -4418,7 +4418,7 @@
     },
     {
       "dependsOn": [
-        "SQLAlchemy==2.1.4",
+        "SQLAlchemy==2.1.5",
         "alembic==1.20.0",
         "kg-common==0.1.0",
         "kg-obs==0.1.0",
@@ -4429,7 +4429,7 @@
     {
       "dependsOn": [
         "kg-common==0.1.0",
-        "pydantic==2.14.0"
+        "pydantic==2.14.1"
       ],
       "ref": "kg-domain==0.1.0"
     },
@@ -4471,7 +4471,7 @@
         "kg-modelgw==0.1.0",
         "kg-obs==0.1.0",
         "kg-ontology==0.1.0",
-        "neo4j==6.4.0",
+        "neo4j==6.4.1",
         "openai==3.29.0"
       ],
       "ref": "kg-graph==0.1.0"
@@ -4515,7 +4515,7 @@
         "kg-platform-sdk==0.1.0",
         "mcp==1.30.0",
         "prometheus_client==0.26.0",
-        "starlette==1.7.0",
+        "starlette==1.8.0",
         "uvicorn==0.54.0"
       ],
       "ref": "kg-mcp==0.1.0"
@@ -4561,14 +4561,14 @@
         "PyYAML==6.0.3",
         "kg-common==0.1.0",
         "kg-domain==0.1.0",
-        "pydantic==2.14.0"
+        "pydantic==2.14.1"
       ],
       "ref": "kg-ontology==0.1.0"
     },
     {
       "dependsOn": [
         "httpx==0.28.1",
-        "pydantic==2.14.0"
+        "pydantic==2.14.1"
       ],
       "ref": "kg-platform-sdk==0.1.0"
     },
@@ -4631,13 +4631,13 @@
         "httpx-sse==0.4.3",
         "httpx==0.28.1",
         "jsonschema==4.26.0",
-        "pydantic-settings==2.15.0",
-        "pydantic==2.14.0",
+        "pydantic-settings==2.16.0",
+        "pydantic==2.14.1",
         "python-dotenv==1.2.4",
         "python-multipart==0.0.32",
         "rich==15.0.0",
         "sse-starlette==3.5.0",
-        "starlette==1.7.0",
+        "starlette==1.8.0",
         "typer==0.27.3",
         "typing-inspection==0.4.4",
         "typing_extensions==4.16.0",
@@ -4670,7 +4670,7 @@
         "pytz==2026.5",
         "urllib3==2.8.0"
       ],
-      "ref": "neo4j==6.4.0"
+      "ref": "neo4j==6.4.1"
     },
     {
       "ref": "numpy==2.5.4"
@@ -4681,7 +4681,7 @@
         "httpx2==2.13.1",
         "jiter==0.17.0",
         "numpy==2.5.4",
-        "pydantic==2.14.0",
+        "pydantic==2.14.1",
         "sniffio==1.3.1",
         "typing_extensions==4.16.0",
         "urllib3==2.8.0"
@@ -4781,11 +4781,11 @@
         "opentelemetry-exporter-otlp-proto-http==1.45.1",
         "opentelemetry-sdk==1.45.1",
         "packaging==26.3",
-        "pydantic==2.14.0",
+        "pydantic==2.14.1",
         "pytest-asyncio==1.4.0",
         "pytest==9.1.1",
         "requests==2.34.2",
-        "ruff==0.17.0",
+        "ruff==0.17.1",
         "tiktoken==0.14.0",
         "typing_extensions==4.16.0"
       ],
@@ -4819,26 +4819,27 @@
     {
       "dependsOn": [
         "PyYAML==6.0.3",
-        "pydantic==2.14.0",
+        "pydantic==2.14.1",
         "python-dotenv==1.2.4",
-        "typing-inspection==0.4.4"
+        "typing-inspection==0.4.4",
+        "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic-settings==2.15.0"
+      "ref": "pydantic-settings==2.16.0"
     },
     {
       "dependsOn": [
         "annotated-types==0.8.0",
-        "pydantic_core==2.50.0",
+        "pydantic_core==2.50.1",
         "typing-inspection==0.4.4",
         "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic==2.14.0"
+      "ref": "pydantic==2.14.1"
     },
     {
       "dependsOn": [
         "typing_extensions==4.16.0"
       ],
-      "ref": "pydantic_core==2.50.0"
+      "ref": "pydantic_core==2.50.1"
     },
     {
       "dependsOn": [
@@ -4922,7 +4923,7 @@
       "ref": "rpds-py==2026.9.1"
     },
     {
-      "ref": "ruff==0.17.0"
+      "ref": "ruff==0.17.1"
     },
     {
       "ref": "shellingham==1.5.4"
@@ -4935,11 +4936,11 @@
     },
     {
       "dependsOn": [
-        "SQLAlchemy==2.1.4",
+        "SQLAlchemy==2.1.5",
         "anyio==4.15.1",
-        "fastapi==0.143.0",
-        "pydantic==2.14.0",
-        "starlette==1.7.0",
+        "fastapi==0.143.3",
+        "pydantic==2.14.1",
+        "starlette==1.8.0",
         "uvicorn==0.54.0"
       ],
       "ref": "sse-starlette==3.5.0"
@@ -4955,7 +4956,7 @@
         "python-multipart==0.0.32",
         "typing_extensions==4.16.0"
       ],
-      "ref": "starlette==1.7.0"
+      "ref": "starlette==1.8.0"
     },
     {
       "dependsOn": [
@@ -5020,7 +5021,7 @@
     }
   ],
   "metadata": {
-    "timestamp": "2026-10-17T22:04:13.047985+00:00",
+    "timestamp": "2026-10-18T04:56:20.330416+00:00",
     "tools": {
       "components": [
         {
@@ -5124,7 +5125,7 @@
       ]
     }
   },
-  "serialNumber": "urn:uuid:b4c797bc-0446-4ec1-97d0-93f2465dfcfc",
+  "serialNumber": "urn:uuid:d92af58f-b65e-4ad4-bc67-5dce77c4d4c6",
   "version": 1,
   "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
   "bomFormat": "CycloneDX",

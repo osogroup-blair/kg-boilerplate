@@ -1,0 +1,150 @@
+{
+  "backup_created_at": "2026-10-18T05:01:52.343185+00:00",
+  "backup_set": "20261018T050152Z",
+  "checks": [
+    {
+      "check": "backup set is intact (sha256 of every artifact equals the manifest)",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "postgres row counts equal the manifest (immediately after restore)",
+      "detail": "{}",
+      "status": "passed"
+    },
+    {
+      "check": "every functions of the source schema is present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "every indexes of the source schema is present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "every policies of the source schema is present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "every rls tables of the source schema is present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "every triggers of the source schema is present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "neo4j node and relationship counts equal the manifest",
+      "detail": "{'nodes': 100, 'relationships': 38} vs {'nodes': 100, 'relationships': 38}",
+      "status": "passed"
+    },
+    {
+      "check": "the Graphiti and uniqueness constraints are present",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "the restored API is ready",
+      "detail": "/health/ready 200",
+      "status": "passed"
+    },
+    {
+      "check": "the restored API refuses writes (MAINTENANCE_MODE=read_only)",
+      "detail": "503",
+      "status": "passed"
+    },
+    {
+      "check": "row-level security fails closed and a pooled connection does not carry a tenant over",
+      "detail": "{'none': 0, 'own': 27, 'after': 0}",
+      "status": "passed"
+    },
+    {
+      "check": "kg deletions reapply: the journal verifies and every line since the backup is applied",
+      "detail": "exit 0, 0 lines: ",
+      "status": "passed"
+    },
+    {
+      "check": "a second reapply is idempotent (nothing left to do)",
+      "detail": "[]",
+      "status": "passed"
+    },
+    {
+      "check": "the journal was not changed by the rehearsal",
+      "detail": "",
+      "status": "passed"
+    },
+    {
+      "check": "kg reconcile --repair ran for every workspace",
+      "detail": "{}",
+      "status": "passed"
+    },
+    {
+      "check": "the residual scan of every journal entry found 0 residuals",
+      "detail": "0",
+      "status": "passed"
+    },
+    {
+      "check": "reconcile left no drift except classes that need a cost confirmation (listed, not executed)",
+      "detail": "{}",
+      "status": "passed"
+    },
+    {
+      "check": "the context probe on the Sarah world matches its pre-backup report (status and items)",
+      "detail": "",
+      "status": "passed"
+    }
+  ],
+  "git": {
+    "commit": "8dd2bfd109201c60094e0cf462aa20f719a5a563",
+    "describe": "v0.8.0-offline-5-g8dd2bfd",
+    "dirty": true
+  },
+  "kind": "restore_rehearsal",
+  "neo4j_restore_seconds": 5.92,
+  "ports": {
+    "KG_API_METRICS_PORT": "9200",
+    "KG_API_PORT": "8100",
+    "KG_MOCK_PORT": "8882",
+    "KG_NEO4J_BOLT_PORT": "7788",
+    "KG_NEO4J_HTTP_PORT": "7575",
+    "KG_PG_PORT": "5644",
+    "KG_WORKER_METRICS_PORT": "9201"
+  },
+  "postgres_restore_seconds": 3.12,
+  "project": "kg-restore",
+  "reconcile": {
+    "demo": {
+      "drift": {
+        "graph.episode.unrecorded": 3
+      },
+      "needs_confirmation": {
+        "graph.episode.unrecorded": 3
+      },
+      "reingest_preview": {
+        "based_on_calls": 200,
+        "estimated_usd": 0.0002,
+        "interactions": 3,
+        "per_interaction_usd": 8.2e-05
+      },
+      "repaired": {
+        "ledger.job_missing_subject": 1
+      },
+      "status": "completed"
+    },
+    "other_demo": {
+      "drift": {},
+      "needs_confirmation": {},
+      "reingest_preview": null,
+      "repaired": {},
+      "status": "completed"
+    }
+  },
+  "rpo_seconds_at_rehearsal": 24.2,
+  "rto_seconds": 94.6,
+  "started_at": "2026-10-18T05:02:16.581415+00:00",
+  "status": "passed"
+}

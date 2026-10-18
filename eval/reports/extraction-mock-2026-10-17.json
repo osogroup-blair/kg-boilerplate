@@ -16,10 +16,10 @@
     "cross_workspace_links": 0,
     "unquarantined_unparseable": 0,
     "chat_calls_per_episode": 3.71,
-    "tokens_per_episode": 4145.6,
+    "tokens_per_episode": 4145.4,
     "latency_seconds": {
-      "p50": 0.81,
-      "p95": 1.32
+      "p50": 0.7,
+      "p95": 0.86
     },
     "embedding_distribution": {
       "related": {
@@ -138,7 +138,7 @@
       "embedding_calls": 6,
       "prompt_tokens": 4752,
       "completion_tokens": 152,
-      "seconds": 1.03,
+      "seconds": 0.86,
       "attempts": 1,
       "known_entities": 4
     },
@@ -172,7 +172,7 @@
       "embedding_calls": 0,
       "prompt_tokens": 0,
       "completion_tokens": 0,
-      "seconds": 4.3,
+      "seconds": 3.94,
       "attempts": 2,
       "known_entities": 4
     },
@@ -206,7 +206,7 @@
       "embedding_calls": 6,
       "prompt_tokens": 4353,
       "completion_tokens": 135,
-      "seconds": 1.32,
+      "seconds": 0.71,
       "attempts": 1,
       "known_entities": 4
     },
@@ -240,7 +240,7 @@
       "embedding_calls": 6,
       "prompt_tokens": 4329,
       "completion_tokens": 133,
-      "seconds": 0.6,
+      "seconds": 0.45,
       "attempts": 1,
       "known_entities": 4
     },
@@ -272,9 +272,9 @@
       "drift": [],
       "chat_calls": 4,
       "embedding_calls": 2,
-      "prompt_tokens": 4667,
+      "prompt_tokens": 4666,
       "completion_tokens": 87,
-      "seconds": 0.58,
+      "seconds": 0.69,
       "attempts": 1,
       "known_entities": 4
     },
@@ -308,7 +308,7 @@
       "embedding_calls": 8,
       "prompt_tokens": 5299,
       "completion_tokens": 241,
-      "seconds": 0.81,
+      "seconds": 0.7,
       "attempts": 1,
       "known_entities": 4
     },
@@ -342,7 +342,7 @@
       "embedding_calls": 7,
       "prompt_tokens": 4726,
       "completion_tokens": 145,
-      "seconds": 0.63,
+      "seconds": 0.6,
       "attempts": 1,
       "known_entities": 4
     }

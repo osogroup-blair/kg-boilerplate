@@ -14,7 +14,7 @@ Router mode: **mock**. Scenarios: 8. Verdict: **PASS**.
 | queries with a distractor in the top 3 | 0 | 0 (proposed) |
 | model calls per event | 0.88 | recorded (DEC-11) |
 | tokens per event | 512.9 | recorded |
-| latency p50 / p95 (s) | 0.6 / 0.87 | recorded |
+| latency p50 / p95 (s) | 0.54 / 0.7 | recorded |
 
 ## Query cosine distribution (ADR-013)
 
@@ -39,11 +39,11 @@ Suggested `MEMORY_VEC_MIN_COSINE` (midpoint between the lowest gold and the high
 
 | scenario | memories tp/fp/fn | stage | drops | reviews | escalations | leaks | procedural active | calls | seconds |
 |---|---|---|---|---|---|---|---|---|---|
-| mem_bad_json | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 0 | 2.86 |
-| mem_cyclist | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.67 |
-| mem_escalation | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.39 |
-| mem_evt003 | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.87 |
-| mem_evt004 | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.36 |
-| mem_injection | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.74 |
-| mem_trivial | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.54 |
-| mem_unmapped | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.37 |
+| mem_bad_json | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 0 | 1.59 |
+| mem_cyclist | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.58 |
+| mem_escalation | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.36 |
+| mem_evt003 | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.7 |
+| mem_evt004 | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.35 |
+| mem_injection | 1/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.68 |
+| mem_trivial | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.37 |
+| mem_unmapped | 0/0/0 | ok | ok | ok | 0 | 0 | 0 | 1 | 0.5 |

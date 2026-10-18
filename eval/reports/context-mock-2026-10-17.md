@@ -12,26 +12,26 @@ Router mode: **mock**. Cases: 16. Ranker: `ctx-rank.v1`. Tokenizer: `tiktoken:ma
 | forbidden items packed | 0 | 0 |
 | temporal correctness | 1.0 | 100% (proposed) |
 | summarised fallback | None | recorded |
-| tokens per call | 236.8 | recorded (DEC-11) |
-| latency p50 / p95 (s) | 0.05 / 0.124 | recorded (DEC-11) |
+| tokens per call | 236.5 | recorded (DEC-11) |
+| latency p50 / p95 (s) | 0.039 / 0.113 | recorded (DEC-11) |
 
 ## Cases
 
 | case | status | recall | irrelevant | temporal | attribution | leaks | budget | tokens |
 |---|---|---|---|---|---|---|---|---|
-| C01_current_employer | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 151/300 |
-| C02_historical_employer | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 97/300 |
-| C03_aspiration_and_conflicting_evidence | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 435/600 |
-| C04_shared_agent_finding | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 372/600 |
-| C05_unrelated_preference_distractor | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 74/300 |
-| C06_private_memory_not_allowed | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 372/600 |
+| C01_current_employer | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 148/300 |
+| C02_historical_employer | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 98/300 |
+| C03_aspiration_and_conflicting_evidence | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 434/600 |
+| C04_shared_agent_finding | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 376/600 |
+| C05_unrelated_preference_distractor | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 73/300 |
+| C06_private_memory_not_allowed | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 376/600 |
 | C07_insufficient_evidence | insufficient_evidence | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 77/600 |
 | C08_backdated_update | insufficient_evidence | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 54/300 |
-| C09_budget_250_vs_1200 | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 435/1200 |
-| C10_graph_backend_missing | partial | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 435/600 |
-| C11_vector_backend_missing | partial | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 435/600 |
+| C09_budget_250_vs_1200 | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 434/1200 |
+| C10_graph_backend_missing | partial | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 434/600 |
+| C11_vector_backend_missing | partial | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 434/600 |
 | C12_foreign_workspace | denied | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 0/None |
-| C13_injection_in_a_memory | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 528/600 |
-| C14_summarized_faithfulness | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 210/1200 |
+| C13_injection_in_a_memory | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 534/600 |
+| C14_summarized_faithfulness | complete | 1.0 | 1.0 | ok | 1.0 | 0 | ok | 207/1200 |
 | C15_hidden_person_is_denied | denied | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 0/None |
-| C16_hidden_relationship_is_absent | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 77/300 |
+| C16_hidden_relationship_is_absent | complete | 1.0 | 0.0 | ok | 1.0 | 0 | ok | 76/300 |
