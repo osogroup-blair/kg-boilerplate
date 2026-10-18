@@ -50,8 +50,9 @@ REPORTS = ROOT / "eval" / "reports"
 
 def compose(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     env_file = WORK / "perf.env"
+    files = ["-f", str(ROOT / "deploy/compose/docker-compose.yml"), "-f", str(ROOT / "eval/load/compose.perf.yml")]
     return subprocess.run(  # noqa: S603
-        ["docker", "compose", "-p", PROJECT, "-f", str(ROOT / "deploy/compose/docker-compose.yml"), "--env-file", str(env_file), *args],  # noqa: S607
+        ["docker", "compose", "-p", PROJECT, *files, "--env-file", str(env_file), *args],  # noqa: S607
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -73,6 +74,10 @@ def write_env(profile: str) -> None:
         f"KG_JOURNAL_HOST_DIR={(WORK / 'journal').resolve()}",
         f"KG_FAULTS_HOST_DIR={(WORK / 'faults').resolve()}",
         "RECONCILE_SCAN_HOURS=0",
+        # One load agent stands in for many: the per-principal abuse guards (60 builds/min, 1200 requests/min by default) would be what is measured. Raised here only.
+        "CONTEXT_RATE_PER_MINUTE=600000",
+        "CONTEXT_RATE_BURST=10000",
+        "PRINCIPAL_REQUESTS_PER_MINUTE=600000",
     ]
     (WORK / "perf.env").write_text("\n".join(lines) + "\n")
 
@@ -173,6 +178,9 @@ async def timed(driver: Driver, op: str, n: int) -> dict[str, float]:
                 continue
             break
         assert resp.status_code < 400, resp.text
+        assert op != "context" or resp.json().get("status") != "denied", (
+            "the load agent cannot see the subject: grants in eval/load/data.py"
+        )
         lat.append(elapsed)
     lat.sort()
     return {"n": n, "p50_ms": round(statistics.median(lat), 1), "p95_ms": round(pct(lat, 0.95), 1), "p99_ms": round(pct(lat, 0.99), 1)}
@@ -195,6 +203,10 @@ async def cmd_baseline_async(args: argparse.Namespace) -> int:
             ("search", args.rps * 2, 40),
             ("long", max(0.5, args.rps / 4), 40),
         ):
+            if report[
+                "scenarios"
+            ]:  # the previous scenario's backlog would otherwise be in front of this one's events and show up as its freshness
+                await drain_outbox(timeout=1200.0)
             since_dt, before = dt.datetime.now(dt.UTC), db_state()
             print(f"== {name} at {rps:g}/s for {seconds}s", flush=True)
             run = await d.run(name, rps, seconds)
@@ -313,6 +325,9 @@ def markdown(r: dict[str, Any]) -> str:
             if r["latency_model"].startswith("provisional")
             else ""
         ),
+        "",
+        "Per-principal rate limits (60 context builds/min, 1200 requests/min by default) are raised on the perf stack: one load agent stands in for many. "
+        "A single agent in production is capped by them, so a client that builds contexts faster than 1 per second gets 429s by design.",
         "",
         f"Dataset: {r['dataset']['size']} ({r['dataset']['entities']} entities, {r['dataset']['facts']} facts, {r['dataset']['memories']} memories) in a workspace beside the others of the shared database.",
         "",

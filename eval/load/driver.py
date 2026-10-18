@@ -76,6 +76,7 @@ class Driver:
     def __init__(self, base_url: str, keys: dict[str, str], sarah: str, *, max_in_flight: int = 64, seed: int = 7):
         self.base, self.keys, self.sarah, self.max = base_url.rstrip("/"), keys, sarah, max_in_flight
         self.rng = random.Random(seed)  # noqa: S311 (a seeded workload generator, not a secret)
+        self._evidence: str | None = None
         self.client = httpx.AsyncClient(
             base_url=self.base, timeout=httpx.Timeout(120.0, connect=10.0), limits=httpx.Limits(max_connections=max_in_flight + 8)
         )
@@ -92,7 +93,8 @@ class Driver:
         try:
             resp = await request
             ok = resp.status_code < 400
-            run.samples.append(Sample(op, ok, resp.status_code, time.perf_counter() - started))
+            denied = ok and op == "context" and resp.json().get("status") == "denied"  # HTTP 200 with nothing in it: fast, and not a build
+            run.samples.append(Sample(op, ok and not denied, resp.status_code, time.perf_counter() - started, "denied" if denied else None))
             if ok and op == "ingest":
                 run.events.append((resp.json()["event_id"], time.monotonic()))
         except Exception as exc:
@@ -122,16 +124,22 @@ class Driver:
             },
         )
 
-    def propose(self) -> Any:
-        return self.client.post(
+    async def propose(self) -> Any:
+        if (
+            self._evidence is None
+        ):  # a proposal must cite evidence (ProposalIn); one memory the agent can already see is enough for a load test
+            found = await self.client.post("/v1/memories/search", headers=self._h("agent"), json={"query": "licensing", "limit": 1})
+            found.raise_for_status()
+            self._evidence = found.json()["hits"][0]["memory_id"]
+        return await self.client.post(
             "/v1/memories/proposals",
             headers={**self._h("agent"), "idempotency-key": str(uuid.uuid4())},
             json={
                 "type": "semantic",
                 "content": f"Load note {uuid.uuid4().hex[:8]}: the licensing review is a project risk.",
                 "purpose": "load",
-                "source_ref": "load-driver",
                 "scopes": [{"kind": "project", "ref": "load-plan"}],
+                "memory_ids": [self._evidence],
             },
         )
 

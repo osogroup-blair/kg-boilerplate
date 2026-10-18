@@ -1,0 +1,355 @@
+{
+  "date": "2026-10-18",
+  "latency_model": "provisional (not measured)",
+  "dataset": {
+    "size": "M",
+    "entities": 5000,
+    "facts": 25000,
+    "memories": 50000
+  },
+  "scenarios": {
+    "steady": {
+      "scenario": "steady",
+      "seconds": 90.3,
+      "operations": {
+        "context": {
+          "count": 271,
+          "errors": 19,
+          "error_rate": 0.0701,
+          "throughput_per_s": 3.0,
+          "p50_ms": 739.8,
+          "p95_ms": 1575.3,
+          "p99_ms": 2155.3,
+          "mean_ms": 881.0,
+          "statuses": {
+            "200": 252,
+            "429": 19
+          }
+        },
+        "ingest": {
+          "count": 55,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 0.61,
+          "p50_ms": 14.3,
+          "p95_ms": 25.1,
+          "p99_ms": 31.3,
+          "mean_ms": 23.9,
+          "statuses": {
+            "202": 55
+          }
+        },
+        "propose": {
+          "count": 34,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 0.38,
+          "p50_ms": 16.8,
+          "p95_ms": 34.6,
+          "p99_ms": 589.1,
+          "mean_ms": 35.3,
+          "statuses": {
+            "202": 34
+          }
+        }
+      },
+      "target_rps": 4.0,
+      "freshness": {
+        "events": 55,
+        "settled": 55,
+        "unsettled": 0,
+        "p50_s": 90.6,
+        "p95_s": 147.2,
+        "max_s": 211.1
+      },
+      "storage": {
+        "postgres_bytes_per_1k_events": 78345309
+      },
+      "cost": {
+        "memory_extraction": {
+          "calls": 55,
+          "usd": 0.002475,
+          "prompt_tokens": 26180,
+          "completion_tokens": 330
+        },
+        "graph_extraction": {
+          "calls": 110,
+          "usd": 0.017053,
+          "prompt_tokens": 186835,
+          "completion_tokens": 660
+        },
+        "embedding": {
+          "calls": 286,
+          "usd": 4.2e-05,
+          "prompt_tokens": 2828,
+          "completion_tokens": 0
+        }
+      },
+      "cost_per_event_usd": 0.000356,
+      "worker_throughput_per_s": {
+        "memory_propose": 0.23,
+        "graph_ingest": 0.23,
+        "normalize": 0.23,
+        "graph_projection": 0.23,
+        "memory_embed": 0.14
+      }
+    },
+    "burst": {
+      "scenario": "burst",
+      "seconds": 31.2,
+      "operations": {
+        "context": {
+          "count": 849,
+          "errors": 674,
+          "error_rate": 0.7939,
+          "throughput_per_s": 27.24,
+          "p50_ms": 11.3,
+          "p95_ms": 1590.3,
+          "p99_ms": 1694.9,
+          "mean_ms": 219.2,
+          "statuses": {
+            "200": 175,
+            "429": 674
+          }
+        },
+        "ingest": {
+          "count": 227,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 7.28,
+          "p50_ms": 18.3,
+          "p95_ms": 32.9,
+          "p99_ms": 44.4,
+          "mean_ms": 20.4,
+          "statuses": {
+            "202": 227
+          }
+        },
+        "propose": {
+          "count": 98,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 3.14,
+          "p50_ms": 19.7,
+          "p95_ms": 36.8,
+          "p99_ms": 40.7,
+          "mean_ms": 22.0,
+          "statuses": {
+            "202": 98
+          }
+        }
+      },
+      "target_rps": 40.0,
+      "freshness": {
+        "events": 227,
+        "settled": 81,
+        "unsettled": 146,
+        "p50_s": 150.7,
+        "p95_s": 306.4,
+        "max_s": 319.6
+      },
+      "storage": {
+        "postgres_bytes_per_1k_events": 18982343
+      },
+      "cost": {
+        "memory_extraction": {
+          "calls": 81,
+          "usd": 0.003645,
+          "prompt_tokens": 38556,
+          "completion_tokens": 486
+        },
+        "graph_extraction": {
+          "calls": 162,
+          "usd": 0.025114,
+          "prompt_tokens": 275157,
+          "completion_tokens": 972
+        },
+        "embedding": {
+          "calls": 273,
+          "usd": 5.1e-05,
+          "prompt_tokens": 3410,
+          "completion_tokens": 0
+        }
+      },
+      "cost_per_event_usd": 0.000127,
+      "worker_throughput_per_s": {
+        "memory_propose": 0.24,
+        "graph_ingest": 0.24,
+        "normalize": 0.68,
+        "graph_projection": 0.02,
+        "memory_embed": 0.29
+      }
+    },
+    "search": {
+      "scenario": "search",
+      "seconds": 42.7,
+      "operations": {
+        "search": {
+          "count": 326,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 7.63,
+          "p50_ms": 448.4,
+          "p95_ms": 3579.4,
+          "p99_ms": 3934.4,
+          "mean_ms": 1402.6,
+          "statuses": {
+            "200": 326
+          }
+        }
+      },
+      "target_rps": 8.0,
+      "storage": {},
+      "cost": {
+        "embedding": {
+          "calls": 326,
+          "usd": 4.6e-05,
+          "prompt_tokens": 3080,
+          "completion_tokens": 0
+        }
+      },
+      "cost_per_event_usd": null,
+      "worker_throughput_per_s": {}
+    },
+    "long": {
+      "scenario": "long",
+      "seconds": 41.6,
+      "operations": {
+        "ingest": {
+          "count": 36,
+          "errors": 0,
+          "error_rate": 0.0,
+          "throughput_per_s": 0.86,
+          "p50_ms": 23.3,
+          "p95_ms": 41.9,
+          "p99_ms": 44.0,
+          "mean_ms": 25.9,
+          "statuses": {
+            "202": 36
+          }
+        }
+      },
+      "target_rps": 1.0,
+      "freshness": {
+        "events": 36,
+        "settled": 36,
+        "unsettled": 0,
+        "p50_s": 59.7,
+        "p95_s": 104.1,
+        "max_s": 149.1
+      },
+      "storage": {
+        "postgres_bytes_per_1k_events": 28672000
+      },
+      "cost": {
+        "memory_extraction": {
+          "calls": 36,
+          "usd": 0.00487,
+          "prompt_tokens": 53244,
+          "completion_tokens": 216
+        },
+        "graph_extraction": {
+          "calls": 72,
+          "usd": 0.017661,
+          "prompt_tokens": 194508,
+          "completion_tokens": 432
+        }
+      },
+      "cost_per_event_usd": 0.000626,
+      "worker_throughput_per_s": {
+        "memory_propose": 0.24,
+        "graph_ingest": 0.24,
+        "normalize": 0.24,
+        "graph_projection": 0.24
+      }
+    }
+  },
+  "size_curve": {
+    "S": {
+      "memories": 10000,
+      "search": {
+        "n": 40,
+        "p50_ms": 175.5,
+        "p95_ms": 752.7,
+        "p99_ms": 783.0
+      },
+      "context": {
+        "n": 30,
+        "p50_ms": 254.1,
+        "p95_ms": 346.1,
+        "p99_ms": 494.2
+      }
+    },
+    "M": {
+      "memories": 50000,
+      "search": {
+        "n": 40,
+        "p50_ms": 470.2,
+        "p95_ms": 2942.0,
+        "p99_ms": 3028.2
+      },
+      "context": {
+        "n": 30,
+        "p50_ms": 1140.4,
+        "p95_ms": 1651.4,
+        "p99_ms": 1687.5
+      }
+    },
+    "L": {
+      "memories": 200000,
+      "search": {
+        "n": 40,
+        "p50_ms": 1193.6,
+        "p95_ms": 2602.5,
+        "p99_ms": 11317.9
+      },
+      "context": {
+        "n": 30,
+        "p50_ms": 1603.8,
+        "p95_ms": 1702.1,
+        "p99_ms": 1755.3
+      }
+    }
+  },
+  "ann_trigger": {
+    "trigger": "200000 memories in one workspace, or a memory-search p95 above 100 ms",
+    "points": [
+      [
+        10000,
+        752.7
+      ],
+      [
+        50000,
+        2942.0
+      ],
+      [
+        200000,
+        2602.5
+      ]
+    ],
+    "fit_ms": {
+      "intercept": 1540.33,
+      "per_100k_memories": 644.7
+    },
+    "memories_at_100ms": -223410,
+    "needed_before_L": true
+  },
+  "proposed_slos": {
+    "context_build_p95_ms": {
+      "measured": 1575.3,
+      "proposed": 2400.0,
+      "at": "M dataset, 4 req/s mixed"
+    },
+    "freshness_p95_s": {
+      "measured": 147.2,
+      "proposed": 295.0
+    },
+    "api_error_rate": {
+      "measured_max": 0.7939,
+      "proposed": 0.001
+    },
+    "events_terminal": {
+      "proposed": "99% of events indexed or needs_review within the freshness SLO; zero silent loss"
+    }
+  }
+}

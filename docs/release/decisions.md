@@ -23,6 +23,22 @@ Status after phase 9. "Owner" items need a person's value before production; the
 - **Triggers to move off (1):** a regulated or contractual isolation requirement from a tenant; any cross-tenant graph finding in the sweep or in production; a tenant that needs its own backup/retention/region.
 - **Owner:** the platform owner decides with security. **Until then** the threat model carries it as accepted finding F-02.
 
+## DEC-11: SLO proposals (the owner sets the values)
+
+**Proposals only.** Source: `eval/reports/baseline-2026-10-18.md` (M dataset, provisional router latency model, one API replica; sizing in [deploy-production.md](../runbooks/deploy-production.md)). A proposal is the measurement with about 50 % headroom, rounded. The alert thresholds marked `SLO (proposal)` in `deploy/observability/rules.yml` do **not** follow these yet; they change once the owner records values.
+
+| Objective | Measured | Proposed | Alert today | Notes |
+|---|---|---|---|---|
+| Context build p95, 3 builds/s, 50,000 memories | 1.58 s (p50 0.74 s) | **2.4 s** | 8 s (`ContextLatencyHigh`) | 1.65 s at 50,000 and 1.70 s at 200,000 in the size curve, so the build time is not what the dataset size drives |
+| Memory search p95, 8/s, 50,000 memories | **3.6 s** (p50 0.45 s) | **no proposal for the exact scan** | none | Any useful objective (say 1 s) fails at 50,000 memories today. Propose the objective with the ANN index, and measure again; see ADR-019 and the trigger in the baseline |
+| Ingest accept p95 (`POST /v1/interactions`) | 25 to 42 ms | **100 ms** | none | |
+| Freshness p95 (accepted to terminal), up to 0.6 events/s | 147 s steady, 104 s long documents | **300 s** | `OutboxOldestPending` at 10 min | Holds only below about 0.3 events/s sustained per worker at the defaults; at 7 events/s 81 of 227 events were terminal after 300 s |
+| Server error rate (5xx) | none in about 1,900 requests (every status was 200, 202 or 429) | **0.1 %** | none | The baseline's own `api_error_rate` counts 429s; this proposal does not |
+| Context builds refused (429) | 0.07 steady, 0.79 burst | not an error SLO | none | The 6-in-flight cap per workspace (about 5 builds/s at 50,000 memories) is by design. A client above it should back off on `retry_after` |
+| Events reaching a terminal state | 100 % of steady and long events | 99 % within the freshness objective, **zero silent loss** | `DeadLetters` | |
+
+Open questions for the owner: whether search is in or out of the first SLO set until ANN lands; whether the freshness objective should assume a faster worker (raising `WORKER_CONCURRENCY` and `SEMAPHORE_LIMIT`, at router cost); and whether to re-measure after `make live-session-apply`, which replaces the modelled latency.
+
 ## Other decisions recorded in phase 9
 | Topic | Decision |
 |---|---|

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="574" font-family="sans-serif" font-size="11">
+<text x="10" y="16" font-weight="bold">Latency by scenario/operation (ms): p50 / p95 / p99 (provisional (not measured))</text>
+<text x="10" y="48">steady/context</text>
+<rect x="220" y="30" width="116.6" height="15" fill="#4c78a8"/><text x="340.6" y="41">739.8</text>
+<rect x="220" y="48" width="248.2" height="15" fill="#f58518"/><text x="472.2" y="59">1575.3</text>
+<rect x="220" y="66" width="339.6" height="15" fill="#e45756"/><text x="563.6" y="77">2155.3</text>
+<text x="10" y="116">steady/ingest</text>
+<rect x="220" y="98" width="2.3" height="15" fill="#4c78a8"/><text x="226.3" y="109">14.3</text>
+<rect x="220" y="116" width="4.0" height="15" fill="#f58518"/><text x="228.0" y="127">25.1</text>
+<rect x="220" y="134" width="4.9" height="15" fill="#e45756"/><text x="228.9" y="145">31.3</text>
+<text x="10" y="184">steady/propose</text>
+<rect x="220" y="166" width="2.6" height="15" fill="#4c78a8"/><text x="226.6" y="177">16.8</text>
+<rect x="220" y="184" width="5.5" height="15" fill="#f58518"/><text x="229.5" y="195">34.6</text>
+<rect x="220" y="202" width="92.8" height="15" fill="#e45756"/><text x="316.8" y="213">589.1</text>
+<text x="10" y="252">burst/context</text>
+<rect x="220" y="234" width="1.8" height="15" fill="#4c78a8"/><text x="225.8" y="245">11.3</text>
+<rect x="220" y="252" width="250.6" height="15" fill="#f58518"/><text x="474.6" y="263">1590.3</text>
+<rect x="220" y="270" width="267.1" height="15" fill="#e45756"/><text x="491.1" y="281">1694.9</text>
+<text x="10" y="320">burst/ingest</text>
+<rect x="220" y="302" width="2.9" height="15" fill="#4c78a8"/><text x="226.9" y="313">18.3</text>
+<rect x="220" y="320" width="5.2" height="15" fill="#f58518"/><text x="229.2" y="331">32.9</text>
+<rect x="220" y="338" width="7.0" height="15" fill="#e45756"/><text x="231.0" y="349">44.4</text>
+<text x="10" y="388">burst/propose</text>
+<rect x="220" y="370" width="3.1" height="15" fill="#4c78a8"/><text x="227.1" y="381">19.7</text>
+<rect x="220" y="388" width="5.8" height="15" fill="#f58518"/><text x="229.8" y="399">36.8</text>
+<rect x="220" y="406" width="6.4" height="15" fill="#e45756"/><text x="230.4" y="417">40.7</text>
+<text x="10" y="456">search/search</text>
+<rect x="220" y="438" width="70.7" height="15" fill="#4c78a8"/><text x="294.7" y="449">448.4</text>
+<rect x="220" y="456" width="564.1" height="15" fill="#f58518"/><text x="788.1" y="467">3579.4</text>
+<rect x="220" y="474" width="620.0" height="15" fill="#e45756"/><text x="844.0" y="485">3934.4</text>
+<text x="10" y="524">long/ingest</text>
+<rect x="220" y="506" width="3.7" height="15" fill="#4c78a8"/><text x="227.7" y="517">23.3</text>
+<rect x="220" y="524" width="6.6" height="15" fill="#f58518"/><text x="230.6" y="535">41.9</text>
+<rect x="220" y="542" width="6.9" height="15" fill="#e45756"/><text x="230.9" y="553">44.0</text>
+</svg>

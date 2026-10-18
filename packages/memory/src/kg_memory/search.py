@@ -4,6 +4,8 @@
     emb         exact cosine of each candidate to the query vector, at the pinned embedding version
     vec         candidates over the cosine floor, ranked
     lex         candidates matching the tsquery, ranked by ts_rank_cd
+    hits        lex and vec merged with a FULL JOIN (the planner can only hash or merge it; a LEFT JOIN of each onto `candidates` was planned as a nested loop on a
+                row estimate of 6 against 50 000 actual, 2.5 billion comparisons, whenever a query term matched most of the workspace)
     ranked      reciprocal-rank fusion + small deterministic boosts (`mem-rrf.v1`), ties broken by id
 
 The authorisation predicate is part of `candidates`, which everything else reads: there is no unscoped candidate list, so a memory the caller may not see can
@@ -72,35 +74,37 @@ WITH candidates AS (
       {filters}
 ),
 emb AS (
-    SELECT c.id, 1 - (e.embedding <=> CAST(:qvec AS vector)) AS cosine
+    SELECT c.id, c.workspace_id, c.importance, c.recorded_at, 1 - (e.embedding <=> CAST(:qvec AS vector)) AS cosine
     FROM candidates c JOIN memory_embeddings e ON e.workspace_id = c.workspace_id AND e.memory_id = c.id AND e.embedding_version = :ver
 ),
 vec AS (
-    SELECT id, cosine, row_number() OVER (ORDER BY cosine DESC, id) AS r FROM emb WHERE cosine >= :min_cos
+    SELECT id, workspace_id, importance, recorded_at, cosine, row_number() OVER (ORDER BY cosine DESC, id) AS r FROM emb WHERE cosine >= :min_cos
 ),
 lex AS (
-    SELECT c.id, row_number() OVER (ORDER BY ts_rank_cd(c.tsv, to_tsquery('simple', :tsq)) DESC, c.id) AS r
+    SELECT c.id, c.workspace_id, c.importance, c.recorded_at, row_number() OVER (ORDER BY ts_rank_cd(c.tsv, to_tsquery('simple', :tsq)) DESC, c.id) AS r
     FROM candidates c WHERE :tsq <> '' AND c.tsv @@ to_tsquery('simple', :tsq)
 ),
 stats AS (
     SELECT (SELECT count(*) FROM candidates) AS considered, (SELECT count(*) FROM emb) AS embedded
 ),
+hits AS (
+    SELECT COALESCE(lex.id, vec.id) AS id, COALESCE(lex.workspace_id, vec.workspace_id) AS workspace_id, COALESCE(lex.importance, vec.importance) AS importance,
+           COALESCE(lex.recorded_at, vec.recorded_at) AS recorded_at, lex.r AS lex_r, vec.r AS vec_r, vec.cosine
+    FROM lex FULL JOIN vec ON vec.id = lex.id
+),
 ranked AS (
-    SELECT c.id, cm.type, cm.status, cm.summary, cm.content, cm.evidence_status, cm.authority_class, cm.classification, cm.effective_from, cm.effective_until,
-           c.importance, lex.r AS lex_rank, vec.r AS vec_rank, vec.cosine, ev.n AS evidence_count,
-           (COALESCE(1.0 / ({k} + lex.r), 0) + COALESCE(1.0 / ({k} + vec.r), 0) + {w_imp} * c.importance::float8 + {w_ev} * ln(1 + ev.n)
-            + :recency * {w_rec} * exp(-EXTRACT(EPOCH FROM (now() - c.recorded_at)) / 86400.0 / 90.0))::float8 AS score,
+    SELECT h.id, cm.type, cm.status, cm.summary, cm.content, cm.evidence_status, cm.authority_class, cm.classification, cm.effective_from, cm.effective_until,
+           h.importance, h.lex_r AS lex_rank, h.vec_r AS vec_rank, h.cosine, ev.n AS evidence_count,
+           (COALESCE(1.0 / ({k} + h.lex_r), 0) + COALESCE(1.0 / ({k} + h.vec_r), 0) + {w_imp} * h.importance::float8 + {w_ev} * ln(1 + ev.n)
+            + :recency * {w_rec} * exp(-EXTRACT(EPOCH FROM (now() - h.recorded_at)) / 86400.0 / 90.0))::float8 AS score,
            (SELECT COALESCE(jsonb_agg(jsonb_build_array(s.scope_kind, s.scope_ref) ORDER BY s.scope_kind, s.scope_ref), '[]'::jsonb)
-              FROM memory_scopes s WHERE s.workspace_id = c.workspace_id AND s.memory_id = c.id) AS scopes,
+              FROM memory_scopes s WHERE s.workspace_id = h.workspace_id AND s.memory_id = h.id) AS scopes,
            (SELECT COALESCE(jsonb_agg(ms.entity_id ORDER BY ms.entity_id), '[]'::jsonb)
-              FROM memory_subjects ms WHERE ms.workspace_id = c.workspace_id AND ms.memory_id = c.id AND ms.role = 'subject') AS subjects
-    FROM candidates c
-    JOIN curated_memories cm ON cm.workspace_id = c.workspace_id AND cm.id = c.id
-    LEFT JOIN lex ON lex.id = c.id
-    LEFT JOIN vec ON vec.id = c.id
-    CROSS JOIN LATERAL (SELECT count(*) AS n FROM memory_evidence e WHERE e.workspace_id = c.workspace_id AND e.memory_id = c.id) ev
-    WHERE lex.r IS NOT NULL OR vec.r IS NOT NULL
-    ORDER BY score DESC, c.id
+              FROM memory_subjects ms WHERE ms.workspace_id = h.workspace_id AND ms.memory_id = h.id AND ms.role = 'subject') AS subjects
+    FROM hits h
+    JOIN curated_memories cm ON cm.workspace_id = h.workspace_id AND cm.id = h.id
+    CROSS JOIN LATERAL (SELECT count(*) AS n FROM memory_evidence e WHERE e.workspace_id = h.workspace_id AND e.memory_id = h.id) ev
+    ORDER BY score DESC, h.id
     LIMIT :k_limit
 )
 SELECT st.considered, st.embedded, r.*

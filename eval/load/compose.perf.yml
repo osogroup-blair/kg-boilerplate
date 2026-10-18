@@ -1,0 +1,8 @@
+# Layered over deploy/compose/docker-compose.yml by eval/load/run.py. The dev compose passes through only the variables it lists, so the perf-only rate limits
+# need to be named here. One load agent stands in for many; the per-principal abuse guards would otherwise be what the baseline measures.
+services:
+  api:
+    environment:
+      CONTEXT_RATE_PER_MINUTE: ${CONTEXT_RATE_PER_MINUTE:-60}
+      CONTEXT_RATE_BURST: ${CONTEXT_RATE_BURST:-20}
+      PRINCIPAL_REQUESTS_PER_MINUTE: ${PRINCIPAL_REQUESTS_PER_MINUTE:-1200}

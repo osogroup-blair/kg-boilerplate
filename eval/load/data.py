@@ -60,7 +60,10 @@ async def seed(settings: Settings, owner_url: str, slug: str, size: str, *, onto
         rotate_keys=False,
         result=result,
         grants={
-            f"agent@{slug}": [("project", "load-plan")],
+            f"agent@{slug}": [
+                ("subject", "*"),
+                ("project", "load-plan"),
+            ],  # without the subject grant every context build is `denied` (P7 subject ACLs)
             f"admin@{slug}": [("subject", "*"), ("project", "*")],
             f"app@{slug}": [("subject", "*")],
         },
