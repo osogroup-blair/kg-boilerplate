@@ -7,9 +7,9 @@ SPIKE   := cd spikes && $(UV) run
 ENVFILE := $(if $(wildcard .env),.env,.env.example)
 KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(ENVFILE)
 RUN := $(UV) run
-PYSRC := packages apps sdk tests scripts
+PYSRC := packages apps sdk tests scripts examples
 
-.PHONY: sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
+.PHONY: demo-sarah test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check \
         backup-init backup backup-verify backup-prune restore-rehearsal reconcile eval-all eval-gate eval-gate-live eval-conflicts eval-authorization eval-injection eval-freeze
 
@@ -17,6 +17,15 @@ sync:                ## install the Python workspace (exact versions from uv.loc
 	$(UV) sync --frozen
 
 # ---- stack ------------------------------------------------------------------------------------------------------------------------
+demo-sarah:          ## example: the Sarah two-agent scenario in a fresh workspace, with a pass/fail report (needs `make up seed`)
+	$(RUN) python -m examples.sarah.run
+
+test-examples:       ## run the examples as tests (needs `make up seed`)
+	$(RUN) pytest tests/examples -q
+
+help:                ## list the targets that carry a ## description
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /\t/' | sort | column -t -s "$$(printf '\t')"
+
 up:                  ## build and start the stack: postgres, neo4j, mock-router, migrate, api, worker (ports: api 8000, pg 5544, neo4j 7475/7688, mock 8782)
 	mkdir -p .local/faults && chmod 777 .local/faults
 	mkdir -p .local/deletion-journal && chmod 777 .local/deletion-journal

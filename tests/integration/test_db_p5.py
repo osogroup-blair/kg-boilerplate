@@ -407,4 +407,9 @@ async def test_the_scope_predicate_is_in_the_scan_of_the_search_statement_not_a_
     for w in ranking:  # and every ranking step sits ABOVE a node that already depends on the candidates CTE
         assert "memory_scopes" not in json.dumps({k: v for k, v in w.items() if k != "Plans"})
     assert "Filter" in flat
+    # lex and vec are merged with a FULL JOIN (hash or merge, never a nested loop): a LEFT JOIN of each onto `candidates` was planned as a nested loop
+    # on a row estimate of 6 against 50 000 actual when a term matched most of the workspace (2.5 billion comparisons)
+    assert any(n.get("Join Type") == "Full" and n.get("Node Type") in ("Hash Join", "Merge Join") for n in all_nodes), (
+        "lex/vec are merged by a full join"
+    )
     _ = accept_event, sub

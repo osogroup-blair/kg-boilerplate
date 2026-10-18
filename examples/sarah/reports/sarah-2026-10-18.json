@@ -1,0 +1,196 @@
+{
+  "mode": "mock",
+  "name": "Sarah two-agent scenario",
+  "passed": true,
+  "steps": [
+    {
+      "at_ids": [
+        "ONT-01",
+        "ONT-02"
+      ],
+      "error": null,
+      "evidence": {
+        "content_hash": "82ff04419d4f",
+        "ontology_version": "1.5.0"
+      },
+      "id": "1",
+      "passed": true,
+      "title": "Admin publishes the ontology; principals registered"
+    },
+    {
+      "at_ids": [
+        "AT-01",
+        "ONT-06"
+      ],
+      "error": null,
+      "evidence": {
+        "idempotent_replay": true,
+        "model_calls": 0,
+        "projection": [
+          "projected"
+        ]
+      },
+      "id": "2",
+      "passed": true,
+      "title": "Trusted app writes evt_001/evt_002 as commands (no model call, idempotent)"
+    },
+    {
+      "at_ids": [
+        "ING-01"
+      ],
+      "error": null,
+      "evidence": {
+        "processing_status": "indexed",
+        "stages": {
+          "graph_ingest": "succeeded",
+          "memory_propose": "succeeded",
+          "normalize": "succeeded"
+        }
+      },
+      "id": "3",
+      "passed": true,
+      "title": "evt_003 conversation is ingested and processed"
+    },
+    {
+      "at_ids": [
+        "AT-02",
+        "AT-03",
+        "AT-04",
+        "AT-05"
+      ],
+      "error": null,
+      "evidence": {
+        "considering_facts": 1,
+        "episodic_memories": 1,
+        "works_at_current": 1
+      },
+      "id": "4",
+      "passed": true,
+      "title": "Current employment is Acme; a CONSIDERING fact and an episodic memory exist"
+    },
+    {
+      "at_ids": [
+        "AT-10",
+        "AGT"
+      ],
+      "error": null,
+      "evidence": {
+        "authority_class": "agent_generated",
+        "finding_status": "active",
+        "note_status": "active"
+      },
+      "id": "5",
+      "passed": true,
+      "title": "Research Agent publishes a sourced finding"
+    },
+    {
+      "at_ids": [
+        "AT-06",
+        "AT-07",
+        "AT-08",
+        "AT-09",
+        "AT-12"
+      ],
+      "error": null,
+      "evidence": {
+        "lines": 5,
+        "tokens": "261/600",
+        "unknowns": 1
+      },
+      "id": "6",
+      "passed": true,
+      "title": "Planning Agent gets a 600-token planning context"
+    },
+    {
+      "at_ids": [
+        "AT-02",
+        "AT-03",
+        "DEC-12"
+      ],
+      "error": null,
+      "evidence": {
+        "as_of_2026_12": 1,
+        "as_of_2027_03": 0,
+        "considering_known_before_evt003": 0,
+        "considering_known_now": 1,
+        "current_now": 1,
+        "end_status": "projected"
+      },
+      "id": "7",
+      "passed": true,
+      "title": "2027 job change: Acme becomes historical; as_of and known_at differ"
+    },
+    {
+      "at_ids": [
+        "AT-11",
+        "AT-14",
+        "SEC-01"
+      ],
+      "error": null,
+      "evidence": {
+        "foreign_vs_missing": {
+          "code": "not_found",
+          "message": "Resource not found",
+          "status": 404
+        },
+        "other_workspace_context": "ok",
+        "ungranted_memories": 0
+      },
+      "id": "8",
+      "passed": true,
+      "title": "An other_demo agent and an ungranted agent are denied"
+    },
+    {
+      "at_ids": [
+        "AT-13",
+        "MEM-06"
+      ],
+      "error": null,
+      "evidence": {
+        "episode_retained": true,
+        "gone_from_next_context": true,
+        "labelled_unverified": true,
+        "rejected": true
+      },
+      "id": "9",
+      "passed": true,
+      "title": "Reviewer rejects the wrong 'Michael manages Sarah'; the next context omits it"
+    },
+    {
+      "at_ids": [
+        "AT-16",
+        "AT-17"
+      ],
+      "error": null,
+      "evidence": {
+        "id_residuals": 0,
+        "purge": "completed",
+        "receipt_stores": [
+          "graph",
+          "job",
+          "postgres",
+          "trace",
+          "vector"
+        ]
+      },
+      "id": "10",
+      "passed": true,
+      "title": "Deletion of a subject: reads blocked at once, purge, receipt"
+    },
+    {
+      "at_ids": [
+        "FI",
+        "AT-08"
+      ],
+      "error": null,
+      "evidence": {
+        "after_replay": "indexed",
+        "context_status_during": "complete",
+        "during_outage": "processing"
+      },
+      "id": "V",
+      "passed": true,
+      "title": "Model-outage variant: queued, context still serves, replay completes"
+    }
+  ]
+}

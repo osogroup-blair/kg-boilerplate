@@ -423,6 +423,8 @@ It has two exits: offline (mock) and **live** (`make eval-memory-live`, run toge
 
 ## Phase 10 — Fully Working Examples
 
+**Detailed plan:** [docs/plans/phase-10-closeout-and-examples.md](docs/plans/phase-10-closeout-and-examples.md). Part A closes out Phase 9 (baseline, sizing, SLO proposals, loose ends); Part B builds the examples below, and the single release-candidate run comes last.
+
 All examples run against `docker compose up` plus one seed command and are covered by CI smoke tests.
 
 1. **Sarah two-agent scenario:** `make demo-sarah` runs all 10 reference steps from `05-delivery/02`, including the 2027 job change, the correction, the deletion, and a model-outage variant. It produces a pass/fail report and prints the context packages.
@@ -449,7 +451,7 @@ All examples run against `docker compose up` plus one seed command and are cover
 
 ## How We'll Use This Roadmap
 
-1. After approval, save this roadmap to the repository as `/Users/blairboylan/Documents/kg_boilerplate/ROADMAP.md`.
+1. After approval, keep this roadmap in the repository as `ROADMAP.md` (done).
 2. For each phase in order, write a **detailed phase plan** before handing it to a coding agent. Each plan covers:
    - file-level work items, schemas and migrations, OpenAPI contracts;
    - authorization points, worker states, UI routes;
