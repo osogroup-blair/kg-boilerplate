@@ -3,7 +3,7 @@ name = "kg-db"
 version = "0.1.0"
 requires-python = "==3.12.*"
 dependencies = [
-  "sqlalchemy[asyncio]==2.1.4",
+  "sqlalchemy[asyncio]==2.1.5",
   "alembic==1.20.0",
   "psycopg[binary]==3.3.6",
   "kg-common",

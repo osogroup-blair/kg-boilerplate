@@ -81,6 +81,8 @@ def main() -> int:
         check(up.returncode == 0, "the stack comes up healthy (ENV=production, generated secrets only)", up.stderr[-600:])
         if up.returncode != 0:
             print(compose("ps", "-a", check_rc=False).stdout)
+            for service in ("neo4j", "api", "worker", "edge", "migrate"):
+                print(f"--- logs: {service}\n" + compose("logs", "--tail", "25", service, check_rc=False).stdout[-2500:])
             return 1
         ps = json.loads("[" + ",".join(compose("ps", "--format", "json", check_rc=False).stdout.strip().splitlines()) + "]")
         by_service: dict[str, list[dict]] = {}
@@ -129,7 +131,13 @@ def main() -> int:
             host = insp["HostConfig"]
             if s == "migrate":
                 continue
-            check(bool(host["ReadonlyRootfs"]), f"{s}: read-only root filesystem")
+            if s == "neo4j":  # documented exception (compose comment): the vendor entrypoint writes its generated config
+                check(
+                    not host["ReadonlyRootfs"] and insp["Config"].get("User") == "7474:7474",
+                    "neo4j: the documented read-only exception, running as its own non-root user",
+                )
+            else:
+                check(bool(host["ReadonlyRootfs"]), f"{s}: read-only root filesystem")
             check(
                 "no-new-privileges:true" in (host.get("SecurityOpt") or []) or "no-new-privileges" in str(host.get("SecurityOpt")),
                 f"{s}: no-new-privileges",
@@ -141,6 +149,7 @@ def main() -> int:
                 for e in env_list
                 if any(k in e.split("=", 1)[0] for k in ("PASSWORD", "SECRET", "PEPPER", "KEYS", "API_KEY"))
                 and not e.split("=", 1)[0].endswith("_FILE")
+                and not e.startswith("ALLOW_")  # a flag, not a value
             ]
             check(not leaked, f"{s}: no secret value in the environment", str(leaked))
             if s in ("api", "worker", "mcp", "edge"):

@@ -35,12 +35,13 @@ def read_key() -> str:
     return os.environ.get("CANARY_KEY", "").strip()
 
 
-async def probe(client: httpx.AsyncClient, *, task: str, max_tokens: int) -> str:
+async def probe(client: httpx.AsyncClient, *, task: str, max_tokens: int | None = None, profile: str = "quick_answer") -> str:
     """One build; returns the outcome label and never raises."""
     try:
-        resp = await client.post(
-            "/v1/context/build", json={"task": task, "max_tokens": max_tokens, "profile": "quick_answer", "allow_partial": True}
-        )
+        body: dict[str, object] = {"task": task, "profile": profile, "allow_partial": True}
+        if max_tokens:  # otherwise the profile's own budget applies (a profile can cap what a request may ask for)
+            body["max_tokens"] = max_tokens
+        resp = await client.post("/v1/context/build", json=body)
     except httpx.HTTPError as exc:
         log.warning("canary_transport_error", error_type=type(exc).__name__)
         return "failed"
@@ -48,9 +49,9 @@ async def probe(client: httpx.AsyncClient, *, task: str, max_tokens: int) -> str
         log.warning("canary_http_status", status=resp.status_code)
         return "failed"
     try:
-        body = resp.json()
-        budgets = body["budgets"]
-        status = str(body["status"])
+        answer = resp.json()
+        budgets = answer["budgets"]
+        status = str(answer["status"])
         used, limit = int(budgets["used_tokens"]), int(budgets["max_tokens"])
     except (ValueError, KeyError, TypeError):
         return "failed"
@@ -85,8 +86,9 @@ async def run(stop: asyncio.Event) -> int:
         log.error("canary_no_key")
         return 2
     interval = float(os.environ.get("CANARY_INTERVAL_SECONDS", "300"))
-    task = os.environ.get("CANARY_TASK", "What is the current state of the canary project?")
-    max_tokens = int(os.environ.get("CANARY_MAX_TOKENS", "600"))
+    task = os.environ.get("CANARY_TASK", "What is the canary project status?")
+    max_tokens = int(os.environ.get("CANARY_MAX_TOKENS", "0")) or None
+    profile = os.environ.get("CANARY_PROFILE", "quick_answer")
     host = os.environ.get(
         "METRICS_HOST", "127.0.0.1"
     )  # production compose sets 0.0.0.0 inside the internal network; nothing publishes this port
@@ -95,7 +97,7 @@ async def run(stop: asyncio.Event) -> int:
         base_url=base, headers={"authorization": f"Bearer {key}"}, timeout=httpx.Timeout(60.0, connect=5.0)
     ) as client:
         while not stop.is_set():
-            outcome = await probe(client, task=task, max_tokens=max_tokens)
+            outcome = await probe(client, task=task, max_tokens=max_tokens, profile=profile)
             metrics.canary_builds_total.labels(outcome=outcome).inc()
             if outcome in ("ok", "degraded"):
                 metrics.canary_last_success_unixtime.set(time.time())

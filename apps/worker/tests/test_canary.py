@@ -31,7 +31,7 @@ def ok(status: str = "complete", used: int = 120, limit: int = 600) -> httpx.Res
 )
 async def test_the_outcome_of_one_probe(response, outcome):
     async with client(lambda request: response) as c:
-        assert await probe(c, task="t", max_tokens=600) == outcome
+        assert await probe(c, task="t", max_tokens=None) == outcome
 
 
 async def test_a_transport_error_is_a_failed_probe_not_an_exception():
@@ -39,7 +39,7 @@ async def test_a_transport_error_is_a_failed_probe_not_an_exception():
         raise httpx.ConnectError("refused")
 
     async with client(boom) as c:
-        assert await probe(c, task="t", max_tokens=600) == "failed"
+        assert await probe(c, task="t", max_tokens=None) == "failed"
 
 
 async def test_the_leak_probe_is_clean_when_nothing_comes_back_and_a_leak_when_the_marker_does():

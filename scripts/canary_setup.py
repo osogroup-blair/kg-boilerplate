@@ -3,6 +3,7 @@
     python scripts/canary_setup.py --api https://kg.example.com --admin-key-file admin.key [--insecure]
 
 * `canary-reader`: a registered agent with a read grant on the project `canary`. Its API key is what the canary uses. Written to `deploy/compose/secrets/canary_key` (0600) unless --key-out says otherwise.
+* one workspace-scoped memory ("The canary project status is green") that the canary task asks about, so a healthy build has evidence;
 * `canary-private`: a second agent that saves ONE private memory containing a unique marker. The canary reader must never be able to see it, so the marker is also the leakage probe's search text.
 
 Prints the marker for `CANARY_LEAK_MARKER` in .env.prod. Idempotent per run only if the handles are free: re-running with the same handles fails with 409 (revoke the old agents first)."""
@@ -44,6 +45,21 @@ def main() -> int:
 
         reader = register("canary-reader", [{"scope_kind": "project", "scope_ref": "canary", "privileges": ["read"]}])
         private = register("canary-private", [{"scope_kind": "project", "scope_ref": "canary", "privileges": ["read", "propose"]}])
+        # something every canary build can find: one workspace-scoped fact the canary task asks about (without evidence a build answers insufficient_evidence, which the canary counts as a failure)
+        seeded = call(
+            "POST",
+            "/v1/memories",
+            admin,
+            {
+                "type": "semantic",
+                "content": "The canary project status is green; its checks run every five minutes.",
+                "scopes": [{"kind": "workspace", "ref": "*"}],
+                "source_ref": "canary-setup",
+                "purpose": "synthetic monitoring",
+            },
+        )
+        if seeded.status_code not in (200, 201):
+            sys.exit(f"saving the canary status memory failed: {seeded.status_code} {seeded.text[:200]}")
         marker = f"canary-marker-{secrets.token_hex(6)}"
         r = call(
             "POST",

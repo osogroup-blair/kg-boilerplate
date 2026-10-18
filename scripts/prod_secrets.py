@@ -2,7 +2,7 @@
 
     python scripts/prod_secrets.py [--out deploy/compose/secrets] [--router-key-file PATH]
 
-One file per secret (mode 0600, directory 0700), each the value only, no trailing newline. Existing files are NEVER overwritten (rotate with `kg secrets` and the runbook, not by
+One file per secret (mode 0444 inside a 0700 directory: Compose bind-mounts the file, and the services run as non-root users that must be able to read it), each the value only, no trailing newline. Existing files are NEVER overwritten (rotate with `kg secrets` and the runbook, not by
 re-running this). The router keys are credentials this repository cannot invent: pass `--router-key-file` (the same key for the API and the worker) or put the files in place
 yourself; until then they hold a marker that the production settings refuse at boot. Nothing is printed except file names."""
 
@@ -60,7 +60,9 @@ def main() -> int:
             kept.append(name)
             continue
         path.write_text(str(value))
-        path.chmod(0o600)
+        path.chmod(
+            0o444
+        )  # the directory is 0700, so only the owner can reach the file; the container's non-root users (10001, 7474) read the bind-mounted file by its mode
         created.append(name)
     print(f"created: {', '.join(created) or '-'}")
     print(f"kept (already present): {', '.join(kept) or '-'}")

@@ -1,6 +1,6 @@
 # Production reference deployment (phase-9 WP10): one VM, Docker Compose, Caddy TLS in front.
 #
-#   python scripts/prod_secrets.py                      # secret files in deploy/compose/secrets (0600, git-ignored)
+#   python scripts/prod_secrets.py                      # secret files in deploy/compose/secrets (a 0700 directory, git-ignored)
 #   cp deploy/compose/prod.env.example .env.prod        # public host name, ACME contact, OIDC, router address, ports of nothing
 #   docker compose -f deploy/compose/docker-compose.prod.yml --env-file .env.prod -p kg-prod up -d --build
 #
@@ -8,7 +8,7 @@
 #   * networks: `edge` (Caddy <-> api, mcp) and `internal` (internal: true: Postgres and Neo4j can reach nothing and are reached by nothing outside the stack). api and worker are on
 #     `egress` as well, for exactly one reason: the model router at ROUTER_URL (a host or VPN address). Nothing but Caddy publishes a port (80, 443).
 #   * every credential is a Docker secret mounted at /run/secrets and read through NAME_FILE; no secret appears in an environment variable or an image layer.
-#   * read-only root filesystems (tmpfs for /tmp), no-new-privileges, all capabilities dropped, non-root users.
+#   * read-only root filesystems (tmpfs for /tmp; the one documented exception is Neo4j, whose entrypoint writes its generated config), no-new-privileges, all capabilities dropped, non-root users.
 #   * ENV=production: the platform refuses to start on a development default, a placeholder router key, a wildcard CORS entry or without the deletion journal volume.
 #   * two API replicas behind Caddy, sharing one Postgres-backed rate limit; the deletion journal and the backups live on volumes/paths OUTSIDE the database.
 name: kg-prod
@@ -111,10 +111,13 @@ services:
       NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP:-2g}
       NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-2g}
       NEO4J_server_config_strict__validation_enabled: "true"
-    cap_add: ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER"]
-    tmpfs: ["/tmp:size=256m,mode=1777", "/var/lib/neo4j/run:mode=1777"]
+    # EXCEPTION to read-only: the vendor entrypoint writes its generated neo4j.conf (plugin defaults, NEO4J_* settings) under /var/lib/neo4j/conf at every start. Everything else holds:
+    # non-root user, no-new-privileges, no capabilities, the data on a volume, and an internal-only network.
+    read_only: false
+    user: "7474:7474"   # the image's own user: started as root the entrypoint would chown its read-only install directory
+    tmpfs: ["/tmp:size=256m,mode=1777", "/var/lib/neo4j/run:uid=7474,gid=7474,mode=0755", "/plugins:uid=7474,gid=7474,mode=0755"]   # apoc is copied into /plugins at each start
     secrets: [neo4j_auth]
-    volumes: ["neo4jdata:/data", "neo4jlogs:/logs", "neo4jplugins:/plugins"]
+    volumes: ["neo4jdata:/data", "neo4jlogs:/logs"]
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:7474 || exit 1"]
@@ -223,8 +226,7 @@ services:
     image: kg-edge:${KG_VERSION:-p9}
     environment:
       KG_PUBLIC_HOST: ${KG_PUBLIC_HOST:?KG_PUBLIC_HOST is required (the public DNS name)}
-      ACME_EMAIL: ${ACME_EMAIL:-}
-      KG_TLS: ${KG_TLS:-}
+      KG_TLS: ${KG_TLS:?set KG_TLS to the certificate contact e-mail (a public certificate) or to internal (Caddy's own CA)}
     cap_add: ["NET_BIND_SERVICE"]
     tmpfs: ["/tmp:size=16m,mode=1777"]
     ports: ["${KG_HTTP_PORT:-80}:80", "${KG_HTTPS_PORT:-443}:443"]
@@ -243,7 +245,6 @@ volumes:
   pgdata:
   neo4jdata:
   neo4jlogs:
-  neo4jplugins:
   caddy_data:
   caddy_config:
   journal:   # production: bind this to a dedicated, append-only (chattr +a) or WORM-backed path that no database backup includes

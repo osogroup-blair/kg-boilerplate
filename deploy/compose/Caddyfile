@@ -1,8 +1,7 @@
 # The edge (phase-9 WP10): TLS termination, the admin console's static files, the API and the MCP server behind one host name.
-# KG_PUBLIC_HOST is the public DNS name (Caddy obtains and renews its certificate); ACME_EMAIL is the contact for it. For a private CA or an internal name set KG_TLS=internal.
+# KG_PUBLIC_HOST is the public DNS name (Caddy obtains and renews its certificate). KG_TLS is `internal` (Caddy's own CA: a private name) or the ACME contact e-mail for a public certificate (compose requires it).
 {
 	admin off
-	email {$ACME_EMAIL}
 }
 
 # the container's own health check (loopback only, never published)
@@ -12,7 +11,7 @@ http://127.0.0.1:8081 {
 }
 
 {$KG_PUBLIC_HOST} {
-	tls {$KG_TLS:}
+	tls {$KG_TLS}
 	encode zstd gzip
 
 	header {

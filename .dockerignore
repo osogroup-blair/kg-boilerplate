@@ -13,3 +13,7 @@ apps/admin/dist
 solution_inputs
 docs
 .DS_Store
+apps/admin/node_modules
+apps/admin/dist
+apps/admin/test-results
+apps/admin/playwright-report

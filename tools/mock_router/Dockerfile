@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
-RUN pip install --no-cache-dir "fastapi==0.143.0" "uvicorn==0.54.0" "pydantic==2.14.0" "tiktoken==0.14.0"
+RUN pip install --no-cache-dir "fastapi==0.143.3" "uvicorn==0.54.0" "pydantic==2.14.1" "tiktoken==0.14.0"
 COPY packages/common/src/kg_common /app/kg_common
 COPY tools/__init__.py /app/tools/__init__.py
 COPY tools/mock_router /app/tools/mock_router

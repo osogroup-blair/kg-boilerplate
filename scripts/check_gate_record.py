@@ -32,10 +32,42 @@ def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=check)  # noqa: S603, S607
 
 
+LOCK = "compat/versions.lock.yaml"
+# only these parts of the lock file change what a model sees or how its output is read: the extraction library and its client, the tokenizer, the graph database and the router contract
+LOCK_KEYS = (
+    ("python_packages", "graphiti-core"),
+    ("python_packages", "openai"),
+    ("python_packages", "tiktoken"),
+    ("services", "neo4j"),
+    ("router", None),
+)
+
+
+def lock_slice(text: str) -> object:
+    import yaml
+
+    try:
+        data = yaml.safe_load(text) or {}
+    except yaml.YAMLError:
+        return text  # unparseable: compare it whole
+    return [(k, data.get(k, {}).get(sub) if sub else data.get(k)) for k, sub in LOCK_KEYS]
+
+
+def lock_changed(a: str, b: str) -> bool:
+    """Did the model-relevant part of the lock file differ between two revisions? (A patch bump of fastapi is not a model change.)"""
+    shown = [git("show", f"{rev}:{LOCK}", check=False) for rev in (a, b)]
+    if any(r.returncode != 0 for r in shown):
+        return True
+    return lock_slice(shown[0].stdout) != lock_slice(shown[1].stdout)
+
+
 def changed_files(base: str) -> list[str]:
-    paths = [p for p in PROTECTED if (ROOT / p).exists()]
+    paths = [p for p in PROTECTED if p != LOCK and (ROOT / p).exists()]
     out = git("diff", "--name-only", f"{base}...HEAD", "--", *paths, check=False)
-    return [line for line in out.stdout.splitlines() if line]
+    files = [line for line in out.stdout.splitlines() if line]
+    if lock_changed(git("merge-base", base, "HEAD", check=False).stdout.strip() or base, "HEAD"):
+        files.append(LOCK)
+    return files
 
 
 def main() -> int:
@@ -49,7 +81,7 @@ def main() -> int:
     if not changed:
         print("no model-affecting file changed: no live gate record needed")
         return 0
-    paths = [p for p in PROTECTED if (ROOT / p).exists()]
+    paths = [p for p in PROTECTED if p != LOCK and (ROOT / p).exists()]
     for record_path in sorted((ROOT / "eval" / "reports" / "gate").glob("*-live.json"), reverse=True):
         rec = json.loads(record_path.read_text())
         commit = rec.get("commit")
@@ -57,7 +89,7 @@ def main() -> int:
             continue
         if git("merge-base", "--is-ancestor", commit, "HEAD", check=False).returncode != 0:
             continue
-        if git("diff", "--quiet", commit, "HEAD", "--", *paths, check=False).returncode == 0:
+        if git("diff", "--quiet", commit, "HEAD", "--", *paths, check=False).returncode == 0 and not lock_changed(commit, "HEAD"):
             print(f"covered by the live gate record {record_path.name} ({len(changed)} protected files changed)")
             return 0
     print(
