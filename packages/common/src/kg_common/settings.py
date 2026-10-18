@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from kg_common.secrets import RingError, SecretRing
 
@@ -23,8 +25,41 @@ DEV_PAYLOAD_KEYS = f"dev1:{DEV_PAYLOAD_KEY_B64}"
 MIN_SECRET_BYTES = 32
 
 
+class _FileSecretsSource(PydanticBaseSettingsSource):
+    """`NAME_FILE=/run/secrets/x` means "the value of NAME is the content of that file" (Docker / Kubernetes secrets; trailing newlines are stripped). It wins over `NAME` itself
+    and over the .env file: a container that was given a secret file means that file. An unreadable file is a startup error, never a silent fallback to a default."""
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        path = os.environ.get(f"{field_name.upper()}_FILE", "")
+        if not path:
+            return None, field_name, False
+        try:
+            return Path(path).read_text().rstrip("\r\n"), field_name, False
+        except OSError as exc:
+            raise ValueError(f"{field_name.upper()}_FILE={path} cannot be read: {exc.strerror}") from exc
+
+    def __call__(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for name, field in self.settings_cls.model_fields.items():
+            value, _, _ = self.get_field_value(field, name)
+            if value is not None:
+                out[name] = value
+        return out
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (init_settings, _FileSecretsSource(settings_cls), env_settings, dotenv_settings, file_secret_settings)
 
     env: Literal["dev", "test", "production"] = "dev"
     service_name: str = "kg-api"
@@ -174,6 +209,7 @@ class Settings(BaseSettings):
     )
     reindex_retention_days: int = Field(default=14, ge=0, le=365)  # a retired graph namespace is kept this long for rollback, then cleared
     reconcile_scan_hours: float = Field(default=24.0, ge=0.0)  # nightly check-only scan per workspace; 0 disables
+    alertmanager_url: str = ""  # optional: the console's alerts panel also lists what this Alertmanager is firing (GET /api/v2/alerts)
     canary_workspace: str = ""  # slug of the workspace whose context the canary builds every 5 minutes; empty disables
     security_headers: bool = True
 
@@ -285,6 +321,17 @@ class Settings(BaseSettings):
             problems.append(
                 "DELETION_JOURNAL_DIR must be set in production (the deletion journal lives outside the database and its backups)"
             )
+        for name, key in (
+            ("OSO_ROUTER_API_KEY_API", self.oso_router_api_key_api),
+            ("OSO_ROUTER_API_KEY_WORKER", self.oso_router_api_key_worker),
+        ):
+            if key.get_secret_value().startswith("REPLACE-WITH"):
+                problems.append(f"{name} is still the placeholder written by scripts/prod_secrets.py")
+        for origin in self.cors_allow_origins:
+            if origin.strip() == "*" or "*" in origin:
+                problems.append("CORS_ALLOW_ORIGINS must list exact origins in production (no wildcard)")
+            elif not origin.startswith("https://"):
+                problems.append(f"CORS_ALLOW_ORIGINS entry '{origin}' must be an https:// origin in production")
         if problems:
             raise ValueError("; ".join(problems))
         return self

@@ -24,8 +24,9 @@ import { TypesTab } from "./pages/ontology/TypesTab";
 import { VersionLayout } from "./pages/ontology/VersionLayout";
 import { VersionsPage } from "./pages/ontology/VersionsPage";
 import { YamlTab } from "./pages/ontology/YamlTab";
-import { Login } from "./pages/Login";
+import { Login, OidcCallback } from "./pages/Login";
 import { GraphExplorerPage } from "./pages/graph/GraphExplorerPage";
+import { RebuildPage } from "./pages/graph/RebuildPage";
 import { MemoriesPage } from "./pages/memories/MemoriesPage";
 import { MemoryDetailPage } from "./pages/memories/MemoryDetailPage";
 import { ReviewDetailPage } from "./pages/reviews/ReviewDetailPage";
@@ -34,7 +35,13 @@ import { ReviewQueuePage } from "./pages/reviews/ReviewQueuePage";
 export function App() {
   const { status } = useAuth();
   if (status === "loading") return <div className="p-8"><Loading label="Restoring session…" /></div>;
-  if (status === "anonymous") return <Login />;
+  if (status === "anonymous")
+    return (
+      <Routes>
+        <Route path="login/callback" element={<OidcCallback />} />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    );
   return (
     <Routes>
       <Route element={<Layout />}>
@@ -55,6 +62,7 @@ export function App() {
         <Route path="entities" element={<DirectoryPage />} />
         <Route path="entities/:entityId" element={<EntityDetailPage />} />
         <Route path="graph" element={<GraphExplorerPage />} />
+        <Route path="graph/rebuild" element={<RebuildPage />} />
         <Route path="memories" element={<MemoriesPage />} />
         <Route path="memories/:memoryId" element={<MemoryDetailPage />} />
         <Route path="context" element={<ContextLabPage />} />

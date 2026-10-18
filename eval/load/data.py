@@ -108,11 +108,18 @@ async def seed(settings: Settings, owner_url: str, slug: str, size: str, *, onto
             )
             await c.execute(
                 text(
-                    "WITH e AS (SELECT id, row_number() OVER (ORDER BY display_name) rn FROM entities WHERE workspace_id = :ws AND display_name LIKE 'Load Person %') "
+                    "CREATE TEMP TABLE _e ON COMMIT DROP AS SELECT id, row_number() OVER (ORDER BY display_name) rn FROM entities WHERE workspace_id = :ws AND display_name LIKE 'Load Person %'"
+                ),
+                p,
+            )
+            await c.execute(text("CREATE UNIQUE INDEX ON _e (rn)"))
+            await c.execute(text("ANALYZE _e"))
+            await c.execute(
+                text(
                     "INSERT INTO facts (id, workspace_id, rel_type, source_entity_id, target_entity_id, valid_from, status, authority_class, source_type, source_command_id, last_command_id, "
                     "source_system, source_ref, ontology_version_id, projection_status, embedding_status) "
                     "SELECT gen_random_uuid(), :ws, 'KNOWS', a.id, b.id, now() - interval '1 day', 'active', 'admin_asserted', 'command', :cmd, :cmd, 'load', 'load', :ov, 'projected', 'skipped_by_policy' "
-                    "FROM generate_series(1, :n) g JOIN e a ON a.rn = (g % :m) + 1 JOIN e b ON b.rn = ((g * 7) % :m) + 1 WHERE a.id <> b.id"
+                    "FROM generate_series(1, :n) g JOIN _e a ON a.rn = (g % :m) + 1 JOIN _e b ON b.rn = ((g * 7) % :m) + 1 WHERE a.id <> b.id"
                 ),
                 {**p, "n": facts, "m": entities},
             )

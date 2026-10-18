@@ -1,0 +1,345 @@
+{
+  "date": "2026-10-17",
+  "replicas": 2,
+  "pytest_exit": 0,
+  "ok": true,
+  "strict_blockers": [
+    "AT-01",
+    "AT-08",
+    "AT-10",
+    "AT-11",
+    "AT-15",
+    "AT-16"
+  ],
+  "ids": [
+    {
+      "id": "SEC-01",
+      "status": "pass",
+      "passed": 69,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py",
+        "tests/security/test_fact_acl_leaks.py",
+        "tests/security/test_isolation.py",
+        "tests/security/test_p2_isolation.py",
+        "tests/security/test_p3_isolation.py",
+        "tests/security/test_p4_isolation.py",
+        "tests/security/test_p5_isolation.py",
+        "tests/security/test_p6_isolation.py",
+        "tests/security/test_p7_isolation.py"
+      ]
+    },
+    {
+      "id": "SEC-02",
+      "status": "pass",
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/security/test_context_leaks.py",
+        "tests/security/test_fact_acl_leaks.py",
+        "tests/security/test_isolation.py",
+        "tests/security/test_memory_leaks.py",
+        "tests/security/test_p5_isolation.py",
+        "tests/security/test_p6_isolation.py"
+      ]
+    },
+    {
+      "id": "SEC-03",
+      "status": "pass",
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p7_revocation.py",
+        "tests/security/test_isolation.py",
+        "tests/security/test_revocation.py"
+      ]
+    },
+    {
+      "id": "SEC-04",
+      "status": "pass",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py",
+        "tests/security/test_context_injection.py",
+        "tests/security/test_injection_corpus.py"
+      ]
+    },
+    {
+      "id": "SEC-05",
+      "status": "pass",
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p8_deletion.py",
+        "tests/security/test_deletion_read_block.py",
+        "tests/security/test_deletion_residuals.py",
+        "tests/security/test_p4_isolation.py"
+      ]
+    },
+    {
+      "id": "SEC-06",
+      "status": "pass",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p8_settings.py",
+        "tests/security/test_egress_matrix.py"
+      ]
+    },
+    {
+      "id": "AT-01",
+      "status": "pass",
+      "passed": 36,
+      "failed": 0,
+      "skipped": 1,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p3_interactions.py"
+      ]
+    },
+    {
+      "id": "AT-02",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py"
+      ]
+    },
+    {
+      "id": "AT-03",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py"
+      ]
+    },
+    {
+      "id": "AT-04",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py"
+      ]
+    },
+    {
+      "id": "AT-05",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p4_extraction.py"
+      ]
+    },
+    {
+      "id": "AT-06",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_context.py"
+      ]
+    },
+    {
+      "id": "AT-07",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_context.py"
+      ]
+    },
+    {
+      "id": "AT-08",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/contract/test_context_budget.py"
+      ]
+    },
+    {
+      "id": "AT-09",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_context.py"
+      ]
+    },
+    {
+      "id": "AT-10",
+      "status": "pass",
+      "passed": 46,
+      "failed": 0,
+      "skipped": 2,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_api.py",
+        "tests/integration/test_p6_traces.py",
+        "tests/security/test_context_leaks.py",
+        "tests/security/test_fact_acl_leaks.py",
+        "tests/security/test_memory_leaks.py",
+        "tests/security/test_p5_isolation.py",
+        "tests/security/test_p6_isolation.py",
+        "tests/security/test_p7_isolation.py"
+      ]
+    },
+    {
+      "id": "AT-11",
+      "status": "pass",
+      "passed": 59,
+      "failed": 0,
+      "skipped": 2,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_api.py",
+        "tests/security/test_context_leaks.py",
+        "tests/security/test_isolation.py",
+        "tests/security/test_p2_isolation.py",
+        "tests/security/test_p3_isolation.py",
+        "tests/security/test_p4_isolation.py"
+      ]
+    },
+    {
+      "id": "AT-12",
+      "status": "pass",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 1,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p6_traces.py"
+      ]
+    },
+    {
+      "id": "AT-13",
+      "status": "pass",
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p8_corrections.py"
+      ]
+    },
+    {
+      "id": "AT-14",
+      "status": "pass",
+      "passed": 41,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p5_memory.py",
+        "tests/integration/test_p7_publish.py",
+        "tests/integration/test_p7_revocation.py"
+      ]
+    },
+    {
+      "id": "AT-15",
+      "status": "pass",
+      "passed": 43,
+      "failed": 0,
+      "skipped": 1,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p3_interactions.py",
+        "tests/integration/test_p4_extraction.py",
+        "tests/security/test_context_injection.py",
+        "tests/security/test_injection_corpus.py"
+      ]
+    },
+    {
+      "id": "AT-16",
+      "status": "pass",
+      "passed": 24,
+      "failed": 0,
+      "skipped": 1,
+      "strict": true,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p8_deletion.py",
+        "tests/integration/test_p8_deletion_more.py",
+        "tests/integration/test_p8_graph_deletion.py",
+        "tests/security/test_deletion_read_block.py",
+        "tests/security/test_deletion_residuals.py"
+      ]
+    },
+    {
+      "id": "AT-17",
+      "status": "pass",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "strict": false,
+      "failing": [],
+      "files": [
+        "tests/integration/test_p8_simulation.py"
+      ]
+    },
+    {
+      "id": "AT-18",
+      "status": "pass",
+      "evidence": "restore-2026-10-17.md",
+      "passed": 1,
+      "failed": 0,
+      "strict": false
+    }
+  ],
+  "totals": {
+    "tests": 477
+  }
+}

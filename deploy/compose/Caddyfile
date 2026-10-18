@@ -1,0 +1,68 @@
+# The edge (phase-9 WP10): TLS termination, the admin console's static files, the API and the MCP server behind one host name.
+# KG_PUBLIC_HOST is the public DNS name (Caddy obtains and renews its certificate); ACME_EMAIL is the contact for it. For a private CA or an internal name set KG_TLS=internal.
+{
+	admin off
+	email {$ACME_EMAIL}
+}
+
+# the container's own health check (loopback only, never published)
+http://127.0.0.1:8081 {
+	bind 127.0.0.1
+	respond /ready "ok" 200
+}
+
+{$KG_PUBLIC_HOST} {
+	tls {$KG_TLS:}
+	encode zstd gzip
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# the API: two (or more) replicas found by DNS, balanced by least connections, taken out while /health fails
+	@api path /v1/* /health
+	handle @api {
+		request_body {
+			max_size 2MB
+		}
+		reverse_proxy {
+			dynamic a {
+				name api
+				port 8000
+				refresh 10s
+			}
+			lb_policy least_conn
+			health_uri /health
+			health_interval 5s
+			health_timeout 3s
+			transport http {
+				dial_timeout 3s
+				response_header_timeout 180s
+			}
+		}
+	}
+
+	# the MCP server (agents connect here with their own keys)
+	handle /mcp* {
+		reverse_proxy mcp:8010
+	}
+
+	# the admin console: static files, one CSP (no inline scripts, no framing, same-origin API only)
+	handle {
+		header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+		header Cache-Control "no-cache"
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

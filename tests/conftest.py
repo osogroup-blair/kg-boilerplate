@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import os
 import socket
 import uuid
@@ -122,8 +123,9 @@ def ctx_for() -> object:
 
 # ---- API stack: seeded DB + the real app (lifespan included) talking to the compose mock router --------------------------------------------
 class ApiStack:
-    def __init__(self, app, client, keys, engine, settings):  # type: ignore[no-untyped-def]
+    def __init__(self, app, client, keys, engine, settings, replicas=None):  # type: ignore[no-untyped-def]
         self.app, self.client, self.keys, self.engine, self.settings = app, client, keys, engine, settings
+        self.replicas = replicas or [app]
 
     def h(self, who: str) -> dict[str, str]:
         """Authorization header for a seeded principal, e.g. h('demo/agent_planning')."""
@@ -133,6 +135,22 @@ class ApiStack:
         r = await self.client.post("/v1/auth/token", headers=self.h(who))
         assert r.status_code == 200, r.text
         return str(r.json()["access_token"])
+
+
+def _round_robin(transports: list):  # type: ignore[no-untyped-def]
+    """One client over several API replicas: request n goes to replica n mod N (the release sweep, `KG_REPLICAS=2`, runs every suite this way)."""
+    import itertools
+
+    import httpx
+
+    class RoundRobin(httpx.AsyncBaseTransport):
+        def __init__(self) -> None:
+            self._cycle = itertools.cycle(transports)
+
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            return await next(self._cycle).handle_async_request(request)
+
+    return RoundRobin()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -156,11 +174,16 @@ async def api(migrated_db: str, test_settings: Settings) -> AsyncIterator[ApiSta
     engine = create_app_engine(settings, pool_size=3, max_overflow=2)
     seeded = await seed_demo(engine, pepper=settings.auth_key_pepper.get_secret_value())
     assert seeded.new_keys, "fresh database should mint keys"
-    app = build_app(settings)
-    async with LifespanManager(app, startup_timeout=60, shutdown_timeout=60) as manager:
-        transport = httpx.ASGITransport(app=manager.app)
+    n = int(os.environ.get("KG_REPLICAS", "1"))
+    if n > 1:  # the release sweep: N independent apps (own pools, caches and listeners) behind one round-robin client, one shared limiter
+        settings = settings.model_copy(update={"limiter_backend": "postgres"})
+    apps = [build_app(settings) for _ in range(n)]
+    async with contextlib.AsyncExitStack() as stack:
+        managers = [await stack.enter_async_context(LifespanManager(a, startup_timeout=60, shutdown_timeout=60)) for a in apps]
+        transports = [httpx.ASGITransport(app=m.app) for m in managers]
+        transport = transports[0] if n == 1 else _round_robin(transports)
         async with httpx.AsyncClient(transport=transport, base_url="http://kg.test") as client:
-            yield ApiStack(app, client, seeded.new_keys, engine, settings)
+            yield ApiStack(apps[0], client, seeded.new_keys, engine, settings, apps)
     await engine.dispose()
 
 
@@ -256,3 +279,25 @@ async def bare_tenant(api):  # type: ignore[no-untyped-def]
     t = await make_tenant(api, ontology=None)
     yield t
     await clear_graph(api, t.group_id)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """The release sweep runs the suites against several replicas behind a round-robin client (`KG_REPLICAS`). A test that patches or swaps state INSIDE one app, or that asserts
+    a per-process limiter's arithmetic, cannot mean the same thing there: it is marked `single_process` and skipped in that run (the shared limiter has its own tests in test_p9_shared)."""
+    if int(os.environ.get("KG_REPLICAS", "1")) <= 1:
+        return
+    skip = pytest.mark.skip(reason="single_process: asserts on one app's in-process state; not meaningful behind a round-robin client")
+    import inspect
+    import re
+
+    reaches_in = re.compile(r"monkeypatch\.setattr\(\s*(?:api\.app|api\.engine|st\b|state\b)|api\.app\.state\.kg\.[\w.]+\s*=[^=]")
+    for item in items:
+        func = getattr(item, "function", None)
+        try:
+            src = inspect.getsource(func) if func is not None else ""
+        except (OSError, TypeError):
+            src = ""
+        if "single_process" in item.keywords or reaches_in.search(
+            src
+        ):  # a test that patches ONE app's internals is single-process by construction
+            item.add_marker(skip)

@@ -189,15 +189,6 @@ class FreshnessIn(BaseModel):
     )
 
 
-class FreshnessOut(BaseModel):
-    graph_lag_seconds: Annotated[float | None, Field(title="Graph Lag Seconds")] = None
-    max_lag_seconds: Annotated[int | None, Field(title="Max Lag Seconds")] = None
-    memory_lag_seconds: Annotated[float | None, Field(title="Memory Lag Seconds")] = (
-        None
-    )
-    stale: Annotated[bool | None, Field(title="Stale")] = False
-
-
 class HitComponents(BaseModel):
     cosine: Annotated[float | None, Field(title="Cosine")]
     evidence_count: Annotated[int, Field(title="Evidence Count")]
@@ -568,6 +559,15 @@ class WriteOut(BaseModel):
     ]
 
 
+class KgContextModelsFreshnessOut(BaseModel):
+    graph_lag_seconds: Annotated[float | None, Field(title="Graph Lag Seconds")] = None
+    max_lag_seconds: Annotated[int | None, Field(title="Max Lag Seconds")] = None
+    memory_lag_seconds: Annotated[float | None, Field(title="Memory Lag Seconds")] = (
+        None
+    )
+    stale: Annotated[bool | None, Field(title="Stale")] = False
+
+
 class ContextBuildIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -620,7 +620,7 @@ class ContextOut(BaseModel):
         dict[str, int] | None, Field(title="Excluded Source Counts")
     ] = None
     facts: Annotated[list[ItemOut] | None, Field(title="Facts")] = None
-    freshness: FreshnessOut | None = None
+    freshness: KgContextModelsFreshnessOut | None = None
     generated_at: Annotated[AwareDatetime, Field(title="Generated At")]
     instructions: Annotated[list[ItemOut] | None, Field(title="Instructions")] = None
     memories: Annotated[list[ItemOut] | None, Field(title="Memories")] = None

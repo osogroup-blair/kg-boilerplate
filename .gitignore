@@ -15,3 +15,5 @@ apps/admin/playwright-report/
 apps/admin/test-results/
 .coverage
 htmlcov/
+deploy/compose/secrets/
+.env.prod

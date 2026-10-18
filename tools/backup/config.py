@@ -56,6 +56,10 @@ class Config:
             retention_days=int(env.get("BACKUP_RETENTION_DAYS", "30")),
             keep_at_least=int(env.get("BACKUP_KEEP_AT_LEAST", "3")),
             compose_project=env.get("BACKUP_COMPOSE_PROJECT", "kg"),
+            compose_file=Path(env["BACKUP_COMPOSE_FILE"])
+            if env.get("BACKUP_COMPOSE_FILE")
+            else cls.compose_file,  # production: deploy/compose/docker-compose.prod.yml
+            compose_env=Path(env["BACKUP_COMPOSE_ENV"]) if env.get("BACKUP_COMPOSE_ENV") else cls.compose_env,  # production: .env.prod
             neo4j_volume=env.get("BACKUP_NEO4J_VOLUME", "kg_neo4jdata"),
             databases=[d for d in env.get("BACKUP_DATABASES", "kg").split(",") if d],
             pg_password=Path(pw_file).read_text().strip() if pw_file else env.get("POSTGRES_ADMIN_PASSWORD", "kg_admin_dev"),

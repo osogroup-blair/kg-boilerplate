@@ -235,6 +235,12 @@ reconcile_repairs_total = Counter("reconcile_repairs_total", "Safe reconcile rep
 reindex_runs = Gauge("reindex_runs", "Reindex runs by status (all workspaces)", ["status"], registry=REGISTRY)
 backup_age_seconds = Gauge("backup_age_seconds", "Age of the newest completed backup per store (-1: never)", ["store"], registry=REGISTRY)
 canary_builds_total = Counter("canary_builds_total", "Synthetic canary context builds by outcome", ["outcome"], registry=REGISTRY)
+leakage_check_failed = Gauge(
+    "leakage_check_failed",
+    "1 when the canary's last cross-agent leakage probe found content it must not see (alert), 0 when it did not",
+    registry=REGISTRY,
+)
+leakage_checks_total = Counter("leakage_checks_total", "Canary leakage probes by outcome", ["outcome"], registry=REGISTRY)
 canary_last_success_unixtime = Gauge("canary_last_success_unixtime", "Unix time of the last successful canary build", registry=REGISTRY)
 maintenance_refusals_total = Counter("maintenance_refusals_total", "Writes refused while MAINTENANCE_MODE=read_only", registry=REGISTRY)
 key_rehashes_total = Counter(

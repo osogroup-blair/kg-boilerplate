@@ -1,0 +1,283 @@
+# Production reference deployment (phase-9 WP10): one VM, Docker Compose, Caddy TLS in front.
+#
+#   python scripts/prod_secrets.py                      # secret files in deploy/compose/secrets (0600, git-ignored)
+#   cp deploy/compose/prod.env.example .env.prod        # public host name, ACME contact, OIDC, router address, ports of nothing
+#   docker compose -f deploy/compose/docker-compose.prod.yml --env-file .env.prod -p kg-prod up -d --build
+#
+# What it enforces:
+#   * networks: `edge` (Caddy <-> api, mcp) and `internal` (internal: true: Postgres and Neo4j can reach nothing and are reached by nothing outside the stack). api and worker are on
+#     `egress` as well, for exactly one reason: the model router at ROUTER_URL (a host or VPN address). Nothing but Caddy publishes a port (80, 443).
+#   * every credential is a Docker secret mounted at /run/secrets and read through NAME_FILE; no secret appears in an environment variable or an image layer.
+#   * read-only root filesystems (tmpfs for /tmp), no-new-privileges, all capabilities dropped, non-root users.
+#   * ENV=production: the platform refuses to start on a development default, a placeholder router key, a wildcard CORS entry or without the deletion journal volume.
+#   * two API replicas behind Caddy, sharing one Postgres-backed rate limit; the deletion journal and the backups live on volumes/paths OUTSIDE the database.
+name: kg-prod
+
+x-secrets-env: &secrets-env
+  DATABASE_URL_APP_FILE: /run/secrets/database_url_app
+  DATABASE_URL_OWNER_FILE: /run/secrets/database_url_owner
+  NEO4J_PASSWORD_FILE: /run/secrets/neo4j_password
+  AUTH_KEY_PEPPER_FILE: /run/secrets/auth_key_pepper
+  AUTH_JWT_SECRET_FILE: /run/secrets/auth_jwt_secret
+  TELEMETRY_HMAC_SECRET_FILE: /run/secrets/telemetry_hmac_secret
+  CONTENT_HMAC_SECRET_FILE: /run/secrets/content_hmac_secret
+  PAYLOAD_KEYS_FILE: /run/secrets/payload_keys
+  OSO_ROUTER_API_KEY_API_FILE: /run/secrets/oso_router_api_key_api
+  OSO_ROUTER_API_KEY_WORKER_FILE: /run/secrets/oso_router_api_key_worker
+  OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+
+x-python-env: &python-env
+  <<: *secrets-env
+  ENV: production
+  NEO4J_URI: bolt://neo4j:7687
+  NEO4J_USER: neo4j
+  OSO_ROUTER_MODE: live
+  OSO_ROUTER_LIVE_URL: ${ROUTER_URL:?ROUTER_URL is required (the model router /v1 base URL, reachable from this host)}
+  PAYLOAD_ACTIVE_KID: ${PAYLOAD_ACTIVE_KID:-prod1}
+  DELETION_JOURNAL_DIR: /journal
+  LIMITER_BACKEND: postgres
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  GRAPHITI_TELEMETRY_ENABLED: "false"
+  MAINTENANCE_MODE: ${MAINTENANCE_MODE:-off}
+  ALLOW_BREAKGLASS_KEYS: ${ALLOW_BREAKGLASS_KEYS:-false}
+  CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-[]}
+  AUTH_OIDC_ENABLED: ${AUTH_OIDC_ENABLED:-false}
+  OIDC_ISSUER: ${OIDC_ISSUER:-}
+  OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  OIDC_REDIRECT_URIS: ${OIDC_REDIRECT_URIS:-[]}
+  CANARY_WORKSPACE: ${CANARY_WORKSPACE:-}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  METRICS_HOST: 0.0.0.0   # inside the internal network only: nothing publishes 9100/9101, Prometheus joins the `edge`-less `observability` network
+
+x-hardened: &hardened
+  read_only: true
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "20m", max-file: "5"}
+
+x-app-secrets: &app-secrets
+  - database_url_app
+  - database_url_owner
+  - neo4j_password
+  - auth_key_pepper
+  - auth_jwt_secret
+  - telemetry_hmac_secret
+  - content_hmac_secret
+  - payload_keys
+  - oso_router_api_key_api
+  - oso_router_api_key_worker
+  - oidc_client_secret
+
+x-python-build: &python-build
+  context: ../..
+  dockerfile: deploy/docker/python.Dockerfile
+
+services:
+  postgres:
+    <<: *hardened
+    image: pgvector/pgvector:pg17@sha256:ac08538c6f8b9904c33c8224c5e5706dbe760aca29db1d096972b4052c22a75d
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      KG_OWNER_PASSWORD_FILE: /run/secrets/kg_owner_password
+      KG_APP_PASSWORD_FILE: /run/secrets/kg_app_password
+    # the Postgres image starts as root only to hand the data directory to `postgres`; it needs these three capabilities for that and drops to the postgres user
+    cap_add: ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER"]
+    tmpfs: ["/tmp:size=64m,mode=1777", "/var/run/postgresql:mode=1777"]
+    secrets: [postgres_password, kg_owner_password, kg_app_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init-prod:/docker-entrypoint-initdb.d:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kg"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  neo4j:
+    <<: *hardened
+    image: neo4j:5.26-community@sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069
+    environment:
+      NEO4J_AUTH_FILE: /run/secrets/neo4j_auth
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP:-2g}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP:-2g}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-2g}
+      NEO4J_server_config_strict__validation_enabled: "true"
+    cap_add: ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER"]
+    tmpfs: ["/tmp:size=256m,mode=1777", "/var/lib/neo4j/run:mode=1777"]
+    secrets: [neo4j_auth]
+    volumes: ["neo4jdata:/data", "neo4jlogs:/logs", "neo4jplugins:/plugins"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 40s
+
+  migrate:
+    <<: *hardened
+    restart: "no"
+    build: *python-build
+    image: kg-python:${KG_VERSION:-p9}
+    command: ["kg", "db", "upgrade"]
+    environment: *python-env
+    secrets: *app-secrets
+    networks: [internal]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *hardened
+    image: kg-python:${KG_VERSION:-p9}
+    command: ["uvicorn", "kg_api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    environment:
+      <<: *python-env
+      SERVICE_NAME: kg-api
+    secrets: *app-secrets
+    volumes: ["journal:/journal:ro"]   # the API only READS the journal; the worker appends (the journal is outside the database and its backups)
+    networks: [edge, internal, egress]
+    extra_hosts: ["host.docker.internal:host-gateway"]   # only for a router on this host; a remote router is reached by its own address
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+      resources: {limits: {memory: 1g}}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      neo4j: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  worker:
+    <<: *hardened
+    image: kg-python:${KG_VERSION:-p9}
+    command: ["python", "-m", "kg_worker"]
+    environment:
+      <<: *python-env
+      SERVICE_NAME: kg-worker
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      RECONCILE_SCAN_HOURS: ${RECONCILE_SCAN_HOURS:-24}
+    secrets: *app-secrets
+    volumes: ["journal:/journal"]
+    networks: [internal, egress]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    stop_grace_period: 40s
+    deploy:
+      resources: {limits: {memory: 2g}}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      neo4j: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9101/metrics').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  # the MCP server holds the address of the API and nothing else: no database, no router, no key (each call forwards the CALLER's key)
+  mcp:
+    <<: *hardened
+    image: kg-python:${KG_VERSION:-p9}
+    command: ["python", "-m", "kg_mcp"]
+    environment:
+      KG_API_URL: http://api:8000
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8010"
+    networks: [edge]
+    depends_on:
+      api: {condition: service_healthy}
+
+  # the synthetic canary (profile `canary`; enable once a canary workspace and agent exist): builds a context through the API every 5 minutes and probes for a cross-agent leak
+  canary:
+    <<: *hardened
+    profiles: ["canary"]
+    image: kg-python:${KG_VERSION:-p9}
+    command: ["python", "-m", "kg_worker.canary"]
+    environment:
+      CANARY_API_URL: http://api:8000
+      CANARY_KEY_FILE: /run/secrets/canary_key
+      CANARY_LEAK_MARKER: ${CANARY_LEAK_MARKER:-}
+      CANARY_INTERVAL_SECONDS: ${CANARY_INTERVAL_SECONDS:-300}
+      METRICS_HOST: 0.0.0.0
+    secrets: [canary_key]
+    networks: [internal]
+    depends_on:
+      api: {condition: service_healthy}
+
+  edge:
+    <<: *hardened
+    build:
+      context: ../..
+      dockerfile: deploy/docker/edge.Dockerfile
+    image: kg-edge:${KG_VERSION:-p9}
+    environment:
+      KG_PUBLIC_HOST: ${KG_PUBLIC_HOST:?KG_PUBLIC_HOST is required (the public DNS name)}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      KG_TLS: ${KG_TLS:-}
+    cap_add: ["NET_BIND_SERVICE"]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    ports: ["${KG_HTTP_PORT:-80}:80", "${KG_HTTPS_PORT:-443}:443"]
+    volumes: ["caddy_data:/data", "caddy_config:/config"]
+    networks: [edge, public]
+    depends_on:
+      api: {condition: service_healthy}
+
+networks:
+  public: {}
+  edge: {internal: true}
+  internal: {internal: true}
+  egress: {}   # api and worker only, for the model router
+
+volumes:
+  pgdata:
+  neo4jdata:
+  neo4jlogs:
+  neo4jplugins:
+  caddy_data:
+  caddy_config:
+  journal:   # production: bind this to a dedicated, append-only (chattr +a) or WORM-backed path that no database backup includes
+
+secrets:
+  postgres_password:
+    file: ${KG_SECRETS_DIR:-./secrets}/postgres_password
+  kg_owner_password:
+    file: ${KG_SECRETS_DIR:-./secrets}/kg_owner_password
+  kg_app_password:
+    file: ${KG_SECRETS_DIR:-./secrets}/kg_app_password
+  database_url_app:
+    file: ${KG_SECRETS_DIR:-./secrets}/database_url_app
+  database_url_owner:
+    file: ${KG_SECRETS_DIR:-./secrets}/database_url_owner
+  neo4j_password:
+    file: ${KG_SECRETS_DIR:-./secrets}/neo4j_password
+  neo4j_auth:
+    file: ${KG_SECRETS_DIR:-./secrets}/neo4j_auth
+  auth_key_pepper:
+    file: ${KG_SECRETS_DIR:-./secrets}/auth_key_pepper
+  auth_jwt_secret:
+    file: ${KG_SECRETS_DIR:-./secrets}/auth_jwt_secret
+  telemetry_hmac_secret:
+    file: ${KG_SECRETS_DIR:-./secrets}/telemetry_hmac_secret
+  content_hmac_secret:
+    file: ${KG_SECRETS_DIR:-./secrets}/content_hmac_secret
+  payload_keys:
+    file: ${KG_SECRETS_DIR:-./secrets}/payload_keys
+  oso_router_api_key_api:
+    file: ${KG_SECRETS_DIR:-./secrets}/oso_router_api_key_api
+  oso_router_api_key_worker:
+    file: ${KG_SECRETS_DIR:-./secrets}/oso_router_api_key_worker
+  oidc_client_secret:
+    file: ${KG_SECRETS_DIR:-./secrets}/oidc_client_secret
+  canary_key:
+    file: ${KG_SECRETS_DIR:-./secrets}/canary_key

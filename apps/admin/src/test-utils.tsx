@@ -41,3 +41,14 @@ export function renderApp(ui: ReactElement, { route = "/", signedIn = true }: { 
     </QueryClientProvider>,
   );
 }
+
+/** Empty-but-valid answers for the Operations v2 panels (cost, latency, freshness, reconciliation, backups, live evaluation, alerts), for tests that render the Operations page for another reason. */
+export const opsV2Routes = (): Record<string, Handler> => ({
+  "GET /v1/operations/alerts": () => json({ firing: [], checked: ["dead_letters"], alertmanager: "not_configured" }),
+  "GET /v1/operations/cost": () => json({ days: 14, total_usd: 0, total_calls: 0, by_purpose: {}, by_alias: {}, rows: [], top_consumers: [], note: "estimates" }),
+  "GET /v1/operations/latency": () => json({ days: 1, context_by_profile: {}, context_by_source: {}, router_by_alias: {}, unit: "seconds" }),
+  "GET /v1/operations/freshness": () => json({ hours: 24, accepted_to_indexed: { n: 0, p50: 0, p95: 0 }, unsettled: {}, oldest_unsettled_age_seconds: 0, by_stage: [], watermarks: {}, unit: "seconds" }),
+  "GET /v1/operations/reconcile": () => json({ classes: [], runs: [] }),
+  "GET /v1/operations/backups": () => json({ stores: [], last_rehearsal: {}, recent: [], stale_after_hours: 26 }),
+  "GET /v1/operations/live-eval": () => json({ last_live_session: null, latest_by_kind: [], recent: [] }),
+});

@@ -3,6 +3,9 @@ name: ci
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "17 3 * * *"        # nightly: the release sweep against two API replicas
+  workflow_dispatch:
 
 jobs:
   check:
@@ -30,6 +33,8 @@ jobs:
           --health-cmd "cypher-shell -u neo4j -p kg-neo4j-dev 'RETURN 1'" --health-interval 5s --health-retries 30 --health-start-period 20s
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the gate-record check compares against the base branch
       - name: Create roles and databases (service containers cannot mount the init script)
         run: |
           export PGPASSWORD=kg_admin_dev
@@ -54,3 +59,35 @@ jobs:
           make seed
           make demo-p1
           make demo-p2
+      - name: Evaluation gate (mock router; strict metrics exact, proposed metrics inside tolerance)
+        run: make eval-all eval-gate
+      - name: Live-gate record for model-affecting changes
+        if: github.event_name == 'pull_request'
+        run: uv run python scripts/check_gate_record.py --base origin/${{ github.base_ref }}
+      - name: Release sweep against two API replicas (nightly and on demand)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: make test-release
+
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # gitleaks scans the history
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: make sync
+      - run: docker build -f deploy/docker/python.Dockerfile -t kg-python:dev . && uv run python -m tools.backup build-image
+      - name: Dependencies, images, filesystem, secrets, SBOM (HIGH/CRITICAL blocks unless docs/security/scan-exceptions.yaml says otherwise)
+        run: make scan
+
+  observability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Alert rules (promtool check + unit tests)
+        run: make obs-test

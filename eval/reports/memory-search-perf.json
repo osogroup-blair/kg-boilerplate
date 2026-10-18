@@ -3,8 +3,8 @@
   "workspaces": 20,
   "candidates_per_query": 50,
   "queries": 60,
-  "p50_ms": 2.66,
-  "p95_ms": 4.3,
-  "max_ms": 11.2,
+  "p50_ms": 2.72,
+  "p95_ms": 8.23,
+  "max_ms": 15.1,
   "plan": "exact cosine over the authorised candidates (no ANN index, ADR-019)"
 }

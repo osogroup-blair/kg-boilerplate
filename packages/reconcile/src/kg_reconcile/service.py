@@ -343,7 +343,7 @@ class Reconcile:
                 await conn.execute(
                     text(
                         "SELECT COALESCE(avg(est_cost_usd), 0)::float8 AS cost, count(*) AS calls FROM (SELECT est_cost_usd FROM model_calls "
-                        "WHERE workspace_id = :ws AND purpose = 'graph_extraction' AND outcome = 'success' ORDER BY created_at DESC LIMIT 200) x"
+                        "WHERE workspace_id = :ws AND purpose = 'graph_extraction' AND outcome = 'ok' ORDER BY created_at DESC LIMIT 200) x"
                     ),
                     {"ws": ctx.workspace_id},
                 )

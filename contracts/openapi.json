@@ -199,6 +199,88 @@
         "title": "ActivityOut",
         "type": "object"
       },
+      "AlertOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "warning",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "platform",
+              "alertmanager"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "severity",
+          "source",
+          "summary"
+        ],
+        "title": "AlertOut",
+        "type": "object"
+      },
+      "AlertsOut": {
+        "properties": {
+          "alertmanager": {
+            "enum": [
+              "not_configured",
+              "ok",
+              "unreachable"
+            ],
+            "title": "Alertmanager",
+            "type": "string"
+          },
+          "checked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Checked",
+            "type": "array"
+          },
+          "firing": {
+            "items": {
+              "$ref": "#/components/schemas/AlertOut"
+            },
+            "title": "Firing",
+            "type": "array"
+          }
+        },
+        "required": [
+          "firing",
+          "checked",
+          "alertmanager"
+        ],
+        "title": "AlertsOut",
+        "type": "object"
+      },
       "AssertionIn": {
         "additionalProperties": false,
         "description": "An optional structured claim: `predicate` is a short token, `object` a scalar. It lets the platform notice a contradiction between two memories.",
@@ -524,6 +606,100 @@
           "lease_reclaims_last_day"
         ],
         "title": "BacklogOut",
+        "type": "object"
+      },
+      "BackupRow": {
+        "properties": {
+          "completed_at": {
+            "title": "Completed At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "expires_at": {
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "started_at": {
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "store": {
+            "title": "Store",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "store",
+          "status",
+          "started_at"
+        ],
+        "title": "BackupRow",
+        "type": "object"
+      },
+      "BackupsOut": {
+        "properties": {
+          "last_rehearsal": {
+            "$ref": "#/components/schemas/RehearsalOut"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/BackupRow"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "stale_after_hours": {
+            "default": 26,
+            "title": "Stale After Hours",
+            "type": "integer"
+          },
+          "stores": {
+            "items": {
+              "$ref": "#/components/schemas/StoreAge"
+            },
+            "title": "Stores",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stores",
+          "last_rehearsal",
+          "recent"
+        ],
+        "title": "BackupsOut",
         "type": "object"
       },
       "BudgetsOut": {
@@ -1287,6 +1463,40 @@
         "title": "Consent",
         "type": "object"
       },
+      "Consumer": {
+        "properties": {
+          "context_builds": {
+            "title": "Context Builds",
+            "type": "integer"
+          },
+          "handle": {
+            "title": "Handle",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "principal_id": {
+            "format": "uuid",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "tokens_used": {
+            "title": "Tokens Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "handle",
+          "kind",
+          "context_builds",
+          "tokens_used"
+        ],
+        "title": "Consumer",
+        "type": "object"
+      },
       "ContentOut": {
         "properties": {
           "actor_ref": {
@@ -1661,7 +1871,7 @@
           "freshness": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/FreshnessOut"
+                "$ref": "#/components/schemas/kg_context__models__FreshnessOut"
               },
               {
                 "type": "null"
@@ -2068,6 +2278,114 @@
           "created_at"
         ],
         "title": "CorrectionRecord",
+        "type": "object"
+      },
+      "CostOut": {
+        "properties": {
+          "by_alias": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "By Alias",
+            "type": "object"
+          },
+          "by_purpose": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "By Purpose",
+            "type": "object"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CostRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "top_consumers": {
+            "items": {
+              "$ref": "#/components/schemas/Consumer"
+            },
+            "title": "Top Consumers",
+            "type": "array"
+          },
+          "total_calls": {
+            "title": "Total Calls",
+            "type": "integer"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "days",
+          "total_usd",
+          "total_calls",
+          "by_purpose",
+          "by_alias",
+          "rows",
+          "top_consumers",
+          "note"
+        ],
+        "title": "CostOut",
+        "type": "object"
+      },
+      "CostRow": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "completion_tokens": {
+            "title": "Completion Tokens",
+            "type": "integer"
+          },
+          "day": {
+            "title": "Day",
+            "type": "string"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "prompt_tokens": {
+            "title": "Prompt Tokens",
+            "type": "integer"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "usd": {
+            "title": "Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "purpose",
+          "alias",
+          "calls",
+          "errors",
+          "prompt_tokens",
+          "completion_tokens",
+          "usd"
+        ],
+        "title": "CostRow",
         "type": "object"
       },
       "DebugOut": {
@@ -3692,6 +4010,65 @@
         "title": "ErrorEnvelope",
         "type": "object"
       },
+      "EvalRow": {
+        "properties": {
+          "finished_at": {
+            "title": "Finished At"
+          },
+          "git_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Commit"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "started_at": {
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "started_at",
+          "summary"
+        ],
+        "title": "EvalRow",
+        "type": "object"
+      },
       "EvidenceOut": {
         "description": "Why the system holds a fact (KGR-05): a command, or an episode of an interaction. Never content.",
         "properties": {
@@ -4291,50 +4668,6 @@
           }
         },
         "title": "FreshnessIn",
-        "type": "object"
-      },
-      "FreshnessOut": {
-        "properties": {
-          "graph_lag_seconds": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Graph Lag Seconds"
-          },
-          "max_lag_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Lag Seconds"
-          },
-          "memory_lag_seconds": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Memory Lag Seconds"
-          },
-          "stale": {
-            "default": false,
-            "title": "Stale",
-            "type": "boolean"
-          }
-        },
-        "title": "FreshnessOut",
         "type": "object"
       },
       "GrantIn": {
@@ -5945,6 +6278,48 @@
         "title": "KeyOut",
         "type": "object"
       },
+      "LatencyOut": {
+        "properties": {
+          "context_by_profile": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Quantiles"
+            },
+            "title": "Context By Profile",
+            "type": "object"
+          },
+          "context_by_source": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Quantiles"
+            },
+            "title": "Context By Source",
+            "type": "object"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "router_by_alias": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Quantiles"
+            },
+            "title": "Router By Alias",
+            "type": "object"
+          },
+          "unit": {
+            "default": "seconds",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "days",
+          "context_by_profile",
+          "context_by_source",
+          "router_by_alias"
+        ],
+        "title": "LatencyOut",
+        "type": "object"
+      },
       "LegalHoldIn": {
         "additionalProperties": false,
         "properties": {
@@ -6101,6 +6476,41 @@
           "direction"
         ],
         "title": "LineageOut",
+        "type": "object"
+      },
+      "LiveEvalOut": {
+        "properties": {
+          "last_live_session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvalRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_by_kind": {
+            "items": {
+              "$ref": "#/components/schemas/EvalRow"
+            },
+            "title": "Latest By Kind",
+            "type": "array"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/EvalRow"
+            },
+            "title": "Recent",
+            "type": "array"
+          }
+        },
+        "required": [
+          "last_live_session",
+          "latest_by_kind",
+          "recent"
+        ],
+        "title": "LiveEvalOut",
         "type": "object"
       },
       "LiveOut": {
@@ -8650,6 +9060,29 @@
         "title": "PublishIn",
         "type": "object"
       },
+      "Quantiles": {
+        "properties": {
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "p50": {
+            "title": "P50",
+            "type": "number"
+          },
+          "p95": {
+            "title": "P95",
+            "type": "number"
+          }
+        },
+        "required": [
+          "n",
+          "p50",
+          "p95"
+        ],
+        "title": "Quantiles",
+        "type": "object"
+      },
       "QuotaDefaults": {
         "additionalProperties": false,
         "properties": {
@@ -9231,6 +9664,59 @@
           "revision"
         ],
         "title": "RegisteredPrincipalOut",
+        "type": "object"
+      },
+      "RehearsalOut": {
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days"
+          },
+          "at": {
+            "title": "At"
+          },
+          "rpo_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpo Seconds"
+          },
+          "rto_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rto Seconds"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "RehearsalOut",
         "type": "object"
       },
       "ReindexIn": {
@@ -11392,6 +11878,34 @@
         "title": "SplitMoveIn",
         "type": "object"
       },
+      "StageLag": {
+        "properties": {
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "p50": {
+            "title": "P50",
+            "type": "number"
+          },
+          "p95": {
+            "title": "P95",
+            "type": "number"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "n",
+          "p50",
+          "p95"
+        ],
+        "title": "StageLag",
+        "type": "object"
+      },
       "StageOut": {
         "properties": {
           "attempts": {
@@ -11504,6 +12018,36 @@
           "attempts"
         ],
         "title": "StageOut",
+        "type": "object"
+      },
+      "StoreAge": {
+        "properties": {
+          "age_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "store": {
+            "title": "Store",
+            "type": "string"
+          }
+        },
+        "required": [
+          "store",
+          "age_seconds",
+          "stale"
+        ],
+        "title": "StoreAge",
         "type": "object"
       },
       "SubjectOut": {
@@ -12420,6 +12964,55 @@
         "title": "WriteOut",
         "type": "object"
       },
+      "kg_api__routers__operations_release__FreshnessOut": {
+        "properties": {
+          "accepted_to_indexed": {
+            "$ref": "#/components/schemas/Quantiles"
+          },
+          "by_stage": {
+            "items": {
+              "$ref": "#/components/schemas/StageLag"
+            },
+            "title": "By Stage",
+            "type": "array"
+          },
+          "hours": {
+            "title": "Hours",
+            "type": "integer"
+          },
+          "oldest_unsettled_age_seconds": {
+            "title": "Oldest Unsettled Age Seconds",
+            "type": "number"
+          },
+          "unit": {
+            "default": "seconds",
+            "title": "Unit",
+            "type": "string"
+          },
+          "unsettled": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Unsettled",
+            "type": "object"
+          },
+          "watermarks": {
+            "additionalProperties": true,
+            "title": "Watermarks",
+            "type": "object"
+          }
+        },
+        "required": [
+          "hours",
+          "accepted_to_indexed",
+          "unsettled",
+          "oldest_unsettled_age_seconds",
+          "by_stage",
+          "watermarks"
+        ],
+        "title": "FreshnessOut",
+        "type": "object"
+      },
       "kg_api__routers__reindex__ActivateIn": {
         "additionalProperties": false,
         "properties": {
@@ -12431,6 +13024,50 @@
           }
         },
         "title": "ActivateIn",
+        "type": "object"
+      },
+      "kg_context__models__FreshnessOut": {
+        "properties": {
+          "graph_lag_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Lag Seconds"
+          },
+          "max_lag_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Lag Seconds"
+          },
+          "memory_lag_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Lag Seconds"
+          },
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "title": "FreshnessOut",
         "type": "object"
       },
       "kg_knowledge__models__ActivateIn": {
@@ -22523,6 +23160,103 @@
         ]
       }
     },
+    "/v1/operations/alerts": {
+      "get": {
+        "description": "What is wrong right now, from the platform's own checks on Postgres state (dead letters, backup age, drift, oldest pending job, a stale rehearsal) plus, when\nALERTMANAGER_URL is set, whatever that Alertmanager is firing. The checks mirror deploy/observability/rules.yml so the console needs no Prometheus access.",
+        "operationId": "operations_alerts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Alerts",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
     "/v1/operations/backlog": {
       "get": {
         "operationId": "backlog",
@@ -22614,6 +23348,341 @@
           }
         ],
         "summary": "Backlog",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/operations/backups": {
+      "get": {
+        "description": "Platform-wide (backups are of the whole database): the age of the newest completed backup per store, recent runs, and the last restore rehearsal with its measured RTO/RPO.\nSizes, statuses and error codes only: no locations, no keys, no content.",
+        "operationId": "operations_backups",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Backups",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/operations/cost": {
+      "get": {
+        "description": "Model spend from the call log's ESTIMATES (the router's invoice is the truth), by day, purpose and alias. Top consumers are the principals that built the most context in the\nwindow: background model calls (extraction, consolidation) belong to no principal and show only in the totals.",
+        "operationId": "operations_cost",
+        "parameters": [
+          {
+            "description": "window in days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "description": "window in days",
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Cost",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/operations/freshness": {
+      "get": {
+        "description": "How far behind the pipeline is: accepted -> indexed lag, the lag per stage (queue wait + run), what has not settled yet, and the watermarks.",
+        "operationId": "operations_freshness",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hours",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 720,
+              "minimum": 1,
+              "title": "Hours",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/kg_api__routers__operations_release__FreshnessOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Freshness",
         "tags": [
           "operations"
         ]
@@ -23282,6 +24351,230 @@
           }
         ],
         "summary": "Retry Job",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/operations/latency": {
+      "get": {
+        "description": "Context build time by profile and by source (from the traces), and the router's response time by alias (from the call log). Seconds.",
+        "operationId": "operations_latency",
+        "parameters": [
+          {
+            "description": "window in days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "window in days",
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatencyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Latency",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/v1/operations/live-eval": {
+      "get": {
+        "description": "When the live session last ran, the newest record of every kind of evaluation (eval gate, live gate, release sweep, resilience, baseline, scan) and per-suite status/drift\nfrom each record's summary. Summaries hold counts, thresholds and verdicts.",
+        "operationId": "operations_live_eval",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveEvalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthenticated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Payload too large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Validation failed"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Dependency unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Operations Live Eval",
         "tags": [
           "operations"
         ]

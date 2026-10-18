@@ -41,6 +41,7 @@ def detail(r: Any) -> tuple[str, int]:
     return err["details"]["quota"], err["retry_after"]
 
 
+@pytest.mark.single_process
 async def test_requests_per_minute_is_a_bucket_that_refills_with_time(api, tenant_agents, clock):
     t = tenant_agents
     agent = await register(t, "chatty-agent", project=None, quotas={"requests_per_minute": 3})
@@ -135,6 +136,7 @@ async def test_interactions_per_day(api, tenant_agents):
     await accept_event_as(other, {"kind": "message", "content": "unaffected"})
 
 
+@pytest.mark.single_process
 async def test_usage_is_the_callers_own_and_survives_a_crash_before_the_flush(api, tenant_agents, strict_mock):  # noqa: F811
     t = tenant_agents
     ids = await sarah_story(t, projected=False)

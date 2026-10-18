@@ -207,6 +207,7 @@ async def test_the_extractive_mode_uses_the_sources_own_words(api, tenant_ctx, s
 # ---- CTX-07 / RET-06: degradation ---------------------------------------------------------------------------------------------------------------
 
 
+@pytest.mark.single_process
 async def test_ctx07_a_graph_outage_is_partial_and_current_facts_still_come_from_postgres(api, tenant_ctx, strict_mock, monkeypatch):  # noqa: F811
     from neo4j.exceptions import ServiceUnavailable
 
@@ -227,6 +228,7 @@ async def test_ctx07_a_graph_outage_is_partial_and_current_facts_still_come_from
     assert "Engineering Manager" not in refused.text  # no package at all
 
 
+@pytest.mark.single_process
 async def test_a_slow_source_times_out_into_partial(api, tenant_ctx, strict_mock, monkeypatch):  # noqa: F811
     import asyncio
 

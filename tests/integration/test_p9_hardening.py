@@ -65,3 +65,21 @@ async def test_a_body_limit_per_route_class(api, tenant):
         json={"source_system": "chat", "source_ref": "big-2", "kind": "message", "content": "z" * (2 * 1024 * 1024)},
     )
     assert huge.status_code == 413  # but not without limit
+
+
+async def test_kg_workspaces_create_bootstraps_a_workspace_with_one_key_and_is_idempotent(api):
+    import uuid as _uuid
+
+    from tests.integration.test_p3_cli import kg
+
+    slug = f"boot-{_uuid.uuid4().hex[:8]}"
+    pepper = {"AUTH_KEY_PEPPER": api.settings.auth_key_pepper.get_secret_value()}  # the CLI must hash under the API's pepper
+    first = await kg("workspaces", "create", "--slug", slug, "--name", "Bootstrap Test", extra_env=pepper)
+    assert first.returncode == 0, first.stderr
+    key = next(line.split(": ", 1)[1] for line in first.stdout.splitlines() if line.startswith(f"admin@{slug}: "))
+    me = await api.client.get("/v1/me", headers={"authorization": f"Bearer {key}"})
+    assert me.status_code == 200 and "workspace_admin" in str(me.json()), me.text
+    again = await kg("workspaces", "create", "--slug", slug, "--name", "Bootstrap Test", extra_env=pepper)
+    assert again.returncode == 0 and "no new key" in again.stdout and key not in again.stdout
+    bad = await kg("workspaces", "create", "--slug", "Bad_Slug", "--name", "x")
+    assert bad.returncode != 0

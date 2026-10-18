@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import { ME, errorEnvelope, json, mockApi, renderApp } from "../test-utils";
+import { ME, errorEnvelope, json, mockApi, opsV2Routes, renderApp } from "../test-utils";
 import { StageTimeline, type Stage } from "./interactions/StageTimeline";
 
 const meAs = (...roles: string[]) => ({ ...ME, principal: { ...ME.principal, roles } });
@@ -197,7 +197,7 @@ describe("Operations", () => {
 
   it("shows health, workers, backlog by stage, lease reclaims and the dead letters", async () => {
     mockApi({
-      "GET /v1/me": () => json(meAs("operator")), "GET /v1/operations/health": () => json(HEALTH), "GET /v1/operations/backlog": () => json(BACKLOG),
+      ...opsV2Routes(), "GET /v1/me": () => json(meAs("operator")), "GET /v1/operations/health": () => json(HEALTH), "GET /v1/operations/backlog": () => json(BACKLOG),
       "GET /v1/operations/jobs": (req) => { expect(new URL(req.url).searchParams.get("status")).toBe("dead"); return json({ items: [job()], next_cursor: null }); },
     });
     renderApp(<App />, { route: "/operations" });

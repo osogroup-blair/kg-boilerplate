@@ -85,3 +85,11 @@ Integration suites fail loudly (not skip) when the stack is missing and `KG_REQU
 - `make demo-p4` is the tour (13 steps; re-runnable); `make eval-extraction` scores the scenario gold set offline (must be 100%). **Before Phase 6** run the live pair yourself: `make verify-router`, then `OSO_ROUTER_API_KEY=... make eval-extraction-live` (see [p4-graph-identity.md](../architecture/p4-graph-identity.md)).
 - Neo4j needs headroom: the compose service is capped at a few GB; if `docker ps` shows it restarting (OOM), raise Docker Desktop memory. Runbooks: [extraction-quarantine](extraction-quarantine.md), [identity-correction](identity-correction.md).
 - `kg db downgrade 0003` refuses while extracted data exists: `kg extraction purge --workspace <ws>` first, or `kg db downgrade 0003 --force-drop-extracted`.
+
+## Phase 9: production, release and recovery
+- **Production** is not this file's compose: it is `deploy/compose/docker-compose.prod.yml` ([deploy-production.md](deploy-production.md)). `make prod-smoke` brings it up under a throw-away project with generated secrets and checks TLS, read-only containers, internal networks and the break-glass flag.
+- **Two API replicas** locally: `docker compose --profile replicas up -d api2` (port 8001). `LIMITER_BACKEND=postgres` (the default in compose) makes both share one rate budget; a revocation or a settings change reaches the other in well under a second.
+- **First workspace in production:** `kg workspaces create --slug … --name …` (prints one break-glass key). `kg seed demo` refuses when `ENV=production`.
+- **Every gate:** `make release-candidate` (drops the dev volumes). The pieces: `make test-release` (the sweep, two replicas), `make eval-all eval-gate`, `make scan`, `make backup restore-rehearsal`, `make perf-up perf-seed perf-baseline`, `make obs-test`, and the owner's `make live-session`.
+- **Recovery:** [backup-restore.md](backup-restore.md). **Rotation:** [rotate-secrets.md](rotate-secrets.md). **Outages:** [graph-outage.md](graph-outage.md), [llm-outage.md](llm-outage.md). **Rebuild the graph:** [reindex-ontology.md](reindex-ontology.md). **SSO:** [oidc-setup.md](oidc-setup.md). **Dependencies:** [upgrade-pin-dependencies.md](upgrade-pin-dependencies.md).
+- **Maintenance mode:** `MAINTENANCE_MODE=read_only` answers every write with 503 (a restored environment before it is verified).

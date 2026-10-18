@@ -1,0 +1,132 @@
+# Prometheus alert rules for the knowledge platform (phase-9 WP9). Every expression uses a metric the platform exports (packages/observability/src/kg_obs/metrics.py).
+# The thresholds marked SLO are PROPOSALS from the WP4 baseline (eval/reports/baseline-*.md); the owner sets the final values (docs/release/decisions.md, DEC-11).
+# `rules_test.yml` unit-tests these with `promtool test rules` (make obs-test).
+groups:
+  - name: kg-correctness
+    rules:
+      - alert: ContextBudgetViolation
+        expr: sum(increase(context_budget_violations_total[10m])) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "A built context exceeded its token budget (must never happen)"
+          runbook: docs/runbooks/context-debugging.md
+      - alert: DeletionResidualsFound
+        expr: increase(deletion_residuals_total[1h]) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "The deletion verifier found residual data after a purge ({{ $labels.store }})"
+          runbook: docs/runbooks/subject-deletion.md
+      - alert: CanaryBudgetViolation
+        expr: sum(increase(canary_builds_total{outcome="budget_violation"}[15m])) > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "The synthetic canary built a context over its budget"
+          runbook: docs/runbooks/context-debugging.md
+      - alert: CanaryFailing
+        expr: sum(increase(canary_builds_total{outcome="failed"}[15m])) >= 2
+        labels: {severity: critical}
+        annotations:
+          summary: "The synthetic canary's context builds are failing (two or more failures in 15 minutes)"
+          runbook: docs/runbooks/graph-outage.md
+      - alert: CanaryStale
+        expr: time() - canary_last_success_unixtime > 900
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "No successful canary build for 15 minutes (or the canary is not running)"
+      - alert: LeakageCheckFailing
+        # a scheduled synthetic leak check (the release sweep subset) exports this gauge: 1 = the last run found a cross-tenant or cross-agent leak
+        expr: leakage_check_failed > 0
+        labels: {severity: critical}
+        annotations:
+          summary: "The scheduled leakage check failed"
+      - alert: ReconcileDrift
+        expr: sum by (drift_class) (reconcile_drift) > 0
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "Reconciliation found {{ $value }} item(s) of drift class {{ $labels.drift_class }}"
+          runbook: docs/runbooks/projection-repair.md
+
+  - name: kg-pipeline
+    rules:
+      - alert: DeadLetters
+        expr: sum(outbox_dead_letters) > 0
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value }} dead-lettered outbox job(s) for 15 minutes"
+          runbook: docs/runbooks/stuck-job-replay.md
+      - alert: OutboxOldestPending
+        # SLO (proposal): no claimable job waits more than 10 minutes
+        expr: max(outbox_oldest_pending_age_seconds) > 600
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "The oldest claimable job has waited {{ $value | humanizeDuration }}"
+          runbook: docs/runbooks/stuck-job-replay.md
+      - alert: WorkerHeartbeatLost
+        expr: time() - max(worker_heartbeat_unixtime) > 120
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "No worker heartbeat for 2 minutes"
+          runbook: docs/runbooks/startup.md
+      - alert: RouterErrorRate
+        # SLO (proposal): under 5 % of router calls fail over 10 minutes
+        expr: |
+          sum(rate(router_calls_total{outcome!="ok"}[10m])) / clamp_min(sum(rate(router_calls_total[10m])), 0.01) > 0.05
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of model router calls are failing"
+          runbook: docs/runbooks/llm-outage.md
+      - alert: GraphDependencyDown
+        expr: dependency_up{dependency="neo4j"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "Neo4j is not answering"
+          runbook: docs/runbooks/graph-outage.md
+      - alert: PostgresDependencyDown
+        expr: dependency_up{dependency="postgres"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Postgres is not answering"
+          runbook: docs/runbooks/startup.md
+
+  - name: kg-capacity-and-recovery
+    rules:
+      - alert: BackupStale
+        expr: backup_age_seconds > 26 * 3600 or backup_age_seconds < 0
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "No completed {{ $labels.store }} backup in the last 26 hours (or ever)"
+          runbook: docs/runbooks/backup-restore.md
+      - alert: QuotaExceededSpike
+        expr: sum by (quota) (increase(quota_exceeded_total[10m])) > 50
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 50 requests refused by the {{ $labels.quota }} quota in 10 minutes"
+      - alert: LimiterErrors
+        expr: increase(limiter_errors_total[10m]) > 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "The shared limiter's database is failing; context builds are being refused (fail-closed)"
+      - alert: InvalidationListenerDown
+        expr: invalidation_listener_up == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "A process lost its cache-invalidation listener; changes now reach it by TTL only"
+      - alert: ContextLatencyHigh
+        # SLO (proposal): context build p95 under 8 s for the quick_answer profile
+        expr: histogram_quantile(0.95, sum by (le, profile) (rate(context_build_duration_seconds_bucket[10m]))) > 8
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 context build time for {{ $labels.profile }} is {{ $value | humanizeDuration }}"
+          runbook: docs/runbooks/context-debugging.md

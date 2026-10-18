@@ -157,6 +157,7 @@ async def test_memory_deletion_removes_the_memory_its_embedding_and_evidence_and
     ).status_code in (403, 404)
 
 
+@pytest.mark.single_process
 async def test_a_workspace_deletion_cools_off_can_be_cancelled_and_then_purges_only_its_own_workspace(api, tenant_governance):
     t = tenant_governance
     w = await deletion_world(api, t)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly knowledge platform backup (RPO: 24 h unless the owner sets a tighter schedule)
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

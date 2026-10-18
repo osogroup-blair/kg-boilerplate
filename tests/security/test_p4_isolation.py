@@ -30,6 +30,8 @@ def p4_routes() -> list[tuple[str, str, Any]]:
             path = getattr(route, "path", "")
             new_entity = path.startswith("/v1/entities/{entity_id}/") and path.endswith(P4_ENTITY_SUFFIXES)
             new_fact = path == "/v1/relationships/{fact_id}/evidence"
+            if path.startswith("/v1/graph/namespaces"):
+                continue  # Flow F routes (P9): their isolation is walked in tests/integration/test_p9_reindex.py::test_a_namespace_can_never_name_another_workspaces_graph
             if path.startswith(P4_PREFIXES) or new_entity or new_fact:
                 for method in sorted(m for m in route.methods if m not in ("HEAD", "OPTIONS")):  # type: ignore[attr-defined]
                     out.append((method, path, route))

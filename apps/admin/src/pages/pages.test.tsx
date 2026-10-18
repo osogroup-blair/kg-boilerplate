@@ -109,7 +109,7 @@ describe("Agents & Access", () => {
     renderApp(<App />);
     await screen.findByTestId("workspace-name");
     const links = screen.getAllByRole("link").map((l) => l.textContent);
-    expect(links).toEqual(["Dashboard", "Ontology", "Entities", "Graph Explorer", "Memories", "Context Lab", "Review Queue", "Commands", "Interactions & Episodes", "Operations", "Agents & Access", "Deletions", "Privacy audit", "Settings"]);
+    expect(links).toEqual(["Dashboard", "Ontology", "Entities", "Graph Explorer", "Graph rebuild", "Memories", "Context Lab", "Review Queue", "Commands", "Interactions & Episodes", "Operations", "Agents & Access", "Deletions", "Privacy audit", "Settings"]);
     vi.unstubAllGlobals();
   });
 });

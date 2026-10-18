@@ -181,6 +181,7 @@ async def test_only_an_admin_can_ask_for_a_debug_snapshot_even_through_the_lab(a
 # ---- rate limit, feature flag, usage, validation ----------------------------------------------------------------------------------------------
 
 
+@pytest.mark.single_process
 async def test_the_rate_limit_answers_429_with_retry_after_and_counts_nothing_else(api, tenant_ctx, monkeypatch):
     from kg_context.limits import BuildLimiter
 

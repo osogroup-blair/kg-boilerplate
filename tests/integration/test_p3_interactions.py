@@ -576,6 +576,7 @@ async def test_reconcile_finds_and_repairs_a_stuck_interaction(tenant, api):
         assert (await Reconciler().run(c, ctx, repair=False)).clean
 
 
+@pytest.mark.single_process
 async def test_payload_key_rotation_reencrypts_in_batches_and_content_stays_readable(tenant, api):
     import base64
     import os

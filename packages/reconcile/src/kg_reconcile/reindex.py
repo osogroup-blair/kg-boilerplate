@@ -231,8 +231,8 @@ class ReindexService:
         embed = (
             await conn.execute(
                 text(
-                    "SELECT COALESCE(avg(est_cost_usd), 0)::float8 AS c FROM (SELECT est_cost_usd FROM model_calls WHERE workspace_id = :ws AND operation = 'embedding' "
-                    "AND outcome = 'success' ORDER BY created_at DESC LIMIT 200) x"
+                    "SELECT COALESCE(avg(est_cost_usd), 0)::float8 AS c FROM (SELECT est_cost_usd FROM model_calls WHERE workspace_id = :ws AND operation = 'embeddings' "
+                    "AND outcome = 'ok' ORDER BY created_at DESC LIMIT 200) x"
                 ),
                 {"ws": ws},
             )
@@ -241,7 +241,7 @@ class ReindexService:
             await conn.execute(
                 text(
                     "SELECT COALESCE(avg(est_cost_usd), 0)::float8 AS c FROM (SELECT est_cost_usd FROM model_calls WHERE workspace_id = :ws AND purpose = 'graph_extraction' "
-                    "AND outcome = 'success' ORDER BY created_at DESC LIMIT 200) x"
+                    "AND outcome = 'ok' ORDER BY created_at DESC LIMIT 200) x"
                 ),
                 {"ws": ws},
             )

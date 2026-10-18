@@ -1,0 +1,21 @@
+# Prometheus scrape configuration for the production compose (join Prometheus to the `kg-prod_internal` network; nothing publishes the metrics ports).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 1m
+
+rule_files: [rules.yml]
+
+alerting:
+  alertmanagers:
+    - static_configs: [{targets: ['alertmanager:9093']}]
+
+scrape_configs:
+  - job_name: kg-api
+    dns_sd_configs:
+      - names: [tasks.api, api]        # every replica: `docker compose` resolves `api` to all of them
+        type: A
+        port: 9100
+  - job_name: kg-worker
+    static_configs: [{targets: ['worker:9101']}]
+  - job_name: kg-canary
+    static_configs: [{targets: ['canary:9103']}]

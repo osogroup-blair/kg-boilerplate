@@ -1247,6 +1247,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/operations/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Alerts
+         * @description What is wrong right now, from the platform's own checks on Postgres state (dead letters, backup age, drift, oldest pending job, a stale rehearsal) plus, when
+         *     ALERTMANAGER_URL is set, whatever that Alertmanager is firing. The checks mirror deploy/observability/rules.yml so the console needs no Prometheus access.
+         */
+        get: operations["operations_alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/operations/backlog": {
         parameters: {
             query?: never;
@@ -1256,6 +1277,68 @@ export interface paths {
         };
         /** Backlog */
         get: operations["backlog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Backups
+         * @description Platform-wide (backups are of the whole database): the age of the newest completed backup per store, recent runs, and the last restore rehearsal with its measured RTO/RPO.
+         *     Sizes, statuses and error codes only: no locations, no keys, no content.
+         */
+        get: operations["operations_backups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Cost
+         * @description Model spend from the call log's ESTIMATES (the router's invoice is the truth), by day, purpose and alias. Top consumers are the principals that built the most context in the
+         *     window: background model calls (extraction, consolidation) belong to no principal and show only in the totals.
+         */
+        get: operations["operations_cost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/freshness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Freshness
+         * @description How far behind the pipeline is: accepted -> indexed lag, the lag per stage (queue wait + run), what has not settled yet, and the watermarks.
+         */
+        get: operations["operations_freshness"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1343,6 +1426,47 @@ export interface paths {
         put?: never;
         /** Retry Job */
         post: operations["retry_job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/latency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Latency
+         * @description Context build time by profile and by source (from the traces), and the router's response time by alias (from the call log). Seconds.
+         */
+        get: operations["operations_latency"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/live-eval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations Live Eval
+         * @description When the live session last ran, the newest record of every kind of evaluation (eval gate, live gate, release sweep, resilience, baseline, scan) and per-suite status/drift
+         *     from each record's summary. Summaries hold counts, thresholds and verdicts.
+         */
+        get: operations["operations_live_eval"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2019,6 +2143,37 @@ export interface components {
             /** Window Days */
             window_days: number;
         };
+        /** AlertOut */
+        AlertOut: {
+            /** Name */
+            name: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "critical" | "warning" | "info";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "platform" | "alertmanager";
+            /** Summary */
+            summary: string;
+            /** Value */
+            value?: number | null;
+        };
+        /** AlertsOut */
+        AlertsOut: {
+            /**
+             * Alertmanager
+             * @enum {string}
+             */
+            alertmanager: "not_configured" | "ok" | "unreachable";
+            /** Checked */
+            checked: string[];
+            /** Firing */
+            firing: components["schemas"]["AlertOut"][];
+        };
         /**
          * AssertionIn
          * @description An optional structured claim: `predicate` is a short token, `object` a scalar. It lets the platform notice a contradiction between two memories.
@@ -2137,6 +2292,43 @@ export interface components {
             lease_reclaims_last_hour: number;
             /** Oldest Pending Age Seconds */
             oldest_pending_age_seconds?: number | null;
+        };
+        /** BackupRow */
+        BackupRow: {
+            /** Completed At */
+            completed_at?: unknown;
+            /** Error Code */
+            error_code?: string | null;
+            /** Expires At */
+            expires_at?: unknown;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Started At */
+            started_at: unknown;
+            /** Status */
+            status: string;
+            /** Store */
+            store: string;
+        };
+        /** BackupsOut */
+        BackupsOut: {
+            last_rehearsal: components["schemas"]["RehearsalOut"];
+            /** Recent */
+            recent: components["schemas"]["BackupRow"][];
+            /**
+             * Stale After Hours
+             * @default 26
+             */
+            stale_after_hours: number;
+            /** Stores */
+            stores: components["schemas"]["StoreAge"][];
         };
         /** BudgetsOut */
         BudgetsOut: {
@@ -2402,6 +2594,22 @@ export interface components {
              */
             external_processing: "allowed" | "denied";
         };
+        /** Consumer */
+        Consumer: {
+            /** Context Builds */
+            context_builds: number;
+            /** Handle */
+            handle: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Principal Id
+             * Format: uuid
+             */
+            principal_id: string;
+            /** Tokens Used */
+            tokens_used: number;
+        };
         /** ContentOut */
         ContentOut: {
             /** Actor Ref */
@@ -2518,7 +2726,7 @@ export interface components {
             };
             /** Facts */
             facts?: components["schemas"]["ItemOut"][];
-            freshness?: components["schemas"]["FreshnessOut"] | null;
+            freshness?: components["schemas"]["kg_context__models__FreshnessOut"] | null;
             /**
              * Generated At
              * Format: date-time
@@ -2711,6 +2919,48 @@ export interface components {
              * @enum {string}
              */
             target_kind: "entity" | "fact" | "memory";
+        };
+        /** CostOut */
+        CostOut: {
+            /** By Alias */
+            by_alias: {
+                [key: string]: number;
+            };
+            /** By Purpose */
+            by_purpose: {
+                [key: string]: number;
+            };
+            /** Days */
+            days: number;
+            /** Note */
+            note: string;
+            /** Rows */
+            rows: components["schemas"]["CostRow"][];
+            /** Top Consumers */
+            top_consumers: components["schemas"]["Consumer"][];
+            /** Total Calls */
+            total_calls: number;
+            /** Total Usd */
+            total_usd: number;
+        };
+        /** CostRow */
+        CostRow: {
+            /** Alias */
+            alias: string;
+            /** Calls */
+            calls: number;
+            /** Completion Tokens */
+            completion_tokens: number;
+            /** Day */
+            day: string;
+            /** Errors */
+            errors: number;
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Purpose */
+            purpose: string;
+            /** Usd */
+            usd: number;
         };
         /** DebugOut */
         DebugOut: {
@@ -3274,6 +3524,30 @@ export interface components {
         ErrorEnvelope: {
             error: components["schemas"]["ErrorBody"];
         };
+        /** EvalRow */
+        EvalRow: {
+            /** Finished At */
+            finished_at?: unknown;
+            /** Git Commit */
+            git_commit?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label?: string | null;
+            /** Started At */
+            started_at: unknown;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+        };
         /**
          * EvidenceOut
          * @description Why the system holds a fact (KGR-05): a command, or an episode of an interaction. Never content.
@@ -3464,20 +3738,6 @@ export interface components {
         FreshnessIn: {
             /** Max Lag Seconds */
             max_lag_seconds?: number | null;
-        };
-        /** FreshnessOut */
-        FreshnessOut: {
-            /** Graph Lag Seconds */
-            graph_lag_seconds?: number | null;
-            /** Max Lag Seconds */
-            max_lag_seconds?: number | null;
-            /** Memory Lag Seconds */
-            memory_lag_seconds?: number | null;
-            /**
-             * Stale
-             * @default false
-             */
-            stale: boolean;
         };
         /** GrantIn */
         GrantIn: {
@@ -4080,6 +4340,28 @@ export interface components {
             /** Revoked At */
             revoked_at?: string | null;
         };
+        /** LatencyOut */
+        LatencyOut: {
+            /** Context By Profile */
+            context_by_profile: {
+                [key: string]: components["schemas"]["Quantiles"];
+            };
+            /** Context By Source */
+            context_by_source: {
+                [key: string]: components["schemas"]["Quantiles"];
+            };
+            /** Days */
+            days: number;
+            /** Router By Alias */
+            router_by_alias: {
+                [key: string]: components["schemas"]["Quantiles"];
+            };
+            /**
+             * Unit
+             * @default seconds
+             */
+            unit: string;
+        };
         /** LegalHoldIn */
         LegalHoldIn: {
             /**
@@ -4144,6 +4426,14 @@ export interface components {
              * @enum {string}
              */
             relation: "replaces" | "consolidated_from" | "published_from";
+        };
+        /** LiveEvalOut */
+        LiveEvalOut: {
+            last_live_session: components["schemas"]["EvalRow"] | null;
+            /** Latest By Kind */
+            latest_by_kind: components["schemas"]["EvalRow"][];
+            /** Recent */
+            recent: components["schemas"]["EvalRow"][];
         };
         /** LiveOut */
         LiveOut: {
@@ -5004,6 +5294,15 @@ export interface components {
              */
             notes: string;
         };
+        /** Quantiles */
+        Quantiles: {
+            /** N */
+            n: number;
+            /** P50 */
+            p50: number;
+            /** P95 */
+            p95: number;
+        };
         /** QuotaDefaults */
         QuotaDefaults: {
             /** Context Tokens Per Day */
@@ -5212,6 +5511,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** RehearsalOut */
+        RehearsalOut: {
+            /** Age Days */
+            age_days?: number | null;
+            /** At */
+            at?: unknown;
+            /** Rpo Seconds */
+            rpo_seconds?: number | null;
+            /** Rto Seconds */
+            rto_seconds?: number | null;
+            /** Status */
+            status?: string | null;
         };
         /** ReindexIn */
         ReindexIn: {
@@ -5998,6 +6310,17 @@ export interface components {
             /** Mention Ids */
             mention_ids?: string[];
         };
+        /** StageLag */
+        StageLag: {
+            /** N */
+            n: number;
+            /** P50 */
+            p50: number;
+            /** P95 */
+            p95: number;
+            /** Stage */
+            stage: string;
+        };
         /** StageOut */
         StageOut: {
             /** Attempts */
@@ -6038,6 +6361,15 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "running" | "succeeded" | "skipped_by_policy" | "skipped_disabled" | "invalid" | "failed" | "dead";
+        };
+        /** StoreAge */
+        StoreAge: {
+            /** Age Seconds */
+            age_seconds: number | null;
+            /** Stale */
+            stale: boolean;
+            /** Store */
+            store: string;
         };
         /** SubjectOut */
         SubjectOut: {
@@ -6379,6 +6711,29 @@ export interface components {
              */
             status: "proposed" | "active" | "superseded" | "disputed" | "expired" | "rejected" | "deleted";
         };
+        /** FreshnessOut */
+        kg_api__routers__operations_release__FreshnessOut: {
+            accepted_to_indexed: components["schemas"]["Quantiles"];
+            /** By Stage */
+            by_stage: components["schemas"]["StageLag"][];
+            /** Hours */
+            hours: number;
+            /** Oldest Unsettled Age Seconds */
+            oldest_unsettled_age_seconds: number;
+            /**
+             * Unit
+             * @default seconds
+             */
+            unit: string;
+            /** Unsettled */
+            unsettled: {
+                [key: string]: number;
+            };
+            /** Watermarks */
+            watermarks: {
+                [key: string]: unknown;
+            };
+        };
         /** ActivateIn */
         kg_api__routers__reindex__ActivateIn: {
             /**
@@ -6386,6 +6741,20 @@ export interface components {
              * @default operator_decision
              */
             reason_code: string;
+        };
+        /** FreshnessOut */
+        kg_context__models__FreshnessOut: {
+            /** Graph Lag Seconds */
+            graph_lag_seconds?: number | null;
+            /** Max Lag Seconds */
+            max_lag_seconds?: number | null;
+            /** Memory Lag Seconds */
+            memory_lag_seconds?: number | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
         };
         /** ActivateIn */
         kg_knowledge__models__ActivateIn: {
@@ -13622,6 +13991,89 @@ export interface operations {
             };
         };
     };
+    operations_alerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertsOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     backlog: {
         parameters: {
             query?: never;
@@ -13638,6 +14090,262 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BacklogOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    operations_backups: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupsOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    operations_cost: {
+        parameters: {
+            query?: {
+                /** @description window in days */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    operations_freshness: {
+        parameters: {
+            query?: {
+                hours?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["kg_api__routers__operations_release__FreshnessOut"];
                 };
             };
             /** @description Unauthenticated */
@@ -14116,6 +14824,177 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    operations_latency: {
+        parameters: {
+            query?: {
+                /** @description window in days */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatencyOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Payload too large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Dependency unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    operations_live_eval: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveEvalOut"];
+                };
+            };
+            /** @description Unauthenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
             };
             /** @description Payload too large */
             413: {

@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Brain, Eraser, EyeOff, FlaskConical, Gauge, GitFork, ListChecks, LogOut, MessagesSquare, Network, Settings, ShieldQuestion, Users } from "lucide-react";
+import { Activity, Hammer, BookOpen, Brain, Eraser, EyeOff, FlaskConical, Gauge, GitFork, ListChecks, LogOut, MessagesSquare, Network, Settings, ShieldQuestion, Users } from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useCan } from "../auth/permissions";
@@ -9,6 +9,7 @@ const NAV = [
   { to: "/ontology", label: "Ontology", icon: BookOpen, end: false },
   { to: "/entities", label: "Entities", icon: Network, end: false },
   { to: "/graph", label: "Graph Explorer", icon: GitFork, end: false },
+  { to: "/graph/rebuild", label: "Graph rebuild", icon: Hammer, end: false, needs: "workspaceAdmin" },
   { to: "/memories", label: "Memories", icon: Brain, end: false },
   { to: "/context", label: "Context Lab", icon: FlaskConical, end: false, needs: "contextLab" },
   { to: "/reviews", label: "Review Queue", icon: ShieldQuestion, end: false },

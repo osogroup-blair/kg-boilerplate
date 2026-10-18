@@ -1,0 +1,12 @@
+# Weekly restore rehearsal (AT-18) on a RECOVERY host that holds the recovery identity: restores the newest backup into a separate compose project and reports RTO/RPO.
+[Unit]
+Description=Knowledge platform restore rehearsal
+After=docker.service
+
+[Service]
+Type=oneshot
+User=kg-ops
+WorkingDirectory=/opt/kg
+EnvironmentFile=/etc/kg/rehearsal.env
+ExecStart=/opt/kg/.venv/bin/python -m tools.backup rehearse --identity ${BACKUP_IDENTITY}
+TimeoutStartSec=4h

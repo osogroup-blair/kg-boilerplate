@@ -122,6 +122,41 @@ eval-all:            ## every suite against the strict mock (offline, determinis
 eval-gate:           ## compare the newest eval-all with eval/baselines/release.json: strict metrics must be exact, the others may not regress past tolerance
 	$(RUN) python -m eval.gate
 
+# ---- load baselines (P9 WP4): the kg-perf compose project has its own ports and volumes and never touches the dev stack ---------------------------------------
+perf-up:             ## start kg-perf with the mock router's PROVISIONAL response-time model
+	$(RUN) python -m eval.load.run up
+
+perf-seed:           ## S/M/L workspaces + background tenants (bulk SQL; the L workspace has 200,000 memories)
+	$(RUN) python -m eval.load.run seed --sizes S,M,L
+
+perf-baseline:       ## steady / burst / search / long-document scenarios + size curve + freshness + cost; writes eval/reports/baseline-<date>.{json,md,svg}
+	$(RUN) python -m eval.load.run baseline --size M --rps 4 --seconds 90 --burst-seconds 30 --settle 300
+
+perf-down:           ## remove kg-perf and its volumes
+	$(RUN) python -m eval.load.run down
+
+test-release:        ## the release sweep: leak suites, route walkers, injection, egress, revocation, trigger gates, sentinels - against TWO API replicas; report keyed by SEC-01..06 / AT-01..18 (eval/reports/<date>/release-sweep.*)
+	$(RUN) python scripts/test_release.py
+
+release-candidate:   ## EVERY gate, in order, from a clean tree (drops the dev volumes!); writes docs/release/rc-report-<date>.md. Does not tag: the owner signs docs/release/checklist.md first
+	$(RUN) python scripts/release_candidate.py $(ARGS)
+
+live-session:        ## OWNER ACTION: the one run against the REAL router (preflight, cost estimate, steps a-h, calibration, proposed diff). Needs OSO_ROUTER_MODE=live, OSO_ROUTER_BASE_URL, a NON-ADMIN OSO_ROUTER_API_KEY. Then read eval/reports/live/<date>/proposal.diff and `make live-session-apply`
+	OSO_ROUTER_MODE=live $(RUN) python -m tools.live_session run $(ARGS)
+
+live-session-apply:  ## write the reviewed proposal (.env.example thresholds, model-purposes status, ADR-012/013/020 status, latency profile)
+	$(RUN) python -m tools.live_session apply
+
+obs-test:            ## promtool: check the alert rules and unit-test them (deploy/observability/rules_test.yml); uses the pinned prometheus image
+	docker run --rm -v $(CURDIR)/deploy/observability:/obs:ro --entrypoint promtool prom/prometheus@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e check rules /obs/rules.yml
+	docker run --rm -v $(CURDIR)/deploy/observability:/obs:ro --entrypoint promtool prom/prometheus@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e test rules /obs/rules_test.yml
+
+prod-secrets:        ## create deploy/compose/secrets (0600, git-ignored): generated credentials for the production compose; never overwrites
+	$(RUN) python scripts/prod_secrets.py
+
+prod-smoke:          ## bring docker-compose.prod.yml up under kg-prod-smoke with generated secrets and prove its claims (TLS, read-only, internal networks, non-root, break-glass); needs `make up` (mock router)
+	$(RUN) python scripts/prod_smoke.py
+
 scan:                ## dependency, image, filesystem and secret scanning + SBOMs; HIGH/CRITICAL blocks unless an unexpired exception exists (docs/security/scan-exceptions.yaml)
 	$(RUN) python scripts/scan.py
 
@@ -218,7 +253,7 @@ test-e2e:            ## Playwright: P1 smoke, P2 ADM-01, P3 ADM-06, P4 ADM-02, P
 check: lint typecheck test-all test-admin   ## everything except the Playwright smoke (run `make test-e2e` with the stack up)
 
 # ---- Phase 0 spike targets ----------------------------------------------------------------------------------------------------------
-.PHONY: scan scan-third-party tools spike-up spike-offline spike-report spike-down verify-router mock-router test-mock sync-catalog
+.PHONY: release-candidate live-session live-session-apply obs-test prod-secrets prod-smoke test-release perf-up perf-seed perf-baseline perf-down scan scan-third-party tools spike-up spike-offline spike-report spike-down verify-router mock-router test-mock sync-catalog
 
 tools:               ## install uv into .tools/uvenv if it is not on PATH (needs python3 >= 3.9; uv then fetches Python 3.12)
 	@command -v uv >/dev/null 2>&1 || test -x $(CURDIR)/.tools/uvenv/bin/uv || (python3 -m venv .tools/uvenv && .tools/uvenv/bin/pip install -q uv)

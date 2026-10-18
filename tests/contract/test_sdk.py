@@ -135,6 +135,7 @@ async def test_a_lost_response_is_retried_with_the_same_key_and_the_server_sees_
     assert rows[0].n == 1 and out.event_id  # the replay answered; nothing was written twice
 
 
+@pytest.mark.single_process
 async def test_a_429_honours_retry_after_and_a_daily_quota_is_not_slept_on(api, tenant_agents):
     t = tenant_agents
     quotas = api.app.state.kg.quotas

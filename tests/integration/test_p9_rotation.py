@@ -43,15 +43,25 @@ async def test_pepper_rotation_dual_verifies_rehashes_once_and_can_be_forced_to_
         assert (await closed.client.get("/v1/me", headers=t.h("agent"))).status_code == 200
         gone = await closed.client.get("/v1/me", headers=t.h("app"))
         assert gone.status_code == 401 and gone.json()["error"]["message"] == "Authentication failed"  # never a hint that the pepper is why
-    # forced expiry for whatever is still on the old pepper, audited in the workspace
-    n = (await owner_sql("SELECT ops.expire_keys_on_pepper(:p) AS n", p=old_fp))[0].n
-    assert n >= 1
-    assert len(await sql(api, t, "SELECT 1 FROM audit_log WHERE workspace_id = :ws AND action = 'secret.keys_expired'")) >= 1
-    async with replicas(api, 1, auth_key_pepper=NEW_PEPPER, auth_key_pepper_previous=old_pepper) as (late,):
-        assert (
-            await late.client.get("/v1/me", headers=t.h("app"))
-        ).status_code == 401  # even with the old pepper back, the key has expired
-        assert (await late.client.get("/v1/me", headers=t.h("agent"))).status_code == 200
+    # forced expiry for whatever is still on the old pepper, audited in the workspace. The function is platform-wide (that is its job), and this database is shared with every other
+    # suite, so the keys it expires in OTHER workspaces (the seeded demo keys among them) are put back afterwards.
+    others = await owner_sql(
+        "SELECT id, expires_at FROM api_keys WHERE pepper_id = :p AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now()) AND workspace_id <> :ws",
+        p=old_fp,
+        ws=t.ws,
+    )
+    try:
+        n = (await owner_sql("SELECT ops.expire_keys_on_pepper(:p) AS n", p=old_fp))[0].n
+        assert n >= 1
+        assert len(await sql(api, t, "SELECT 1 FROM audit_log WHERE workspace_id = :ws AND action = 'secret.keys_expired'")) >= 1
+        async with replicas(api, 1, auth_key_pepper=NEW_PEPPER, auth_key_pepper_previous=old_pepper) as (late,):
+            assert (
+                await late.client.get("/v1/me", headers=t.h("app"))
+            ).status_code == 401  # even with the old pepper back, the key has expired
+            assert (await late.client.get("/v1/me", headers=t.h("agent"))).status_code == 200
+    finally:
+        for row in others:
+            await owner_sql("UPDATE api_keys SET expires_at = :e WHERE id = :id", e=row.expires_at, id=row.id)
 
 
 async def test_a_key_minted_before_keys_were_labelled_is_tried_against_both_peppers(api, tenant):

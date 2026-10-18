@@ -1,0 +1,20 @@
+# Nightly encrypted backup of the production stack. The tool runs on the HOST because the Neo4j Community dump is offline (it stops the graph container for ~20 s per run) and the
+# backup must not live inside the stack it protects. Install: copy both units to /etc/systemd/system, edit the paths, `systemctl enable --now kg-backup.timer`.
+[Unit]
+Description=Knowledge platform encrypted backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=kg-ops
+WorkingDirectory=/opt/kg
+EnvironmentFile=/etc/kg/backup.env
+# BACKUP_RECIPIENTS / BACKUP_ESCROW_RECIPIENTS are PUBLIC age keys; the recovery identity is not on this machine.
+Environment=BACKUP_COMPOSE_PROJECT=kg-prod BACKUP_COMPOSE_FILE=/opt/kg/deploy/compose/docker-compose.prod.yml BACKUP_COMPOSE_ENV=/opt/kg/.env.prod
+Environment=BACKUP_NEO4J_VOLUME=kg-prod_neo4jdata BACKUP_PG_PASSWORD_FILE=/opt/kg/deploy/compose/secrets/postgres_password
+ExecStart=/opt/kg/.venv/bin/python -m tools.backup backup
+ExecStartPost=/opt/kg/.venv/bin/python -m tools.backup verify
+ExecStartPost=/opt/kg/.venv/bin/python -m tools.backup prune
+TimeoutStartSec=2h
+Nice=10

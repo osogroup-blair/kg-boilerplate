@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -366,3 +367,53 @@ def secrets_expire_keys(
 def _bad(message: str) -> int:
     typer.echo(f"error: {message}", err=True)
     return 1
+
+
+# ---- kg workspaces (P9 WP10): the first-boot bootstrap that `kg seed demo` refuses to be in production ------------------------------------------------------------------------
+workspaces_app = typer.Typer(no_args_is_help=True, help="Workspaces: create one with its first administrator (production first boot)")
+
+
+@workspaces_app.command("create")
+def workspaces_create(
+    slug: Annotated[str, typer.Option(help="lowercase letters, digits and hyphens; 2-40 characters")],
+    name: Annotated[str, typer.Option(help="display name")],
+    ontology: Annotated[Path | None, typer.Option(help="publish and activate this ontology YAML (idempotent)")] = None,
+) -> None:
+    """Creates the workspace and its first administrator with ONE break-glass API key, printed once (the platform keeps only its hash). Idempotent: a repeat creates nothing and
+    prints no key. With OIDC enabled, the next step is `POST /v1/oidc-group-mappings` (or the console), after which the key can be revoked."""
+    import re
+
+    from kg_domain.enums import PrincipalKind, Role
+
+    from kg_cli.seed import SeedPrincipal, SeedResult, publish_ontology, seed_workspace
+
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,38}[a-z0-9]", slug):
+        raise typer.BadParameter("slug: 2-40 characters, lowercase letters, digits and hyphens, not starting or ending with a hyphen")
+    settings = get_settings()
+
+    async def run() -> None:
+        engine = create_app_engine(settings, pool_size=2, max_overflow=0)
+        result = SeedResult(new_keys={})
+        try:
+            await seed_workspace(
+                engine,
+                slug,
+                name,
+                [SeedPrincipal(f"admin@{slug}", PrincipalKind.USER, Role.WORKSPACE_ADMIN, f"{name} administrator")],
+                pepper=settings.auth_key_pepper.get_secret_value(),
+                rotate_keys=False,
+                result=result,
+            )
+            if ontology is not None:
+                published = await publish_ontology(engine, ontology.read_text(), slug=slug)
+                typer.echo(f"ontology {ontology.name}: " + ("published and activated" if published else "already published (skipped)"))
+        finally:
+            await engine.dispose()
+        typer.echo(f"workspace {slug}: {result.created_workspaces} created, {result.created_principals} administrator(s) created")
+        for handle, key in sorted((result.new_keys or {}).items()):
+            typer.echo(f"{handle.split('/')[-1]}: {key}")
+            typer.echo("^ shown once. Store it in the password manager; in production it works only while ALLOW_BREAKGLASS_KEYS=true.")
+        if not result.new_keys:
+            typer.echo("no new key (the administrator already has one; mint another with `kg keys create`)")
+
+    asyncio.run(run())

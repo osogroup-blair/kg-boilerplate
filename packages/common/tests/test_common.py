@@ -89,3 +89,34 @@ def test_token_counter_margin_and_id():
     c = TokenCounter()
     assert c.tokenizer_id == "tiktoken:max(o200k_base,cl100k_base)+margin0.1"
     assert c.count("some text to count") >= c.raw("some text to count")
+
+
+def test_file_secrets_win_over_the_environment_and_are_stripped(tmp_path, monkeypatch):
+    from kg_common.settings import Settings
+
+    f = tmp_path / "pepper"
+    f.write_text("a-real-pepper-of-more-than-thirty-two-bytes\n")
+    monkeypatch.setenv("AUTH_KEY_PEPPER", "from-the-environment")
+    monkeypatch.setenv("AUTH_KEY_PEPPER_FILE", str(f))
+    assert Settings(_env_file=None).auth_key_pepper.get_secret_value() == "a-real-pepper-of-more-than-thirty-two-bytes"
+
+
+def test_an_unreadable_secret_file_is_a_startup_error_not_a_default(tmp_path, monkeypatch):
+    import pytest
+    from kg_common.settings import Settings
+
+    monkeypatch.setenv("AUTH_JWT_SECRET_FILE", str(tmp_path / "missing"))
+    with pytest.raises(ValueError, match="AUTH_JWT_SECRET_FILE"):
+        Settings(_env_file=None)
+
+
+def test_production_cors_needs_exact_https_origins():
+    import pytest
+
+    from tests.conftest import PRODUCTION_SECRETS, make_test_settings
+
+    base = {"env": "production", **PRODUCTION_SECRETS}
+    assert make_test_settings(**base, cors_allow_origins=["https://console.example.com"]).cors_allow_origins
+    for bad in (["*"], ["http://console.example.com"], ["https://*.example.com"]):
+        with pytest.raises(ValueError, match="CORS_ALLOW_ORIGINS"):
+            make_test_settings(**base, cors_allow_origins=bad)

@@ -6,6 +6,7 @@ import { useCan } from "../../auth/permissions";
 import { Empty, ErrorState, Loading, PermissionDenied, stateForStatus } from "../../components/states";
 import { inputCls, JobBadge } from "../../components/ui";
 import { ageLabel, fmt } from "../../lib/format";
+import { Alerts, Backups, Cost, Freshness, Latency, LiveEval, Reconciliation } from "./OpsPanels";
 
 function Status({ label, value }: { label: string; value: string }) {
   const ok = value === "ok";
@@ -136,9 +137,16 @@ export function OperationsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold">Operations</h1>
+      <section aria-labelledby="al-h"><h2 id="al-h" className="mb-3 font-medium">Alerts</h2><Alerts /></section>
       <section aria-labelledby="h-h"><h2 id="h-h" className="mb-3 font-medium">Health and workers</h2><Health /></section>
       <section aria-labelledby="b-h"><h2 id="b-h" className="mb-3 font-medium">Backlog</h2><Backlog /></section>
       <section aria-labelledby="j-h"><h2 id="j-h" className="mb-3 font-medium">Jobs</h2><Jobs /></section>
+      <section aria-labelledby="f-h"><h2 id="f-h" className="mb-3 font-medium">Freshness</h2><Freshness /></section>
+      <section aria-labelledby="l-h"><h2 id="l-h" className="mb-3 font-medium">Latency</h2><Latency /></section>
+      <section aria-labelledby="c-h"><h2 id="c-h" className="mb-3 font-medium">Cost</h2><Cost /></section>
+      <section aria-labelledby="r-h"><h2 id="r-h" className="mb-3 font-medium">Reconciliation</h2><Reconciliation /></section>
+      <section aria-labelledby="bk-h"><h2 id="bk-h" className="mb-3 font-medium">Backups and restore</h2><Backups /></section>
+      <section aria-labelledby="le-h"><h2 id="le-h" className="mb-3 font-medium">Live evaluation</h2><LiveEval /></section>
     </div>
   );
 }

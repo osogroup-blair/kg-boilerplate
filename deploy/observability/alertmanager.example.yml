@@ -1,0 +1,32 @@
+# Alertmanager example (phase-9 WP9). Critical alerts page; warnings go to the team channel; everything is grouped so one outage is one message.
+# Replace the receivers' endpoints; keep the routing. The console's alerts panel also reads this Alertmanager when ALERTMANAGER_URL is set.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: team-channel
+  group_by: [alertname, store, drift_class]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: on-call
+      repeat_interval: 1h
+      continue: true            # critical alerts also reach the channel
+
+receivers:
+  - name: on-call
+    webhook_configs:
+      - url: https://paging.example.com/hooks/kg          # PagerDuty / Opsgenie / your pager's webhook
+        send_resolved: true
+  - name: team-channel
+    webhook_configs:
+      - url: https://chat.example.com/hooks/kg-alerts      # Slack / Teams incoming webhook
+        send_resolved: true
+
+inhibit_rules:
+  # when Postgres is down every dependent alert is noise
+  - source_matchers: ['alertname="PostgresDependencyDown"']
+    target_matchers: ['alertname=~"DeadLetters|OutboxOldestPending|CanaryFailing|CanaryStale|LimiterErrors"']
+    equal: []

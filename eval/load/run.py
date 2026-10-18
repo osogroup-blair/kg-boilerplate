@@ -148,13 +148,32 @@ def stage_throughput(since: dt.datetime, seconds: float) -> dict[str, float]:
     return {r[0]: round(int(r[1]) / max(1.0, seconds), 2) for r in rows}
 
 
+async def drain_outbox(*, timeout: float) -> None:  # noqa: ASYNC109
+    """Waits until no job is pending or leased (jobs that are only retrying later do not hold the curve back for more than `timeout`)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        busy = sql(
+            "SELECT count(*) FROM outbox_jobs WHERE status IN ('pending', 'leased') AND available_at <= now() + interval '5 seconds'"
+        )[0][0]
+        if int(busy) == 0:
+            await asyncio.sleep(5)  # let caches and autovacuum settle
+            return
+        await asyncio.sleep(5)
+
+
 async def timed(driver: Driver, op: str, n: int) -> dict[str, float]:
     lat = []
     for _ in range(n):
-        started = time.perf_counter()
-        resp = await getattr(driver, op)()
-        lat.append((time.perf_counter() - started) * 1000)
+        while True:
+            started = time.perf_counter()
+            resp = await getattr(driver, op)()
+            elapsed = (time.perf_counter() - started) * 1000
+            if resp.status_code == 429:  # the platform's own limiter: wait out the window (not part of the measurement) and measure again
+                await asyncio.sleep(max(1.0, float(resp.json().get("error", {}).get("retry_after") or 1)))
+                continue
+            break
         assert resp.status_code < 400, resp.text
+        lat.append(elapsed)
     lat.sort()
     return {"n": n, "p50_ms": round(statistics.median(lat), 1), "p95_ms": round(pct(lat, 0.95), 1), "p99_ms": round(pct(lat, 0.99), 1)}
 
@@ -192,6 +211,9 @@ async def cmd_baseline_async(args: argparse.Namespace) -> int:
             summary["cost_per_event_usd"] = round(sum(v["usd"] for v in summary["cost"].values()) / events, 6) if run.events else None
             summary["worker_throughput_per_s"] = stage_throughput(since_dt, time.time() - before["t"])
             report["scenarios"][name] = summary
+        await drain_outbox(
+            timeout=600.0
+        )  # the size curve measures an idle platform: the scenarios' own backlog (extraction, embedding) must be done first
         curve = {}
         for size in ("S", "M", "L"):
             if f"perf-{size.lower()}" not in creds:

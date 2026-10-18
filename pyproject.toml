@@ -68,6 +68,7 @@ markers = [
   "integration: needs the kg test stack (postgres, neo4j)",
   "security: tenant-isolation / authz negative tests",
   "contract: API or adapter contract tests",
+  "single_process: reaches into one app's in-process state (monkeypatches, internal swaps, per-process limiter semantics); skipped by the release sweep's multi-replica run (KG_REPLICAS>1)",
   "resilience: failure injection against real worker processes (make test-resilience; sets KG_RESILIENCE=1)",
 ]
 

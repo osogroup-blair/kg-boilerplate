@@ -1,0 +1,166 @@
+# `promtool test rules deploy/observability/rules_test.yml` (make obs-test): each rule fires when it should, and stays quiet when it should.
+rule_files: [rules.yml]
+evaluation_interval: 1m
+
+tests:
+  - name: a budget violation fires, a quiet counter does not
+    interval: 1m
+    input_series:
+      - series: 'context_budget_violations_total'
+        values: '0 0 0 1 1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - {eval_time: 2m, alertname: ContextBudgetViolation, exp_alerts: []}
+      - eval_time: 5m
+        alertname: ContextBudgetViolation
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "A built context exceeded its token budget (must never happen)"
+              runbook: docs/runbooks/context-debugging.md
+      - {eval_time: 14m, alertname: ContextBudgetViolation, exp_alerts: []}   # it stops firing once the increase leaves the window
+
+  - name: deletion residuals fire immediately
+    interval: 1m
+    input_series:
+      - series: 'deletion_residuals_total{store="neo4j"}'
+        values: '0 0 2 2 2'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: DeletionResidualsFound
+        exp_alerts:
+          - exp_labels: {severity: critical, store: neo4j}
+            exp_annotations:
+              summary: "The deletion verifier found residual data after a purge (neo4j)"
+              runbook: docs/runbooks/subject-deletion.md
+
+  - name: a dead letter pages only after 15 minutes
+    interval: 1m
+    input_series:
+      - series: 'outbox_dead_letters{stage="graph_ingest"}'
+        values: '1x30'
+    alert_rule_test:
+      - {eval_time: 10m, alertname: DeadLetters, exp_alerts: []}
+      - eval_time: 16m
+        alertname: DeadLetters
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "1 dead-lettered outbox job(s) for 15 minutes"
+              runbook: docs/runbooks/stuck-job-replay.md
+
+  - name: the oldest pending job over 10 minutes for 5 minutes
+    interval: 1m
+    input_series:
+      - series: 'outbox_oldest_pending_age_seconds{stage="normalize"}'
+        values: '0 0 700x12'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: OutboxOldestPending, exp_alerts: []}
+      - eval_time: 10m
+        alertname: OutboxOldestPending
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "The oldest claimable job has waited 11m 40s"
+              runbook: docs/runbooks/stuck-job-replay.md
+
+  - name: the router error rate over 5 percent
+    interval: 1m
+    input_series:
+      - {series: 'router_calls_total{outcome="ok",purpose="extraction",alias="a",operation="chat"}', values: '0+90x20'}
+      - {series: 'router_calls_total{outcome="rate_limited",purpose="extraction",alias="a",operation="chat"}', values: '0+10x20'}
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: RouterErrorRate
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "10% of model router calls are failing"
+              runbook: docs/runbooks/llm-outage.md
+
+  - name: a healthy router does not alert
+    interval: 1m
+    input_series:
+      - {series: 'router_calls_total{outcome="ok",purpose="extraction",alias="a",operation="chat"}', values: '0+100x20'}
+    alert_rule_test:
+      - {eval_time: 18m, alertname: RouterErrorRate, exp_alerts: []}
+
+  - name: reconcile drift after 30 minutes
+    interval: 1m
+    input_series:
+      - series: 'reconcile_drift{drift_class="graph_missing_node"}'
+        values: '3x40'
+    alert_rule_test:
+      - {eval_time: 20m, alertname: ReconcileDrift, exp_alerts: []}
+      - eval_time: 35m
+        alertname: ReconcileDrift
+        exp_alerts:
+          - exp_labels: {severity: warning, drift_class: graph_missing_node}
+            exp_annotations:
+              summary: "Reconciliation found 3 item(s) of drift class graph_missing_node"
+              runbook: docs/runbooks/projection-repair.md
+
+  - name: a backup older than 26 hours, and a store that never had one
+    interval: 1m
+    input_series:
+      - {series: 'backup_age_seconds{store="postgres"}', values: '3600x120 100000x400'}
+      - {series: 'backup_age_seconds{store="neo4j"}', values: '-1x520'}
+      - {series: 'backup_age_seconds{store="config"}', values: '3600x520'}
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels: {severity: critical, store: neo4j}
+            exp_annotations:
+              summary: "No completed neo4j backup in the last 26 hours (or ever)"
+              runbook: docs/runbooks/backup-restore.md
+      - eval_time: 300m
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels: {severity: critical, store: neo4j}
+            exp_annotations:
+              summary: "No completed neo4j backup in the last 26 hours (or ever)"
+              runbook: docs/runbooks/backup-restore.md
+          - exp_labels: {severity: critical, store: postgres}
+            exp_annotations:
+              summary: "No completed postgres backup in the last 26 hours (or ever)"
+              runbook: docs/runbooks/backup-restore.md
+
+  - name: a canary whose last success is 30 minutes old pages after 5 minutes; a recent one does not
+    interval: 1m
+    input_series:
+      - {series: 'canary_last_success_unixtime{job="stale"}', values: '100x60'}
+      - {series: 'canary_last_success_unixtime{job="fresh"}', values: '0+60x60'}
+    alert_rule_test:
+      - {eval_time: 10m, alertname: CanaryStale, exp_alerts: []}
+      - eval_time: 30m
+        alertname: CanaryStale
+        exp_alerts:
+          - exp_labels: {severity: critical, job: stale}
+            exp_annotations:
+              summary: "No successful canary build for 15 minutes (or the canary is not running)"
+
+  - name: a failing canary
+    interval: 1m
+    input_series:
+      - {series: 'canary_builds_total{outcome="failed"}', values: '0 0 1 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3'}
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CanaryFailing
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "The synthetic canary's context builds are failing (two or more failures in 15 minutes)"
+              runbook: docs/runbooks/graph-outage.md
+      - {eval_time: 18m, alertname: CanaryFailing, exp_alerts: []}
+
+  - name: a quota spike
+    interval: 1m
+    input_series:
+      - {series: 'quota_exceeded_total{quota="requests_per_minute"}', values: '0+10x20'}
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: QuotaExceededSpike
+        exp_alerts:
+          - exp_labels: {severity: warning, quota: requests_per_minute}
+            exp_annotations:
+              summary: "More than 50 requests refused by the requests_per_minute quota in 10 minutes"
