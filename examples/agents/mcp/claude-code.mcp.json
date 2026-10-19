@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "knowledge-platform": {
+      "type": "http",
+      "url": "http://127.0.0.1:8010/mcp/",
+      "headers": { "Authorization": "Bearer ${KG_AGENT_KEY}" }
+    }
+  }
+}

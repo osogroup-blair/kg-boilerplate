@@ -27,7 +27,7 @@ class Env:
 def load_env(*, live: bool = False) -> Env:
     env = Env(
         base_url=os.environ.get("KG_BASE_URL", "http://127.0.0.1:8000"),
-        mcp_url=os.environ.get("KG_MCP_URL", "http://127.0.0.1:8790/mcp/"),
+        mcp_url=os.environ.get("KG_MCP_URL", "http://127.0.0.1:8010/mcp/"),
         mock_url=os.environ.get("KG_MOCK_URL", "http://127.0.0.1:8782"),
         live=live,
     )

@@ -47,3 +47,8 @@ def coverage_check(rules: list[dict[str, Any]], schemas: set[str]) -> set[str]:
     """Returns the structured-output schema names that no rule answers (lesson X3): an empty set means the pack covers them."""
     covered = {str(r.get("when", {}).get("schema_name")) for r in rules}
     return schemas - covered
+
+
+def add_rules(env: Env, rules: list[dict[str, Any]]) -> None:
+    """Adds rules to the pack already loaded (for answers that depend on ids created during the run). `mock_pack` removes them on exit."""
+    _call(env, "POST", "/__mock/fixtures", json={"rules": rules})

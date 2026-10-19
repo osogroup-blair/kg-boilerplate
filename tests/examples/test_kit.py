@@ -48,3 +48,17 @@ def test_show_context() -> None:
 
 def test_coverage_check() -> None:
     assert coverage_check([{"when": {"schema_name": "A"}}], {"A", "B"}) == {"B"}
+
+
+def test_scripted_rules_select_one_tool_per_turn() -> None:
+    from examples.agents.common import handles, scripted_rules
+
+    rules = scripted_rules("[m]", [("a", {"x": 1}), ("b", {})], "done")
+    assert [r["when"].get("not_contains") for r in rules[:2]] == [['"tool": "a"'], ['"tool": "b"']]
+    assert rules[1]["when"]["contains"] == ["[m]", '"tool": "a"']  # the second call only after the first tool's result
+    assert rules[-1]["response"] == "done" and rules[-1]["when"]["contains"] == ["[m]", '"tool": "b"']
+    assert handles("- fact [F:0de9d78b \u00b7 E:evt_002] and [M:03ce4d76 \u00b7 E:3be4c892] [U:d87495e7]") == {
+        "F:0de9d78b",
+        "M:03ce4d76",
+        "U:d87495e7",
+    }

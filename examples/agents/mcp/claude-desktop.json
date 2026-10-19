@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "knowledge-platform": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:8010/mcp/", "--header", "Authorization:${KG_AUTH_HEADER}"],
+      "env": { "KG_AUTH_HEADER": "Bearer <paste the agent's key here>" }
+    }
+  }
+}

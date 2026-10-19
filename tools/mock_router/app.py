@@ -389,6 +389,14 @@ def create_app(config: MockConfig | None = None) -> FastAPI:
         key = fixture_key(req.model, norm, schema_name)
         hit = store.lookup(key, req.model, norm, schema_name)
         mode = "fixture"
+        scripted: dict | None = None  # a rule may script a whole assistant message, tool calls included: {"_message": {"content": ..., "tool_calls": [...]}}
+        if isinstance(hit, dict) and "_message" in hit:
+            scripted = dict(hit["_message"])
+            calls = [{"id": c.get("id") or f"call_{uuid.uuid4().hex[:12]}", "type": "function",
+                      "function": {"name": c["function"]["name"], "arguments": c["function"]["arguments"] if isinstance(c["function"]["arguments"], str)
+                                   else json.dumps(c["function"]["arguments"])}} for c in scripted.get("tool_calls") or []]
+            scripted = {"role": "assistant", "content": scripted.get("content"), **({"tool_calls": calls} if calls else {})}
+            hit = scripted.get("content") or ""
         if hit is not None:
             content = hit if isinstance(hit, str) else json.dumps(hit)
         elif req.response_format and req.response_format.type == "json_schema" and req.response_format.json_schema:
@@ -410,7 +418,8 @@ def create_app(config: MockConfig | None = None) -> FastAPI:
         headers = {"x-gateway-request-id": request.state.rid}
         body = {
             "id": f"chatcmpl_{uuid.uuid4().hex[:24]}", "object": "chat.completion", "created": int(time.time()), "model": req.model,
-            "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+            "choices": [{"index": 0, "message": scripted or {"role": "assistant", "content": content},
+                         "finish_reason": "tool_calls" if scripted and scripted.get("tool_calls") else "stop"}],
             "usage": usage,
         }
         if req.stream:

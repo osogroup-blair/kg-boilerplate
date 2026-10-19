@@ -202,6 +202,8 @@ One run in a fresh workspace, in blueprint order. Every step records its AT ids 
 | Quota exhausted (small quota set by the kit) | `QuotaExceeded` with `retry_after` |
 | Prompt-injection text inside an ingested note | Shows up neutralised as data in the package, never as an instruction (SEC-04 corpus sample) |
 
+- **Built (2026-10-18):** the loop talks to the router with plain `httpx` (no `openai` dependency, so D1 holds with less); the mock router gained a scripted `_message` response so a rule can return `tool_calls` (test in `tools/mock_router/tests/test_contract.py`); `make test-mock` was already broken before this work (the spikes environment lacks `kg_common`), run the mock suite with `uv run pytest tools/mock_router/tests` instead. Two denial cases differ from the table above: a profile outside `allowed_profiles` is `422 profile_not_allowed`, and a request quota is `QuotaExceeded`. MCP parity is asserted on the cited item handles, not on prose.
+
 #### WP-B4: Jupyter notebooks (`examples/notebooks/`)
 - **Dependencies:** a `uv` dependency group `examples` with `jupyterlab`, `ipykernel`, `nbclient`, `nbformat`, `networkx`, `matplotlib`, `openai` (WP-B3). `make examples-install` installs it; the platform's lock stays authoritative.
 - **Rules for every notebook:** the first cell calls `_kit.notebook_env("<name>")`, which gets a fresh workspace and starts the mock context. Markdown explains each step in plain terms. Each code cell **asserts** what it shows, so `test-examples` fails for a real reason. Outputs are stripped in git (decision D4), with a check in `make lint` that fails on committed outputs. Runtime is under 3 minutes each in mock mode.

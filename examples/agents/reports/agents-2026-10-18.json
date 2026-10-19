@@ -1,0 +1,109 @@
+{
+  "mode": "mock",
+  "name": "Agent integrations",
+  "passed": true,
+  "steps": [
+    {
+      "at_ids": [
+        "ONT-01",
+        "ING-01"
+      ],
+      "error": null,
+      "evidence": {
+        "content_hash": "82ff04419d4f",
+        "idempotent_replay": true,
+        "model_calls": 0,
+        "ontology_version": "1.5.0",
+        "processing_status": "indexed",
+        "projection": [
+          "projected"
+        ],
+        "stages": {
+          "graph_ingest": "succeeded",
+          "memory_propose": "succeeded",
+          "normalize": "succeeded"
+        }
+      },
+      "id": "1",
+      "passed": true,
+      "title": "Build the world: ontology, Sarah, the evt_003 conversation, three agents"
+    },
+    {
+      "at_ids": [
+        "AT-10",
+        "AGT"
+      ],
+      "error": null,
+      "evidence": {
+        "finding": "active/agent_generated",
+        "tools": [
+          "build_context",
+          "save_working_memory",
+          "propose_memory"
+        ],
+        "turns": 4
+      },
+      "id": "2",
+      "passed": true,
+      "title": "Research agent (SDK): reads, keeps a private note, publishes a sourced finding"
+    },
+    {
+      "at_ids": [
+        "AT-06..09",
+        "AT-12"
+      ],
+      "error": null,
+      "evidence": {
+        "backend": "sdk",
+        "items": 4,
+        "tokens": "259/600",
+        "turns": 2
+      },
+      "id": "3",
+      "passed": true,
+      "title": "Planning agent (SDK): gets the finding, not the private note, within 600 tokens"
+    },
+    {
+      "at_ids": [
+        "AGT-03",
+        "SEC-03"
+      ],
+      "error": null,
+      "evidence": {
+        "denial_through_both": [
+          0,
+          false
+        ],
+        "same_items": 4,
+        "workspace_id_argument_refused": true
+      },
+      "id": "4",
+      "passed": true,
+      "title": "The same flow through MCP hands over the same items and the same denials"
+    },
+    {
+      "at_ids": [
+        "AT-11",
+        "AT-14",
+        "AT-15",
+        "SEC-01",
+        "SEC-04"
+      ],
+      "error": null,
+      "evidence": {
+        "agent over its request quota": "QuotaExceeded (quota_exceeded), retry_after 47s",
+        "agent with no grant asks for Sarah": "no memories, no finding, no private facts",
+        "cases": 8,
+        "compromised agent": "key revoked; 1 shared memory disputed, 1 review item opened",
+        "other workspace asks for Sarah": "404 not_found, identical to a random id",
+        "profile outside allowed_profiles": "ValidationError (profile_not_allowed)",
+        "prompt injection inside an ingested note": "retrieved as quoted data; the end marker appears once and no line starts with 'System:'",
+        "proposal citing evidence it cannot see": "InvalidEvidence (invalid_evidence)",
+        "retired agent": "AuthError (unauthenticated) on the next call"
+      },
+      "id": "5",
+      "passed": true,
+      "title": "Unauthorized agents: every denial in one table"
+    }
+  ]
+}

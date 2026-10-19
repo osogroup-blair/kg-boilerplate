@@ -44,3 +44,23 @@ def test_crm_second_domain_passes(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-1000:]
     assert "benchmark PASS" in proc.stdout
+
+
+@pytest.mark.skipif(not _stack_up() and os.environ.get("KG_REQUIRE_STACK") != "1", reason="the dev stack is not up")
+def test_agents_example_passes(tmp_path: Path) -> None:
+    try:
+        up = httpx.get("http://127.0.0.1:8010/health", timeout=2).status_code == 200
+    except httpx.HTTPError:
+        up = False
+    if not up:
+        pytest.skip("the MCP server is not up: run `make mcp-up`")
+    proc = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "examples.agents.run", "--reports", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        timeout=900,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-1000:]
+    assert "PASS: 5/5" in proc.stdout

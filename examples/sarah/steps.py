@@ -376,7 +376,9 @@ class Scenario(Runner):
             "after_replay": done["processing_status"],
         }
 
-    def run_all(self) -> None:
+    def mock_rules(self) -> list[dict[str, Any]]:
+        """Model answers for every event the scenario ingests (offline runs). Shared with the agent examples, which build the same world."""
+
         def rule(schema: str, marker: str, response: dict[str, Any]) -> dict[str, Any]:
             return {"when": {"alias": "oso/general", "schema_name": schema, "contains": [marker]}, "response": response}
 
@@ -394,7 +396,10 @@ class Scenario(Runner):
             ),
             rule("SummarizedEntities", "Michael is Sarah's manager", {"summaries": [{"name": n, "summary": f"{n}."} for n in names]}),
         ]
-        with mock.mock_pack(self.env, rules):
+        return rules
+
+    def run_all(self) -> None:
+        with mock.mock_pack(self.env, self.mock_rules()):
             self.step("1", "Admin publishes the ontology; principals registered", ["ONT-01", "ONT-02"], self.s1_ontology)
             self.step(
                 "2", "Trusted app writes evt_001/evt_002 as commands (no model call, idempotent)", ["AT-01", "ONT-06"], self.s2_commands

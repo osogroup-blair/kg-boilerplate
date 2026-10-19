@@ -302,3 +302,21 @@ def test_sdk_beta_parse_depends_on_responses_free_chat_path(live):
     assert r.choices[0].message.parsed == Out(name="sample", n=0, tags=[])
     with pytest.raises(openai.NotFoundError):
         sdk(live).responses.create(model="oso/general", input="hi")
+
+
+# ---- scripted assistant messages (P10: agent examples) -------------------------------------------------------------------
+def test_a_rule_can_script_tool_calls_and_a_later_turn_answers_with_text(client):
+    rules = [
+        {"when": {"alias": "oso/general", "contains": ["plan the trip"], "not_contains": ["tool result"]},
+         "response": {"_message": {"content": None, "tool_calls": [{"function": {"name": "lookup", "arguments": {"q": "flights"}}}]}}},
+        {"when": {"alias": "oso/general", "contains": ["tool result"]}, "response": "Book the 9am flight."},
+    ]
+    assert client.post("/__mock/fixtures", json={"rules": rules}).status_code == 200
+    tools = [{"type": "function", "function": {"name": "lookup", "description": "d", "parameters": {"type": "object", "properties": {}}}}]
+    first = chat(client, messages=[{"role": "user", "content": "plan the trip"}], tools=tools).json()["choices"][0]
+    assert first["finish_reason"] == "tool_calls" and first["message"]["content"] is None
+    call = first["message"]["tool_calls"][0]
+    assert call["id"] and call["type"] == "function" and json.loads(call["function"]["arguments"]) == {"q": "flights"}
+    msgs = [{"role": "user", "content": "plan the trip"}, first["message"], {"role": "tool", "tool_call_id": call["id"], "content": "tool result: 9am"}]
+    second = chat(client, messages=msgs, tools=tools).json()["choices"][0]
+    assert second["finish_reason"] == "stop" and second["message"]["content"] == "Book the 9am flight."
