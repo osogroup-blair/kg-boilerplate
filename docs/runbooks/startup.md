@@ -53,7 +53,7 @@ make up
 # then, as a user with the operator or admin role:
 curl -s -X POST localhost:8000/v1/operations/router-check -H "authorization: Bearer $KEY"
 ```
-Containers reach a loopback-only router through `host.docker.internal:8780` (compose sets `extra_hosts`). An admin router key is detected from provider headers and logged as `router_key_is_admin` (an error under `ENV=production`). Phase 0's `make verify-router` remains the live verification kit.
+Containers reach a router that listens on the host's network through `host.docker.internal:8780` (compose sets `extra_hosts`). On Linux that does **not** work for a router published only on `127.0.0.1` ("connection refused"): use the forwarder override, `make up OSO_ROUTER_NETWORK=<the router's network> [OSO_ROUTER_CONTAINER=model-gateway OSO_ROUTER_PORT=8780]` (`deploy/compose/docker-compose.live-router.yml` starts `router-proxy` on both networks; on this machine the network is `decision-model-service_default`). Never attach the api or worker to the router's network themselves: its `postgres`/`neo4j` service names collide with ours. Host-run tools always use `OSO_ROUTER_LIVE_URL=http://127.0.0.1:8780/v1`. An admin router key is detected from provider headers and logged as `router_key_is_admin` (an error under `ENV=production`). Phase 0's `make verify-router` remains the live verification kit.
 
 ## Tests
 ```bash

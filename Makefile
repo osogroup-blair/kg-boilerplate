@@ -5,7 +5,9 @@ SPIKE_COMPOSE := docker compose -f spikes/docker-compose.spike.yml --env-file .e
 SPIKE   := cd spikes && $(UV) run
 
 ENVFILE := $(if $(wildcard .env),.env,.env.example)
-KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(ENVFILE)
+# A router in another Docker network (loopback-published, so containers cannot reach it by host.docker.internal on Linux): make up OSO_ROUTER_NETWORK=<network> (see deploy/compose/docker-compose.live-router.yml)
+export OSO_ROUTER_NETWORK OSO_ROUTER_CONTAINER OSO_ROUTER_PORT
+KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml $(if $(OSO_ROUTER_NETWORK),-f deploy/compose/docker-compose.live-router.yml) --env-file $(ENVFILE)
 RUN := $(UV) run
 PYSRC := packages apps sdk tests scripts examples
 
