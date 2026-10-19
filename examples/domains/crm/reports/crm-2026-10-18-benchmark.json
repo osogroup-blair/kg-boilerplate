@@ -1,0 +1,92 @@
+{
+  "cases": [
+    {
+      "forbidden_present": [],
+      "id": "R01_globex_renewal_prep",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Account manager prepares the Globex renewal",
+      "tokens": "449/800"
+    },
+    {
+      "forbidden_present": [],
+      "id": "R02_initech_missing_signals",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Initech has no renewal date or budget owner on file, so both are reported as unknown",
+      "tokens": "203/800"
+    },
+    {
+      "forbidden_present": [],
+      "id": "S01_support_triage_has_no_account_plan",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "The support agent sees the ticket, never the account plan",
+      "tokens": "417/500"
+    },
+    {
+      "forbidden_present": [],
+      "id": "T01_marcus_now",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Marcus Lee now works for Initech, not Globex (valid time, backdated update)",
+      "tokens": "111/400"
+    },
+    {
+      "forbidden_present": [],
+      "id": "T02_marcus_before_he_left",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Marcus Lee on 2026-06-01 still worked for Globex",
+      "tokens": "135/400"
+    },
+    {
+      "forbidden_present": [],
+      "id": "L01_other_customer_cannot_read_globex_people",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Initech's account manager asking about Globex gets no Globex contact, memory or plan",
+      "tokens": "108/600"
+    },
+    {
+      "forbidden_present": [],
+      "id": "L02_globex_cannot_read_initech_people",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "Globex's account manager asking about Initech gets no Initech contact or memory",
+      "tokens": "173/600"
+    },
+    {
+      "forbidden_present": [],
+      "id": "P01_project_blocker",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "What blocks the Globex data migration",
+      "tokens": "217/500"
+    },
+    {
+      "forbidden_present": [],
+      "id": "B01_tight_budget",
+      "leaked": [],
+      "missing": [],
+      "ok": true,
+      "title": "A 150-token budget is respected even for a rich account",
+      "tokens": "25/150"
+    }
+  ],
+  "metrics": {
+    "attribution": 1.0,
+    "budget_adherence": 1.0,
+    "leakage": 0,
+    "recall": 1.0
+  },
+  "passed": true
+}

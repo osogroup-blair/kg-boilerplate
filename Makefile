@@ -9,7 +9,7 @@ KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(E
 RUN := $(UV) run
 PYSRC := packages apps sdk tests scripts examples
 
-.PHONY: demo-sarah test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
+.PHONY: demo-sarah demo-crm eval-crm test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check \
         backup-init backup backup-verify backup-prune restore-rehearsal reconcile eval-all eval-gate eval-gate-live eval-conflicts eval-authorization eval-injection eval-freeze
 
@@ -19,6 +19,12 @@ sync:                ## install the Python workspace (exact versions from uv.loc
 # ---- stack ------------------------------------------------------------------------------------------------------------------------
 demo-sarah:          ## example: the Sarah two-agent scenario in a fresh workspace, with a pass/fail report (needs `make up seed`)
 	$(RUN) python -m examples.sarah.run
+
+demo-crm:            ## example: the second domain (Project / Customer CRM), config only, with its benchmark (needs `make up seed`)
+	$(RUN) python -m examples.domains.crm.run
+
+eval-crm:            ## the CRM benchmark on its own: leakage 0, budget 100%, attribution 100% (needs `make up seed`)
+	$(RUN) python -m examples.domains.crm.run --eval
 
 test-examples:       ## run the examples as tests (needs `make up seed`)
 	$(RUN) pytest tests/examples -q

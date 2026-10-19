@@ -1,0 +1,304 @@
+{
+  "entities": [
+    {
+      "key": "globex",
+      "type": "Customer",
+      "name": "Globex",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "CUST-1"
+        }
+      ],
+      "source_ref": "CUST-1",
+      "attributes": {
+        "renewal_date": "2026-12-15",
+        "budget_owner": "Dana Reyes"
+      }
+    },
+    {
+      "key": "initech",
+      "type": "Customer",
+      "name": "Initech",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "CUST-2"
+        }
+      ],
+      "source_ref": "CUST-2",
+      "attributes": {}
+    },
+    {
+      "key": "dana",
+      "type": "Contact",
+      "name": "Dana Reyes",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "CON-1"
+        }
+      ],
+      "source_ref": "CON-1"
+    },
+    {
+      "key": "marcus",
+      "type": "Contact",
+      "name": "Marcus Lee",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "CON-2"
+        }
+      ],
+      "source_ref": "CON-2"
+    },
+    {
+      "key": "priya",
+      "type": "Contact",
+      "name": "Priya Shah",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "CON-3"
+        }
+      ],
+      "source_ref": "CON-3"
+    },
+    {
+      "key": "atlas",
+      "type": "Product",
+      "name": "Atlas Platform",
+      "source_ref": "PRD-1"
+    },
+    {
+      "key": "migration",
+      "type": "Project",
+      "name": "Globex Data Migration",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "PRJ-1"
+        }
+      ],
+      "source_ref": "PRJ-1"
+    },
+    {
+      "key": "tck",
+      "type": "Ticket",
+      "name": "TCK-4411",
+      "external_ids": [
+        {
+          "system": "crm",
+          "value": "TCK-4411"
+        }
+      ],
+      "source_ref": "TCK-4411"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "dana_globex",
+      "type": "WORKS_FOR",
+      "source": "dana",
+      "target": "globex",
+      "valid_from": "2023-03-01",
+      "attributes": {
+        "role": "Head of Operations"
+      },
+      "source_ref": "crm_001"
+    },
+    {
+      "id": "marcus_globex",
+      "type": "WORKS_FOR",
+      "source": "marcus",
+      "target": "globex",
+      "valid_from": "2021-05-01",
+      "attributes": {
+        "role": "IT Director"
+      },
+      "source_ref": "crm_002"
+    },
+    {
+      "id": "priya_initech",
+      "type": "WORKS_FOR",
+      "source": "priya",
+      "target": "initech",
+      "valid_from": "2022-09-01",
+      "attributes": {
+        "role": "VP Engineering"
+      },
+      "source_ref": "crm_003"
+    },
+    {
+      "id": "globex_owner",
+      "type": "HAS_ACCOUNT_OWNER",
+      "source": "globex",
+      "target": "dana",
+      "valid_from": "2023-03-01",
+      "source_ref": "crm_004"
+    },
+    {
+      "id": "globex_atlas",
+      "type": "USES_PRODUCT",
+      "source": "globex",
+      "target": "atlas",
+      "valid_from": "2024-01-15",
+      "source_ref": "crm_005"
+    },
+    {
+      "id": "initech_atlas",
+      "type": "USES_PRODUCT",
+      "source": "initech",
+      "target": "atlas",
+      "valid_from": "2025-02-01",
+      "source_ref": "crm_006"
+    },
+    {
+      "id": "dana_sponsors",
+      "type": "SPONSORS",
+      "source": "dana",
+      "target": "migration",
+      "valid_from": "2026-06-01",
+      "source_ref": "crm_007"
+    },
+    {
+      "id": "migration_globex",
+      "type": "PROJECT_FOR",
+      "source": "migration",
+      "target": "globex",
+      "valid_from": "2026-06-01",
+      "source_ref": "crm_008"
+    },
+    {
+      "id": "migration_blocked",
+      "type": "BLOCKED_BY",
+      "source": "migration",
+      "target": "tck",
+      "valid_from": "2026-10-12",
+      "source_ref": "crm_009"
+    },
+    {
+      "id": "tck_escalated",
+      "type": "ESCALATED_TO",
+      "source": "tck",
+      "target": "dana",
+      "valid_from": "2026-10-12",
+      "source_ref": "crm_010"
+    }
+  ],
+  "conversations": [
+    {
+      "ref": "note_globex_meeting",
+      "occurred_at": "2026-10-05T15:00:00Z",
+      "subjects": [
+        "dana",
+        "globex"
+      ],
+      "content": "Meeting note, Globex: Dana Reyes confirmed the renewal is due 2026-12-15 and that she signs the budget. She is worried about the Atlas export timeouts.",
+      "entities": [
+        "Dana Reyes",
+        "Globex",
+        "Atlas Platform"
+      ],
+      "memory": {
+        "type": "episodic",
+        "summary": "Dana Reyes is worried about Atlas export timeouts ahead of the Globex renewal",
+        "content": "Dana Reyes is worried that the Atlas export timeouts could put the Globex renewal at risk.",
+        "subject_names": [
+          "Dana Reyes"
+        ]
+      },
+      "attributes": {
+        "Customer": {
+          "renewal_date": "2026-12-15",
+          "budget_owner": "Dana Reyes"
+        }
+      }
+    },
+    {
+      "ref": "ticket_4411",
+      "occurred_at": "2026-10-12T09:30:00Z",
+      "subjects": [
+        "dana",
+        "globex",
+        "tck"
+      ],
+      "content": "Support ticket TCK-4411 from Globex: the Atlas export times out on datasets above 2 GB. Dana Reyes asked for a fix before the renewal.",
+      "entities": [
+        "Dana Reyes",
+        "Globex",
+        "TCK-4411"
+      ],
+      "memory": {
+        "type": "episodic",
+        "summary": "Atlas exports above 2 GB time out for Globex (TCK-4411)",
+        "content": "Atlas exports above 2 GB time out for Globex (ticket TCK-4411); Dana Reyes wants a fix before the renewal.",
+        "subject_names": [
+          "Dana Reyes"
+        ]
+      },
+      "attributes": {
+        "Customer": {
+          "renewal_date": "2026-12-15",
+          "budget_owner": "Dana Reyes"
+        }
+      }
+    },
+    {
+      "ref": "note_initech_call",
+      "occurred_at": "2026-10-08T11:00:00Z",
+      "subjects": [
+        "priya",
+        "initech"
+      ],
+      "content": "Call note, Initech: Priya Shah says Initech is comparing Atlas with a competitor ahead of its own renewal.",
+      "entities": [
+        "Priya Shah",
+        "Initech",
+        "Atlas Platform"
+      ],
+      "memory": {
+        "type": "episodic",
+        "summary": "Initech is comparing Atlas with a competitor",
+        "content": "Priya Shah says Initech is comparing Atlas with a competitor ahead of its renewal.",
+        "subject_names": [
+          "Priya Shah"
+        ]
+      },
+      "attributes": {
+        "Customer": {
+          "renewal_date": null,
+          "budget_owner": null
+        }
+      }
+    }
+  ],
+  "account_plan": {
+    "ref": "account_plan_globex",
+    "occurred_at": "2026-10-14T10:00:00Z",
+    "subjects": [
+      "dana",
+      "globex"
+    ],
+    "content": "Account plan: Globex will accept a two-year renewal with an 8% uplift if the Atlas export timeouts are fixed.",
+    "entities": [
+      "Dana Reyes",
+      "Globex"
+    ],
+    "attributes": {
+      "Customer": {
+        "renewal_date": "2026-12-15",
+        "budget_owner": "Dana Reyes"
+      }
+    },
+    "memory": null
+  },
+  "marcus_leaves": {
+    "valid_to": "2026-09-01T00:00:00Z",
+    "source_recorded_at": "2026-09-10T09:00:00Z",
+    "source_ref": "crm_011",
+    "joins": "initech",
+    "role": "CTO"
+  }
+}

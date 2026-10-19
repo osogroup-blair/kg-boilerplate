@@ -1,0 +1,73 @@
+{
+  "mode": "mock",
+  "name": "CRM second domain",
+  "passed": true,
+  "steps": [
+    {
+      "at_ids": [
+        "P-01",
+        "ONT-01"
+      ],
+      "error": null,
+      "evidence": {
+        "ontology": "1.0.0 (264f910caf49)",
+        "profiles": [
+          "account_review",
+          "renewal_prep",
+          "support_triage"
+        ]
+      },
+      "id": "1",
+      "passed": true,
+      "title": "Publish the CRM ontology; register the app"
+    },
+    {
+      "at_ids": [
+        "AT-01"
+      ],
+      "error": null,
+      "evidence": {
+        "entities": 8,
+        "model_calls": 0,
+        "relationships": 11
+      },
+      "id": "2",
+      "passed": true,
+      "title": "CRM system of record writes customers, contacts, products, projects and a backdated job change (no model call)"
+    },
+    {
+      "at_ids": [
+        "AGT"
+      ],
+      "error": null,
+      "evidence": {
+        "agents": [
+          "globex-am (Globex contacts + acct-globex)",
+          "initech-am (Initech contacts + acct-initech)",
+          "support-agent (all contacts, no account project)"
+        ]
+      },
+      "id": "3",
+      "passed": true,
+      "title": "Register account managers and a support agent with different grants"
+    },
+    {
+      "at_ids": [
+        "ING-01",
+        "MEM"
+      ],
+      "error": null,
+      "evidence": {
+        "account_plan": "active",
+        "conversations": {
+          "note_globex_meeting": "indexed",
+          "note_initech_call": "indexed",
+          "ticket_4411": "indexed"
+        }
+      },
+      "id": "4",
+      "passed": true,
+      "title": "Meeting notes and a support ticket are ingested; the account plan is published to the Globex account project"
+    }
+  ]
+}

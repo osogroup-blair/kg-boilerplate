@@ -1,0 +1,165 @@
+# A second domain, proving the platform is reusable with configuration only: customers, the people who work for them, the projects and deals we run for them,
+# the products they use and the tickets that block them. Nothing outside this file, the events, the mock fixtures and the benchmark in this folder is CRM-specific.
+# Walk-through: docs/guides/add-a-domain.md
+ontology:
+  id: crm-accounts
+  version: 1.0.0
+  mode: strict
+entity_types:
+  Contact:
+    description: A person at a customer
+    identity:
+      key: platform_uuid
+      external_id_systems: [crm]
+      aliases: [name]
+    allowed_classifications: [internal, confidential, restricted]
+    access: subject_scoped            # a contact's facts and memories need a grant on that contact
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Customer:
+    description: A customer organisation
+    identity:
+      key: platform_uuid
+      external_id_systems: [crm]
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      renewal_date: {type: date, required: false}
+      budget_owner: {type: string, required: false, max_length: 200}
+  Deal:
+    description: A commercial opportunity
+    identity: {key: platform_uuid, external_id_systems: [crm]}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Product:
+    description: Something we sell
+    identity: {key: platform_uuid}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Project:
+    description: Delivery work for a customer
+    identity: {key: platform_uuid, external_id_systems: [crm]}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Ticket:
+    description: A support ticket
+    identity: {key: platform_uuid, external_id_systems: [crm]}
+    allowed_classifications: [internal, confidential, restricted]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+relationship_types:
+  WORKS_FOR:
+    description: A contact's employment at a customer
+    source: Contact
+    target: Customer
+    temporal: true
+    fact_template: "{source} works for {target}{role?: as {role}}"
+    attributes:
+      role: {type: string, required: false, max_length: 200}
+    rules:
+      - require_source
+      - preserve_valid_time
+      - kind: succession
+        params: {match: [source, target]}
+  HAS_ACCOUNT_OWNER:
+    description: The contact who owns the commercial relationship on the customer's side
+    source: Customer
+    target: Contact
+    temporal: true
+    fact_template: "{source} has {target} as its account owner"
+    rules:
+      - require_source
+      - preserve_valid_time
+      - {kind: max_active_per_source, params: {n: 1}}
+  SPONSORS:
+    description: A contact sponsors a project
+    source: Contact
+    target: Project
+    temporal: true
+    fact_template: "{source} sponsors {target}"
+    rules: [require_source]
+  PROJECT_FOR:
+    description: The customer a project is delivered for
+    source: Project
+    target: Customer
+    temporal: true
+    fact_template: "{source} is delivered for {target}"
+    rules: [require_source]
+  DEAL_FOR:
+    description: The customer a deal is with
+    source: Deal
+    target: Customer
+    temporal: true
+    fact_template: "{source} is a deal with {target}"
+    rules: [require_source]
+  USES_PRODUCT:
+    description: A customer's adoption of a product
+    source: Customer
+    target: Product
+    temporal: true
+    fact_template: "{source} uses {target}"
+    rules: [require_source, preserve_valid_time]
+  BLOCKED_BY:
+    description: A project that cannot proceed until a ticket is resolved
+    source: Project
+    target: Ticket
+    temporal: true
+    fact_template: "{source} is blocked by {target}"
+    rules: [require_source, require_review_if_inferred]
+  ESCALATED_TO:
+    description: A ticket escalated to a contact
+    source: Ticket
+    target: Contact
+    temporal: true
+    fact_template: "{source} was escalated to {target}"
+    rules: [require_source]
+context_profiles:
+  account_review:
+    max_tokens: 600
+    max_items: 20
+    include: [current_facts, relevant_facts, episodic, semantic, uncertainty]
+    evidence_required: false
+    compression: [structured, extractive]
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic], limit_per_type: 6}
+    current_facts: always
+    required_current_k: 3
+  renewal_prep:
+    max_tokens: 800
+    max_items: 24
+    include: [current_facts, relevant_facts, episodic, semantic, procedural, uncertainty]
+    evidence_required: false
+    compression: [structured, extractive]
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic, procedural], limit_per_type: 6}
+    current_facts: always
+    required_current_k: 3
+    expected_signals:                 # deterministic unknowns: the engine says what is missing, no model decides
+      - {key: renewal_date, label: renewal date, for_types: [Customer], satisfied_by: [{attribute: renewal_date}]}
+      - {key: budget_owner, label: budget owner, for_types: [Customer], satisfied_by: [{attribute: budget_owner}]}
+  support_triage:
+    max_tokens: 500
+    max_items: 16
+    include: [current_facts, relevant_facts, episodic, uncertainty]
+    evidence_required: false
+    compression: [structured, extractive]
+    graph: {enabled: true, hops: 1, limit: 12}
+    memory: {types: [episodic, semantic], limit_per_type: 4}
+    current_facts: always
+    required_current_k: 2
+memory_policies:
+  default:
+    extraction: enabled
+    extraction_min_importance: 0.5
+    max_memories_per_interaction: 3
+    auto_activate: [episodic, semantic]
+    procedural_requires_review: true
+    agent_shared_requires_review: false
+    working_ttl_hours: 24
+    max_content_chars: 2000
+    default_extracted_scope: subject
+    excluded_classifications: [local_only]
+    archive_after_days: null

@@ -1,0 +1,101 @@
+# The CRM benchmark: frozen cases scored by `make eval-crm` (recall of expected text and unknowns, forbidden text, leakage anywhere in the response, token budget,
+# attribution). Cases name world keys (see events/timeline.json); the runner resolves them to ids. Same thresholds as the Sarah benchmark:
+# leakage 0, budget adherence 100%, attribution 100%; with the deterministic mock every expectation must also hold.
+#   expect   text that must be in the rendered context      forbid   text that must not be in it (relevance and correctness)
+#   unknowns labels the engine must report as unknown       leak     text that must be nowhere in the response (authorisation)
+cases:
+  - id: R01_globex_renewal_prep
+    title: Account manager prepares the Globex renewal
+    principal: globex-am
+    task: Prepare the Globex renewal
+    subjects: [globex, dana]
+    profile: renewal_prep
+    max_tokens: 800
+    project: acct-globex
+    expect: ["Dana Reyes works for Globex", "TCK-4411", "Atlas exports above 2 GB", "8% uplift"]
+    forbid: ["Initech", "Priya", "No verified renewal date", "No verified budget owner"]
+    leak: ["Priya Shah"]
+
+  - id: R02_initech_missing_signals
+    title: Initech has no renewal date or budget owner on file, so both are reported as unknown
+    principal: initech-am
+    task: Prepare the Initech renewal
+    subjects: [initech, priya]
+    profile: renewal_prep
+    max_tokens: 800
+    project: acct-initech
+    expect: ["Priya Shah works for Initech", "comparing Atlas with a competitor"]
+    unknowns: ["renewal date", "budget owner"]
+    leak: ["Dana Reyes", "8% uplift", "TCK-4411"]
+
+  - id: S01_support_triage_has_no_account_plan
+    title: The support agent sees the ticket, never the account plan
+    principal: support-agent
+    task: Dana says the Atlas export keeps timing out
+    subjects: [globex, dana]
+    profile: support_triage
+    max_tokens: 500
+    expect: ["TCK-4411"]
+    forbid: ["8% uplift"]
+    leak: ["8% uplift", "two-year renewal"]
+
+  - id: T01_marcus_now
+    title: Marcus Lee now works for Initech, not Globex (valid time, backdated update)
+    principal: globex-am
+    task: Who does Marcus Lee work for
+    subjects: [marcus]
+    profile: account_review
+    max_tokens: 400
+    expect: ["Marcus Lee works for Initech"]
+    forbid: ["Marcus Lee works for Globex"]
+
+  - id: T02_marcus_before_he_left
+    title: Marcus Lee on 2026-06-01 still worked for Globex
+    principal: globex-am
+    task: Who does Marcus Lee work for
+    subjects: [marcus]
+    profile: account_review
+    max_tokens: 400
+    as_of: "2026-06-01T00:00:00Z"
+    expect: ["Marcus Lee works for Globex as IT Director"]
+    forbid: ["works for Initech"]
+
+  - id: L01_other_customer_cannot_read_globex_people
+    title: Initech's account manager asking about Globex gets no Globex contact, memory or plan
+    principal: initech-am
+    task: What is going on with Globex
+    subjects: [globex]
+    profile: account_review
+    max_tokens: 600
+    project: acct-initech
+    leak: ["Dana Reyes", "8% uplift", "export", "Marcus Lee"]
+
+  - id: L02_globex_cannot_read_initech_people
+    title: Globex's account manager asking about Initech gets no Initech contact or memory
+    principal: globex-am
+    task: What is going on with Initech
+    subjects: [initech]
+    profile: account_review
+    max_tokens: 600
+    project: acct-globex
+    leak: ["Priya Shah", "competitor"]
+
+  - id: P01_project_blocker
+    title: What blocks the Globex data migration
+    principal: globex-am
+    task: What is blocking the Globex data migration
+    subjects: [migration]
+    profile: account_review
+    max_tokens: 500
+    project: acct-globex
+    expect: ["Globex Data Migration", "TCK-4411"]
+
+  - id: B01_tight_budget
+    title: A 150-token budget is respected even for a rich account
+    principal: globex-am
+    task: Prepare the Globex renewal
+    subjects: [globex, dana]
+    profile: renewal_prep
+    max_tokens: 150
+    project: acct-globex
+    expect: []

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,10 +11,9 @@ import httpx
 from kg_platform_sdk import KGClientSync
 
 from examples._kit import admin, mock, waits
-from examples._kit.env import Env
-from examples._kit.report import Report, Step
+from examples._kit.runner import Runner
 from examples._kit.show import context_lines, show_context
-from examples._kit.workspace import Workspace, fresh_workspace
+from examples._kit.workspace import fresh_workspace
 
 PROJECT = "newco-plan"
 EVT003 = "Sarah Johnson: I'm considering entrepreneurship, and Michael, who I've known for years, keeps encouraging me."
@@ -29,48 +27,7 @@ def hr(v: str) -> list[dict[str, str]]:
     return [{"system": "hr", "value": v}]
 
 
-class Scenario:
-    def __init__(self, env: Env, ws: Workspace, report: Report, out: Callable[[str], None] = print) -> None:
-        self.env, self.ws, self.report, self.say = env, ws, report, out
-        self.ids: dict[str, str] = {}
-        self.data: dict[str, Any] = {}
-
-    # ---- plumbing ------------------------------------------------------------------------------------------------------------------------
-    def step(self, sid: str, title: str, at: list[str], fn: Callable[[], dict[str, Any]]) -> None:
-        self.say(f"\n[{sid}] {title}")
-        try:
-            evidence = fn()
-            self.report.add(Step(sid, title, at, True, evidence))
-            self.say(f"     pass  {evidence}")
-        except Exception as exc:  # a failing step must not hide the later ones
-            self.report.add(Step(sid, title, at, False, error=f"{type(exc).__name__}: {str(exc)[:900]}"))
-            self.say(f"     FAIL  {type(exc).__name__}: {str(exc)[:900]}")
-
-    def sdk(self, handle: str) -> KGClientSync:
-        return KGClientSync(self.env.base_url, self.ws.keys[handle])
-
-    def mock_requests(self) -> int:
-        return len(httpx.get(f"{self.env.mock_url}/__mock/requests", timeout=10).json())
-
-    def build(self, handle: str, **kw: Any) -> dict[str, Any]:
-        with self.sdk(handle) as kg:
-            for _ in range(4):  # the first graph search after a restart can outlast its source timeout (`partial`, by design): ask again
-                out = kg.build_context(**kw).model_dump(mode="json")
-                if out["status"] != "partial":
-                    break
-                time.sleep(3)
-        return out
-
-    def settle(self) -> None:
-        waits.wait_until(lambda: (self._backlog() == 0, self._backlog()), timeout=180, what="the outbox to drain")
-
-    def _backlog(self) -> int:
-        r = admin.get(self.ws, "/v1/ops/backlog")
-        if r.status_code != 200:
-            return 0
-        body = r.json()
-        return int(sum(v for v in (body.get("pending", 0), body.get("leased", 0)) if isinstance(v, int)))
-
+class Scenario(Runner):
     # ---- steps ---------------------------------------------------------------------------------------------------------------------------
     def s1_ontology(self) -> dict[str, Any]:
         active = admin.get(self.ws, "/v1/ontologies/active").json()
@@ -240,22 +197,6 @@ class Scenario:
         assert not bad, f"unmet: {bad}"
         self.data["planning_ctx"] = out
         return {"tokens": f"{used}/600", "lines": len(context_lines(out)), "unknowns": len(out["unknowns"])}
-
-    def ingest(self, source_ref: str, content: str, subjects: list[str], occurred_at: str) -> str:
-        r = admin.post(
-            self.ws,
-            "/v1/interactions",
-            {
-                "source_system": "chat",
-                "source_ref": source_ref,
-                "kind": "message",
-                "content": content,
-                "occurred_at": occurred_at,
-                "subject_refs": [{"entity_id": s} for s in subjects],
-            },
-            key=self.ws.keys["conversation-app"],
-        )
-        return str(r["event_id"])
 
     def s7_job_change(self) -> dict[str, Any]:
         key = self.ws.keys["conversation-app"]
@@ -436,9 +377,22 @@ class Scenario:
         }
 
     def run_all(self) -> None:
+        def rule(schema: str, marker: str, response: dict[str, Any]) -> dict[str, Any]:
+            return {"when": {"alias": "oso/general", "schema_name": schema, "contains": [marker]}, "response": response}
+
+        names = ["Michael", "Sarah Johnson"]
         rules = [
-            {"when": {"alias": "oso/general", "schema_name": "MemoryCandidates", "contains": [t]}, "response": {"candidates": []}}
-            for t in ("work at NewCo now", "Michael is Sarah's manager")
+            # events whose extraction the scenario does not care about must still be answered (the strict mock fails loudly otherwise, and the job would retry forever)
+            *[rule("MemoryCandidates", t, {"candidates": []}) for t in ("work at NewCo now", "Michael is Sarah's manager")],
+            rule("ExtractedEntities", EVT005[:60], {"extracted_entities": []}),
+            rule("ExtractedEdges", EVT005[:60], {"edges": []}),
+            rule("MemoryCandidates", EVT005[:60], {"candidates": []}),
+            rule(
+                "NodeResolutions",
+                "Michael is Sarah's manager",
+                {"entity_resolutions": [{"id": i, "name": n, "duplicate_candidate_id": -1} for i, n in enumerate(names)]},
+            ),
+            rule("SummarizedEntities", "Michael is Sarah's manager", {"summaries": [{"name": n, "summary": f"{n}."} for n in names]}),
         ]
         with mock.mock_pack(self.env, rules):
             self.step("1", "Admin publishes the ontology; principals registered", ["ONT-01", "ONT-02"], self.s1_ontology)

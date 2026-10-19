@@ -30,3 +30,17 @@ def test_sarah_scenario_passes(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-1000:]
     assert "PASS: 11/11" in proc.stdout
+
+
+@pytest.mark.skipif(not _stack_up() and os.environ.get("KG_REQUIRE_STACK") != "1", reason="the dev stack is not up")
+def test_crm_second_domain_passes(tmp_path: Path) -> None:
+    proc = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "examples.domains.crm.run", "--reports", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        timeout=900,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-1000:]
+    assert "benchmark PASS" in proc.stdout
