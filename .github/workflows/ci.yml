@@ -53,12 +53,6 @@ jobs:
           cache-dependency-path: apps/admin/package-lock.json
       - run: make sync admin-install
       - run: make check
-      - name: Clean-start demos (seed + demo-p1 + demo-p2 against the compose stack)
-        run: |
-          make up
-          make seed
-          make demo-p1
-          make demo-p2
       - name: Evaluation gate (mock router; strict metrics exact, proposed metrics inside tolerance)
         run: make eval-all eval-gate
       - name: Live-gate record for model-affecting changes
@@ -82,6 +76,11 @@ jobs:
         run: |
           make up seed
           make mcp-up
+      - name: Clean-start demos (demo-p1 and demo-p2 against the compose stack)
+        # They live here, not in `check`: the compose stack and the service containers of `check` both want host ports 5544 and 7688.
+        run: |
+          make demo-p1
+          make demo-p2
       - name: The examples (Sarah, the CRM domain, agents through the SDK and MCP)
         run: make examples
       - name: The examples and the seven notebooks as tests
