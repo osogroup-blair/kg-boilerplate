@@ -218,6 +218,8 @@ One run in a fresh workspace, in blueprint order. Every step records its AT ids 
 | `06_corrections_and_deletion` | Impact preview → correction → next build reflects it; identity split; deletion freeze → plan → purge → verify → receipt; legal hold blocking a purge |
 | `07_second_domain` | Loads the CRM from `examples/domains/crm/`, runs `renewal_prep`, and diffs it against Sarah's `planning` profile to show that only config changed |
 
+- **Built (2026-10-18):** notebooks are generated from `src/*.py` percent files and committed without outputs (`build --check` is a test); an opt-in `examples` dependency group (jupyterlab, ipykernel, nbclient, nbformat, networkx, matplotlib) and `make examples-install notebooks test-examples`. Changes from the table above: notebook 1 does not show ciphertext (the examples are black-box and must not read the database); it shows who may read the content instead. Notebook 6 omits legal hold and identity split (runbooks linked). Ruff excludes the generated `.ipynb`; mypy excludes the cell sources.
+
 #### WP-B5: Documentation
 - **`README.md`** becomes a real quickstart: what it is (3 lines), prerequisites, `make tools sync admin-install up seed`, then `make examples` and what you will see, links to the examples index, admin console URL and login, and "where to go next". The "start here if picking up the work" table moves below.
 - **`examples/README.md`:** a table of examples with command, runtime, what it proves, and blueprint ids; a section on running live (owner, cost warning).

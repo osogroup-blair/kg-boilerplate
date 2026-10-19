@@ -50,6 +50,19 @@ dev = [
   "hypothesis==6.169.0",
   "datamodel-code-generator==0.83.0",
 ]
+examples = [
+    "ipykernel>=7.4.0",
+    "jupyterlab>=4.6.4",
+    "matplotlib>=3.11.2",
+    "nbclient>=0.11.0",
+    "nbformat>=5.11.1",
+    "networkx>=3.7",
+]
+
+[[tool.mypy.overrides]]
+module = ["examples.notebooks.build", "examples.notebooks.run"]
+disallow_untyped_calls = false   # nbformat ships no type information
+warn_return_any = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -75,7 +88,7 @@ markers = [
 [tool.ruff]
 line-length = 140
 target-version = "py312"
-extend-exclude = ["spikes", "tools", "apps/admin", "sdk/python/src/kg_platform_sdk/models.py"]
+extend-exclude = ["spikes", "tools", "apps/admin", "sdk/python/src/kg_platform_sdk/models.py", "examples/notebooks/*.ipynb"]  # the notebooks are generated from examples/notebooks/src
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
@@ -86,6 +99,7 @@ ignore = ["B008", "S101", "E501"]
 "tests/**" = ["S", "B"]
 "tools/**" = ["S"]
 "scripts/**" = ["S"]
+"examples/notebooks/src/**" = ["E402", "E702"]   # notebook cells: teaching code, imports where the story needs them
 
 [tool.mypy]
 python_version = "3.12"
@@ -94,7 +108,7 @@ plugins = ["pydantic.mypy"]
 mypy_path = ["packages/common/src", "packages/domain/src", "packages/db/src", "packages/governance/src", "packages/graph/src", "packages/knowledge/src", "packages/jobs/src", "packages/ingestion/src", "packages/extraction/src", "packages/memory/src", "packages/context/src", "packages/reconcile/src", "packages/ontology/src", "packages/modelgw/src", "packages/observability/src", "apps/api/src", "apps/worker/src", "apps/cli/src", "apps/mcp/src", "sdk/python/src"]
 explicit_package_bases = true
 namespace_packages = true
-exclude = ["/tests/"]
+exclude = ["/tests/", "examples/notebooks/src/"]  # the notebook cells are teaching code, generated into .ipynb
 
 [[tool.mypy.overrides]]
 module = ["graphiti_core.*", "tiktoken.*", "alembic.*", "prometheus_client.*", "opentelemetry.*"]

@@ -39,6 +39,11 @@ class Crm(Runner):
         spec = yaml.safe_load(ONTOLOGY.read_text())
         return list(spec["entity_types"])
 
+    def mock_rules(self) -> list[dict[str, Any]]:
+        """Offline model answers for every conversation in the timeline (including the account plan the agent submits)."""
+        by_name = {e["name"]: e["type"] for e in TIMELINE["entities"]}
+        return rules_for([*TIMELINE["conversations"], TIMELINE["account_plan"]], by_name, self.entity_types())
+
     # ---- the world ---------------------------------------------------------------------------------------------------------------------
     def setup(self) -> dict[str, Any]:
         me = admin.get(self.ws, "/v1/me").json()["principal"]["id"]
@@ -197,9 +202,7 @@ def main() -> int:
     report = Report("CRM second domain", "live" if env.live else "mock")
     crm = Crm(env, ws, report, out=(lambda _m: None) if args.eval else print)
     print(f"workspace {ws.slug}")
-    types = crm.entity_types()
-    by_name = {e["name"]: e["type"] for e in TIMELINE["entities"]}
-    with mock.mock_pack(env, rules_for([*TIMELINE["conversations"], TIMELINE["account_plan"]], by_name, types)):
+    with mock.mock_pack(env, crm.mock_rules()):
         crm.step("1", "Publish the CRM ontology; register the app", ["P-01", "ONT-01"], crm.setup)
         crm.step(
             "2",

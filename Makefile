@@ -9,7 +9,7 @@ KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(E
 RUN := $(UV) run
 PYSRC := packages apps sdk tests scripts examples
 
-.PHONY: demo-sarah demo-crm eval-crm examples-agents test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
+.PHONY: examples-install demo-sarah demo-crm eval-crm examples-agents notebooks test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
         test test-int test-security test-contract test-resilience test-all test-admin test-e2e lint typecheck openapi admin-client check \
         backup-init backup backup-verify backup-prune restore-rehearsal reconcile eval-all eval-gate eval-gate-live eval-conflicts eval-authorization eval-injection eval-freeze
 
@@ -29,8 +29,14 @@ eval-crm:            ## the CRM benchmark on its own: leakage 0, budget 100%, at
 examples-agents:     ## example: Research and Planning agents through the SDK and MCP, plus the unauthorized-agent tour (needs `make up seed mcp-up`)
 	$(RUN) python -m examples.agents.run
 
-test-examples:       ## run the examples as tests (needs `make up seed`)
-	$(RUN) pytest tests/examples -q
+notebooks:           ## execute the seven notebooks against the stack and save the executed copies, with outputs, to examples/notebooks/out/ (needs `make up seed examples-install`)
+	$(RUN) --group examples python -m examples.notebooks.run --write
+
+examples-install:    ## install the optional notebook tooling (jupyterlab, nbclient, networkx, matplotlib) into the environment
+	$(UV) sync --frozen --group examples
+
+test-examples:       ## run the examples and notebooks as tests (needs `make up seed examples-install`; the agents test also needs `make mcp-up`)
+	$(RUN) --group examples pytest tests/examples -q
 
 help:                ## list the targets that carry a ## description
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sed -E 's/:[^#]*## /\t/' | sort | column -t -s "$$(printf '\t')"
