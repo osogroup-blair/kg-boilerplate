@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "unparseable memory extraction"
@@ -21,7 +20,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "unparseable memory extraction"
@@ -33,7 +31,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "SummarizedEntities",
    "contains": [
     "unparseable memory extraction"
@@ -45,7 +42,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "NodeResolutions",
    "contains": [
     "unparseable memory extraction"
@@ -63,7 +59,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "Person",
    "contains": [
     "unparseable memory extraction"
@@ -73,7 +68,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "MemoryCandidates",
    "contains": [
     "unparseable memory extraction"

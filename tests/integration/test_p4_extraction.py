@@ -236,15 +236,15 @@ async def test_an_unparseable_model_answer_is_quarantined_after_two_attempts_and
     await add_mock_rules(
         [
             {
-                "when": {"alias": "oso/general", "schema_name": "ExtractedEntities", "contains": ["unparseable extraction"]},
+                "when": {"schema_name": "ExtractedEntities", "contains": ["unparseable extraction"]},
                 "response": {"extracted_entities": [{"name": "Sarah Johnson", "entity_type_id": 2, "episode_indices": [0]}]},
             },
             {
-                "when": {"alias": "oso/general", "schema_name": "ExtractedEdges", "contains": ["unparseable extraction"]},
+                "when": {"schema_name": "ExtractedEdges", "contains": ["unparseable extraction"]},
                 "response": {"edges": []},
             },
             {
-                "when": {"alias": "oso/general", "schema_name": "SummarizedEntities", "contains": ["unparseable extraction"]},
+                "when": {"schema_name": "SummarizedEntities", "contains": ["unparseable extraction"]},
                 "response": {"summaries": [{"name": "Sarah Johnson", "summary": "Sarah Johnson."}]},
             },
         ]

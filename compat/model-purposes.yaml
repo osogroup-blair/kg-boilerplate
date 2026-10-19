@@ -1,29 +1,36 @@
 # Purpose -> router alias map (Phase 0 §2.3). The platform refers to PURPOSES, never models.
-# Status: PROVISIONAL until `make verify-router` has run (GR-12 / LV-04 / LV-09).
+# Status: PROVISIONAL until `make live-session-apply`. `make verify-router` ran against https://models.oso.group on 2026-10-19 (LV-04 / GR-12):
+#   oso/general and oso/fast answer 422 unsupported_capability to response_format json_schema; oso/code, oso/code-high and oso/frontier answer valid JSON;
+#   oso/reasoning was inconsistent (invalid JSON once, 503 routing_failed once). So every STRUCTURED purpose uses oso/code with oso/code-high as fallback, and only
+#   plain-text purposes stay on oso/general / oso/fast. If the router admin adds an `oso/structured` alias (router-contract section 11), change these lines only.
 # Source for alias and capability facts: oso_model_router scripts/seed-logical-router.ts (ALIASES, DEPLOYMENTS).
 version: 1
 status: provisional
 model_purposes:
   graph_extraction:
-    alias: oso/general
+    alias: oso/code                 # -> oso/structured if the router admin creates it (docs/router-contract.md section 11)
     requires: [structured_output]
-    fallback_alias: oso/code        # -> oso/structured once the router admin creates it (see docs/router-contract.md §9)
+    fallback_alias: oso/code-high
     task_type: extraction
   graph_extraction_small:
-    alias: oso/general              # NOT oso/fast: no structured_output-capable candidate (fails unsupported_capability)
+    alias: oso/code                 # NOT oso/fast or oso/general: neither supports structured output on the live router (422 unsupported_capability)
     requires: [structured_output]
+    fallback_alias: oso/code-high
     task_type: extraction
   memory_extraction:
-    alias: oso/general
+    alias: oso/code
     requires: [structured_output]
+    fallback_alias: oso/code-high
     task_type: extraction
   memory_consolidation:
-    alias: oso/general              # P8: a condensed group of memories, validated sentence by sentence and ALWAYS reviewed (ADR-043)
+    alias: oso/code                 # P8: a condensed group of memories, validated sentence by sentence and ALWAYS reviewed (ADR-043)
     requires: [structured_output]
+    fallback_alias: oso/code-high
     task_type: summarization
   ontology_simulation:
-    alias: oso/general              # P8: extraction of sample interactions under a DRAFT ontology, in an isolated staging namespace (ADR-046)
+    alias: oso/code                 # P8: extraction of sample interactions under a DRAFT ontology, in an isolated staging namespace (ADR-046)
     requires: [structured_output]
+    fallback_alias: oso/code-high
     task_type: extraction
   graph_projection:
     alias: oso/embedding            # embedding-only: deterministic command projections write nodes/edges directly and never call a chat model (ADR-016)

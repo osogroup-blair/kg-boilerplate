@@ -31,7 +31,7 @@ async def test_g01_chat_round_trip_records_usage_and_metadata_only_log(env, corr
 
 async def test_g01_json_schema_round_trip_is_typed(env, corr):
     r = await env.gw.complete("graph_extraction", MSGS, classification="confidential", correlation=corr, response_schema=Extraction)
-    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/general"
+    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/code"
 
 
 async def test_g01_embeddings_round_trip(env, corr):
@@ -105,6 +105,9 @@ async def test_g03_non_retryable_codes_are_attempted_once(env, corr, code, categ
 
 async def test_g03_real_unsupported_capability_from_wrong_alias_is_not_retried(env, corr):
     env.gw.config.purposes["graph_extraction_small"].alias = "oso/fast"  # the misconfiguration the contract warns about
+    env.gw.config.purposes[
+        "graph_extraction_small"
+    ].fallback_alias = None  # with a fallback configured the gateway would recover; this test is about the bare error
     with pytest.raises(RouterError) as e:
         await env.gw.complete("graph_extraction_small", MSGS, classification="internal", correlation=corr, response_schema=Extraction)
     assert e.value.code == "unsupported_capability" and len(env.spy.requests) == 1
@@ -115,7 +118,9 @@ async def test_g03_exhausted_primary_falls_back_to_fallback_alias(env, corr):
     env.faults({"code": "provider_unavailable", "count": 4})
     r = await env.gw.complete("graph_extraction", MSGS, classification="internal", correlation=corr, response_schema=Extraction)
     assert (
-        r.fallback_used and r.alias == "oso/code" and [x["body"]["model"] for x in env.spy.requests] == ["oso/general"] * 4 + ["oso/code"]
+        r.fallback_used
+        and r.alias == "oso/code-high"
+        and [x["body"]["model"] for x in env.spy.requests] == ["oso/code"] * 4 + ["oso/code-high"]
     )
     assert env.log[-1].fallback_used and env.log[0].outcome == "provider_unavailable"
 

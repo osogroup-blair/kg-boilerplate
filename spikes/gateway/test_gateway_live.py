@@ -57,6 +57,7 @@ async def test_g05_local_only_never_sent():
 async def test_g05_oso_fast_rejects_json_schema():
     g = gw()
     g.purposes["graph_extraction_small"]["alias"] = "oso/fast"
+    g.purposes["graph_extraction_small"]["fallback_alias"] = None   # with a fallback the gateway recovers; this test is about the bare error
     with pytest.raises(RouterError) as e:
         await g.complete("graph_extraction_small", [{"role": "user", "content": "x"}], classification="public", correlation=corr(), response_schema=Fact)
     assert e.value.code == "unsupported_capability"

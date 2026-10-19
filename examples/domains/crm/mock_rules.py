@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from typing import Any
 
-ALIAS = "oso/general"
-
 
 def type_ids(entity_types: list[str]) -> dict[str, int]:
     """Graphiti's numbering of the ontology's entity types: alphabetical, from 1 (0 is the generic Entity)."""
@@ -21,7 +19,7 @@ def rules_for(conversations: list[dict[str, Any]], entity_type_of: dict[str, str
         marker = c["content"][:60]  # a stretch of the text that only this conversation contains
         out.append(
             {
-                "when": {"alias": ALIAS, "schema_name": "ExtractedEntities", "contains": [marker]},
+                "when": {"schema_name": "ExtractedEntities", "contains": [marker]},
                 "response": {
                     "extracted_entities": [
                         {"name": n, "entity_type_id": ids[entity_type_of[n]], "episode_indices": [0]} for n in c["entities"]
@@ -32,28 +30,28 @@ def rules_for(conversations: list[dict[str, Any]], entity_type_of: dict[str, str
         names = c["entities"]  # node resolution (the pipeline asks when a workspace already has nodes) and node summaries
         out.append(
             {
-                "when": {"alias": ALIAS, "schema_name": "NodeResolutions", "contains": [marker]},
+                "when": {"schema_name": "NodeResolutions", "contains": [marker]},
                 "response": {"entity_resolutions": [{"id": i, "name": n, "duplicate_candidate_id": -1} for i, n in enumerate(names)]},
             }
         )
         out.append(
             {
-                "when": {"alias": ALIAS, "schema_name": "SummarizedEntities", "contains": [marker]},
+                "when": {"schema_name": "SummarizedEntities", "contains": [marker]},
                 "response": {"summaries": [{"name": n, "summary": f"{n}."} for n in names]},
             }
         )
-        out.append({"when": {"alias": ALIAS, "schema_name": "ExtractedEdges", "contains": [marker]}, "response": {"edges": []}})
+        out.append({"when": {"schema_name": "ExtractedEdges", "contains": [marker]}, "response": {"edges": []}})
         for type_name, attrs in c.get(
             "attributes", {}
         ).items():  # entity types with attributes beyond the name get one attribute-extraction call per node
-            out.append({"when": {"alias": ALIAS, "schema_name": type_name, "contains": [marker]}, "response": attrs})
+            out.append({"when": {"schema_name": type_name, "contains": [marker]}, "response": attrs})
         m = c["memory"]
         if m is None:  # a note the agent submits as evidence: no memory of its own
-            out.append({"when": {"alias": ALIAS, "schema_name": "MemoryCandidates", "contains": [marker]}, "response": {"candidates": []}})
+            out.append({"when": {"schema_name": "MemoryCandidates", "contains": [marker]}, "response": {"candidates": []}})
             continue
         out.append(
             {
-                "when": {"alias": ALIAS, "schema_name": "MemoryCandidates", "contains": [marker]},
+                "when": {"schema_name": "MemoryCandidates", "contains": [marker]},
                 "response": {
                     "candidates": [
                         {

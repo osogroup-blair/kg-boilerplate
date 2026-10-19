@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "work at NewCo now"
@@ -28,7 +27,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "work at NewCo now"
@@ -52,7 +50,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -68,7 +65,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -84,7 +80,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -100,7 +95,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -116,7 +110,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -132,7 +125,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -148,7 +140,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -164,7 +155,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -180,7 +170,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -196,7 +185,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -212,7 +200,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -228,7 +215,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo",
@@ -244,7 +230,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson works at NewCo"
@@ -257,7 +242,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Sarah Johnson works at NewCo"
@@ -270,7 +254,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "WORKS_AT",
    "contains": [
     "Sarah Johnson works at NewCo"

@@ -204,8 +204,13 @@ def run_agent(
 
 
 def router_settings(live: bool) -> tuple[str, str]:
-    default_url = "http://127.0.0.1:8782/v1"
-    return os.environ.get("OSO_ROUTER_BASE_URL", default_url), os.environ.get("OSO_ROUTER_API_KEY", "mock-key")
+    """(base URL, key) for the model the agents talk to. Offline this is the mock router with its own placeholder key: the real router key is used ONLY with
+    `--live`, because libraries such as Graphiti load `.env` into the process environment, so it can be present in a mock-mode run and must not be sent to the mock."""
+    if live:
+        return os.environ.get("OSO_ROUTER_BASE_URL") or os.environ.get(
+            "OSO_ROUTER_LIVE_URL"
+        ) or "https://models.oso.group/v1", os.environ.get("OSO_ROUTER_API_KEY", "")
+    return os.environ.get("KG_MOCK_ROUTER_URL", "http://127.0.0.1:8782/v1"), "mock-key"
 
 
 def scripted_rules(marker: str, steps: list[tuple[str, dict[str, Any]]], final: str) -> list[dict[str, Any]]:

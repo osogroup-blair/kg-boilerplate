@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "state licensing board handbook"
@@ -13,7 +12,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "state licensing board handbook"
@@ -25,7 +23,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "SummarizedEntities",
    "contains": [
     "state licensing board handbook"
@@ -37,7 +34,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "NodeResolutions",
    "contains": [
     "state licensing board handbook"
@@ -49,7 +45,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "Person",
    "contains": [
     "state licensing board handbook"
@@ -59,7 +54,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "MemoryCandidates",
    "contains": [
     "state licensing board handbook"

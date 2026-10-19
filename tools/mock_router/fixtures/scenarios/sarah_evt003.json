@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "considering entrepreneurship"
@@ -35,7 +34,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "considering entrepreneurship"
@@ -70,7 +68,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson is considering entrepreneurship"
@@ -83,7 +80,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson knows Michael"
@@ -96,7 +92,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Sarah Johnson is considering entrepreneurship"
@@ -109,7 +104,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Sarah Johnson knows Michael"

@@ -49,11 +49,11 @@ class Agents(Scenario):
         marker = INJECTION.split(":")[0]
         return [
             *self.mock_rules(),
-            {"when": {"alias": "oso/general", "schema_name": "ExtractedEntities", "contains": [marker]}, "response": {"extracted_entities": [{"name": "Sarah Johnson", "entity_type_id": 2, "episode_indices": [0]}]}},
-            {"when": {"alias": "oso/general", "schema_name": "ExtractedEdges", "contains": [marker]}, "response": {"edges": []}},
-            {"when": {"alias": "oso/general", "schema_name": "NodeResolutions", "contains": [marker]}, "response": {"entity_resolutions": [{"id": 0, "name": "Sarah Johnson", "duplicate_candidate_id": -1}]}},
-            {"when": {"alias": "oso/general", "schema_name": "SummarizedEntities", "contains": [marker]}, "response": {"summaries": [{"name": n, "summary": f"{n}."} for n in names]}},
-            {"when": {"alias": "oso/general", "schema_name": "MemoryCandidates", "contains": [marker]},
+            {"when": {"schema_name": "ExtractedEntities", "contains": [marker]}, "response": {"extracted_entities": [{"name": "Sarah Johnson", "entity_type_id": 2, "episode_indices": [0]}]}},
+            {"when": {"schema_name": "ExtractedEdges", "contains": [marker]}, "response": {"edges": []}},
+            {"when": {"schema_name": "NodeResolutions", "contains": [marker]}, "response": {"entity_resolutions": [{"id": 0, "name": "Sarah Johnson", "duplicate_candidate_id": -1}]}},
+            {"when": {"schema_name": "SummarizedEntities", "contains": [marker]}, "response": {"summaries": [{"name": n, "summary": f"{n}."} for n in names]}},
+            {"when": {"schema_name": "MemoryCandidates", "contains": [marker]},
              "response": {"candidates": [{"type": "episodic", "content": INJECTION, "summary": "ledgers plan note", "subject_names": ["Sarah Johnson"], "importance": 0.8,
                                           "reason_code": "notable_discussion", "occurred_at": "2026-10-16T09:00:00Z", "effective_from": None, "related_fact_ids": []}]}},
         ]  # fmt: skip

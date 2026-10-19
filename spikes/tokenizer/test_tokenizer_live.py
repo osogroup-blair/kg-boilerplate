@@ -17,17 +17,23 @@ ALIASES = ("oso/fast", "oso/general", "oso/code", "oso/reasoning")
 
 
 async def prompt_tokens(c: httpx.AsyncClient, alias: str, text: str) -> int:
-    r = await c.post(os.environ["OSO_ROUTER_BASE_URL"].rstrip("/") + "/chat/completions",
-                     headers={"Authorization": f"Bearer {os.environ['OSO_ROUTER_API_KEY']}", "x-request-id": str(uuid.uuid4())},
-                     json={"model": alias, "max_tokens": 16, "temperature": 0, "messages": [{"role": "user", "content": text}]})
-    r.raise_for_status()
-    return r.json()["usage"]["prompt_tokens"]
+    for attempt in (1, 2):   # the router's latency tail is long (oso/general answered a 16-token reply in 36-52 s on 2026-10-19): one retry, not a bigger failure
+        try:
+            r = await c.post(os.environ["OSO_ROUTER_BASE_URL"].rstrip("/") + "/chat/completions",
+                             headers={"Authorization": f"Bearer {os.environ['OSO_ROUTER_API_KEY']}", "x-request-id": str(uuid.uuid4())},
+                             json={"model": alias, "max_tokens": 16, "temperature": 0, "messages": [{"role": "user", "content": text}]})
+            r.raise_for_status()
+            return r.json()["usage"]["prompt_tokens"]
+        except httpx.ReadTimeout:
+            if attempt == 2:
+                raise
+    raise AssertionError("unreachable")
 
 
 async def test_tk02_calibrate_against_router_prompt_tokens():
     base = TokenCounter(margin=0.0)
     table, needed = {}, 0.0
-    async with httpx.AsyncClient(timeout=120) as c:
+    async with httpx.AsyncClient(timeout=240) as c:
         for alias in ALIASES:
             overhead = await prompt_tokens(c, alias, ".") - base.raw(".")            # chat-template overhead per request
             for name, text in SAMPLES.items():

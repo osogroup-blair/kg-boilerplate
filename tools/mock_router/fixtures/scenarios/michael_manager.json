@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "Michael is Sarah's manager"
@@ -28,7 +27,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "Michael is Sarah's manager"
@@ -52,7 +50,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael manages Sarah Johnson"
@@ -65,7 +62,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Michael manages Sarah Johnson"

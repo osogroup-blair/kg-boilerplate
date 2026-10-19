@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "In March 2025 Sarah Johnson joined the board of Velo Club"
@@ -28,7 +27,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "In March 2025 Sarah Johnson joined the board of Velo Club"
@@ -52,7 +50,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Sarah Johnson serves on the board of Velo Club"
@@ -65,7 +62,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Sarah Johnson serves on the board of Velo Club"
@@ -78,7 +74,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "WORKS_AT",
    "contains": [
     "Sarah Johnson serves on the board of Velo Club"

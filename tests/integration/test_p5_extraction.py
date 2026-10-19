@@ -58,7 +58,7 @@ async def test_evt003_yields_one_episodic_memory_linked_to_its_interaction_episo
         {"active": 1},
         {},
         "mem.v1",
-        "oso/general",
+        "oso/code",
     )
     assert res["chat_calls"] == 1 and res["prompt_tokens"] > 0 and len(res["memory_ids"]) == 1 and res["review_ids"] == []
     (m,) = await memory_rows(api, t)
@@ -70,9 +70,7 @@ async def test_evt003_yields_one_episodic_memory_linked_to_its_interaction_episo
         "conversation_report",
         "internal",
     )
-    assert (
-        m.content == BUSINESS and "entrepreneurship" in m.summary and m.derived_by_alias == "oso/general" and m.prompt_version == "mem.v1"
-    )
+    assert m.content == BUSINESS and "entrepreneurship" in m.summary and m.derived_by_alias == "oso/code" and m.prompt_version == "mem.v1"
     assert m.created_by == uuid.UUID(await t.principal_id("app")) and m.pipeline_version == "p5.v1" and float(m.importance) == 0.8
     full = (await get(t, "admin", str(m.id))).json()
     assert full["scopes"] == [{"kind": "subject", "ref": ids["sarah"]}] and full["subject_ids"] == [ids["sarah"]]
@@ -220,7 +218,7 @@ async def test_unparseable_output_is_quarantined_after_two_attempts_and_changes_
     await add_mock_rules(
         [
             {
-                "when": {"alias": "oso/general", "schema_name": "MemoryCandidates", "contains": ["unparseable memory extraction"]},
+                "when": {"schema_name": "MemoryCandidates", "contains": ["unparseable memory extraction"]},
                 "response": {"candidates": []},
             }
         ]

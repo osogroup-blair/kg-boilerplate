@@ -33,7 +33,7 @@ def lv01(ctx: Ctx) -> None:
     m = ctx.client.get(f"{ctx.base_url}/models", headers=ctx.headers())
     ids = {d["id"] for d in m.json().get("data", [])} if m.status_code == 200 else set()
     table = {d["id"]: {k: d.get(k) for k in ("capabilities", "context_length", "max_output_tokens")} for d in m.json().get("data", [])} if m.status_code == 200 else {}
-    ok = h.status_code == 200 and h.json() == {"status": "ok"} and REQUIRED_ALIASES <= ids
+    ok = h.status_code == 200 and h.json().get("status") == "ok" and REQUIRED_ALIASES <= ids  # the router also reports version and gitSha
     ctx.record("LV-01", "pass" if ok else "fail", {"health": h.status_code, "models_status": m.status_code, "missing_aliases": sorted(REQUIRED_ALIASES - ids),
                                                    "extra_aliases": sorted(ids - REQUIRED_ALIASES), "alias_table": table})
 
@@ -66,22 +66,29 @@ def lv03(ctx: Ctx) -> None:
 
 
 def lv04(ctx: Ctx) -> None:
+    """Structured output per alias. The platform's structured purposes (compat/model-purposes.yaml) must resolve to aliases that return valid schema JSON; on this
+    router (live run 2026-10-19) oso/general and oso/fast answer 422 unsupported_capability, which is recorded, not a failure."""
+    import json
+
+    import yaml
+
     msgs = "List the people mentioned: Sarah Chen told Michael Torres about Acme."
     out = {}
-    for alias in ("oso/general", "oso/code", "oso/fast"):
+    for alias in ("oso/general", "oso/code", "oso/code-high", "oso/fast"):
         r = ctx.chat(alias, msgs, response_format=PEOPLE_SCHEMA, max_tokens=200)
         valid = False
         if r.status_code == 200:
-            import json
             try:
                 valid = isinstance(json.loads(r.json()["choices"][0]["message"]["content"])["people"], list)
             except Exception:
                 valid = False
         out[alias] = {"status": r.status_code, "error": _err(r), "valid_schema_json": valid}
-    jo = ctx.chat("oso/general", 'Return a JSON object {"ok": true}', response_format={"type": "json_object"}, max_tokens=50)
-    out["oso/general json_object"] = {"status": jo.status_code, "error": _err(jo)}
-    ok = out["oso/general"]["valid_schema_json"] and out["oso/code"]["valid_schema_json"] and out["oso/fast"]["error"] == "unsupported_capability"
-    ctx.record("LV-04", "pass" if ok else "fail", out, "" if ok else "Structured-output expectations of router-contract §5 do not hold: revisit compat/model-purposes.yaml")
+    purposes = yaml.safe_load((ROOT / "compat" / "model-purposes.yaml").read_text())["model_purposes"]
+    structured = {a for p in purposes.values() if "structured_output" in (p.get("requires") or []) for a in (p["alias"], p.get("fallback_alias")) if a}
+    missing = sorted(a for a in structured if not out.get(a, {}).get("valid_schema_json"))
+    ok = not missing and out["oso/fast"]["error"] == "unsupported_capability"
+    out["structured_purpose_aliases"] = sorted(structured)
+    ctx.record("LV-04", "pass" if ok else "fail", out, "" if ok else f"Aliases used by structured purposes did not return valid schema JSON: {missing}; revisit compat/model-purposes.yaml")
 
 
 def lv05(ctx: Ctx) -> None:
@@ -174,7 +181,7 @@ def lv09(ctx: Ctx) -> None:
 def lv10(ctx: Ctx) -> None:
     uv = shutil.which("uv") or str(ROOT / ".tools/uvenv/bin/uv")
     env = {**os.environ, "OSO_ROUTER_MODE": "live", "OSO_ROUTER_BASE_URL": ctx.base_url, "OSO_ROUTER_API_KEY": ctx.api_key, "GRAPHITI_TELEMETRY_ENABLED": "false",
-           "PYTHONPATH": f"{ROOT / 'spikes'}:{ROOT}"}
+           "PYTHONPATH": f"{ROOT / 'spikes'}:{ROOT}:{ROOT / 'packages/common/src'}"}
     proc = subprocess.run([uv, "run", "python", "-m", "graphiti.record_fixtures", str(ctx.fixtures_dir / "recorded-sarah.json")], cwd=ROOT / "spikes", env=env,
                           capture_output=True, text=True, timeout=1800)
     tail = "\n".join((proc.stdout + proc.stderr).splitlines()[-12:])

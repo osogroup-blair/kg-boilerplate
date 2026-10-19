@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "I've joined Orbit now"
@@ -28,7 +27,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "I've joined Orbit now"
@@ -52,7 +50,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -68,7 +65,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -84,7 +80,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -100,7 +95,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -116,7 +110,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -132,7 +125,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -148,7 +140,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -164,7 +155,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -180,7 +170,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -196,7 +185,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -212,7 +200,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -228,7 +215,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit",
@@ -244,7 +230,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeDuplicate",
    "contains": [
     "<new fact> Michael works at Orbit"
@@ -257,7 +242,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "EdgeTimestamps",
    "contains": [
     "<fact> Michael works at Orbit"
@@ -270,7 +254,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "WORKS_AT",
    "contains": [
     "Michael works at Orbit"

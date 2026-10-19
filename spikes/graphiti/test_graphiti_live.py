@@ -31,7 +31,7 @@ def _url(path: str) -> str:
 
 
 async def test_gr11_sarah_extraction_through_the_real_router(ontology):
-    rig = Rig(live=True)
+    rig = Rig(live=True, model="oso/code", small_model="oso/code")  # oso/general rejects structured output on this router (GR-12), so extraction uses oso/code
     await rig.g.build_indices_and_constraints()
     gid = new_group()
     per_episode = []
@@ -62,7 +62,7 @@ async def test_gr11_sarah_extraction_through_the_real_router(ontology):
     }
     await rig.close()
     rp.evidence("GR-11", per_episode_cost=per_episode, node_labels=names, edges=[{"name": e.name, "fact": e.fact, "valid_at": e.valid_at, "invalid_at": e.invalid_at} for e in edges],
-                checks=checks, models_note="alias oso/general; physical model unknown to non-admin keys")
+                checks=checks, models_note="alias oso/code (oso/general has no structured output on this router); physical model unknown to non-admin keys")
     rp.note("GR-11", "Extraction quality + cost/latency per episode through the real router. If any check is False, record which and decide: custom "
                      "extraction instructions, a different alias, or oso/structured (see router-contract §11).")
     assert all(checks.values()), checks
@@ -91,9 +91,10 @@ async def test_gr12_structured_output_aliases_and_single_candidate_fragility():
     rp.evidence("GR-12", results=out, aliases_with_valid_structured_output=works, oso_general_single_candidate_fragile=general_fragile,
                 oso_code_works_as_fallback=code_has_fallback, oso_fast_rejects_structured=out["oso/fast"]["error"] == "unsupported_capability",
                 recommend_oso_structured_alias=general_fragile)
-    rp.note("GR-12", "Settles compat/model-purposes.yaml: keep graph_extraction on oso/general with fallback_alias oso/code if oso_code_works_as_fallback; "
+    rp.note("GR-12", "Settles compat/model-purposes.yaml: structured purposes use oso/code (fallback oso/code-high) because oso/general has no structured output; "
                      "request oso/structured (router-contract §11) if oso/general fails under simulated primary_timeout.")
-    assert out["oso/fast"]["error"] == "unsupported_capability" and "oso/general" in works
+    # decision 2026-10-19 (live run): oso/general and oso/fast answer unsupported_capability; oso/code is the primary for structured purposes
+    assert out["oso/fast"]["error"] == "unsupported_capability" and "oso/code" in works
 
 
 def _valid_people(body) -> bool:

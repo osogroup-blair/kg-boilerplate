@@ -121,9 +121,18 @@ def preflight(ctx: Ctx) -> dict[str, Any]:
             ceiling = classification
             break
     checks["classification_ceiling"] = {
-        "ok": ceiling in ("restricted", "confidential"),
+        "ok": ceiling in ("restricted", "confidential", "internal"),
         "highest_accepted": ceiling,
-        "note": "the test data is `internal`; `restricted` is what the egress policy allows",
+        "note": (
+            "the test data is `internal`, which this key may send"
+            if ceiling == "internal"
+            else "the test data is `internal`; `restricted` is what the egress policy allows"
+        )
+        + (
+            "; confidential and restricted data would be REFUSED by the router (403 classification_not_permitted): raise the key's permitted classifications before processing such data"
+            if ceiling == "internal"
+            else ""
+        ),
     }
     for name, cmd in (
         ("postgres", ["docker", "compose", "exec", "-T", "postgres", "pg_isready", "-U", "postgres"]),

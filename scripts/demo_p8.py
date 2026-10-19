@@ -566,7 +566,7 @@ async def main() -> int:
                     emids.append(r.json()["memory_id"])
                 await d.mock(
                     "POST", "/__mock/fixtures",
-                    json={"rules": [{"when": {"alias": "oso/general", "schema_name": "ConsolidationProposal", "contains": [f"Velo Club in March (run {TAG})"]}, "response": {"groups": [{"source_memory_ids": ["M1", "M2", "M3"], "summary": "Riley rides with Tom and the Velo Club.", "statements": [{"text": episodes[0], "source_memory_ids": ["M1"]}, {"text": episodes[1], "source_memory_ids": ["M2"]}, {"text": episodes[2], "source_memory_ids": ["M3"]}], "keep_separate": []}]}}]},
+                    json={"rules": [{"when": {"schema_name": "ConsolidationProposal", "contains": [f"Velo Club in March (run {TAG})"]}, "response": {"groups": [{"source_memory_ids": ["M1", "M2", "M3"], "summary": "Riley rides with Tom and the Velo Club.", "statements": [{"text": episodes[0], "source_memory_ids": ["M1"]}, {"text": episodes[1], "source_memory_ids": ["M2"]}, {"text": episodes[2], "source_memory_ids": ["M3"]}], "keep_separate": []}]}}]},
                 )  # fmt: skip
 
                 async def embedded() -> bool:

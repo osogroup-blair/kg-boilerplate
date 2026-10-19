@@ -30,7 +30,7 @@ CHECKS = [
     ("LV-01", "LIVE-DEFERRED", "Router health + /v1/models lists the 9 aliases", "router-contract §1"),
     ("LV-02", "LIVE-DEFERRED", "Auth error shape + request id headers", "router-contract §3"),
     ("LV-03", "LIVE-DEFERRED", "Plain chat on each purpose alias", "router-contract §5"),
-    ("LV-04", "LIVE-DEFERRED", "json_schema on oso/general & oso/code; unsupported_capability on oso/fast", "router-contract §5"),
+    ("LV-04", "LIVE-DEFERRED", "json_schema valid on every alias the structured purposes use (oso/code, oso/code-high); unsupported_capability on oso/fast (and oso/general, recorded)", "router-contract §5"),
     ("LV-05", "LIVE-DEFERRED", "Embeddings: 384 dims, batching, >512-token behaviour", "router-contract §6"),
     ("LV-06", "LIVE-DEFERRED", "Data classifications accepted/rejected", "router-contract §7"),
     ("LV-07", "LIVE-DEFERRED", "Fault simulation, fallback and error mapping", "router-contract §4"),

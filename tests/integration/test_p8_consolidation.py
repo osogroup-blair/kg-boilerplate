@@ -217,7 +217,7 @@ async def test_consolidation_disabled_by_policy_runs_no_job_that_changes_anythin
 
 
 def rule(response: dict) -> dict:
-    return {"when": {"alias": "oso/general", "schema_name": "ConsolidationProposal", "contains": ["rode 40 km"]}, "response": response}
+    return {"when": {"schema_name": "ConsolidationProposal", "contains": ["rode 40 km"]}, "response": response}
 
 
 GOOD = {

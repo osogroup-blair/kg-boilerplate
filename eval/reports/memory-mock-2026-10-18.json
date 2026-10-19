@@ -17,8 +17,8 @@
     "model_calls_per_event": 0.88,
     "tokens_per_event": 512.9,
     "latency_seconds": {
-      "p50": 0.38,
-      "p95": 1.11
+      "p50": 0.36,
+      "p95": 0.74
     }
   },
   "retrieval": {
@@ -100,7 +100,7 @@
       "chat_calls": 0,
       "prompt_tokens": 0,
       "completion_tokens": 0,
-      "seconds": 1.11
+      "seconds": 2.33
     },
     {
       "id": "mem_cyclist",
@@ -121,7 +121,7 @@
       "chat_calls": 1,
       "prompt_tokens": 487,
       "completion_tokens": 106,
-      "seconds": 1.22
+      "seconds": 0.47
     },
     {
       "id": "mem_escalation",
@@ -142,7 +142,7 @@
       "chat_calls": 1,
       "prompt_tokens": 481,
       "completion_tokens": 169,
-      "seconds": 0.37
+      "seconds": 0.25
     },
     {
       "id": "mem_evt003",
@@ -163,7 +163,7 @@
       "chat_calls": 1,
       "prompt_tokens": 501,
       "completion_tokens": 111,
-      "seconds": 0.93
+      "seconds": 0.74
     },
     {
       "id": "mem_evt004",
@@ -184,7 +184,7 @@
       "chat_calls": 1,
       "prompt_tokens": 488,
       "completion_tokens": 95,
-      "seconds": 0.39
+      "seconds": 0.24
     },
     {
       "id": "mem_injection",
@@ -205,7 +205,7 @@
       "chat_calls": 1,
       "prompt_tokens": 491,
       "completion_tokens": 78,
-      "seconds": 0.35
+      "seconds": 0.27
     },
     {
       "id": "mem_trivial",
@@ -226,7 +226,7 @@
       "chat_calls": 1,
       "prompt_tokens": 463,
       "completion_tokens": 73,
-      "seconds": 0.35
+      "seconds": 0.36
     },
     {
       "id": "mem_unmapped",
@@ -247,7 +247,7 @@
       "chat_calls": 1,
       "prompt_tokens": 471,
       "completion_tokens": 89,
-      "seconds": 0.35
+      "seconds": 0.36
     }
   ],
   "problems": []

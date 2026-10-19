@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "MemoryCandidates",
    "contains": [
     "considering entrepreneurship"

@@ -380,7 +380,7 @@ class Scenario(Runner):
         """Model answers for every event the scenario ingests (offline runs). Shared with the agent examples, which build the same world."""
 
         def rule(schema: str, marker: str, response: dict[str, Any]) -> dict[str, Any]:
-            return {"when": {"alias": "oso/general", "schema_name": schema, "contains": [marker]}, "response": response}
+            return {"when": {"schema_name": schema, "contains": [marker]}, "response": response}
 
         names = ["Michael", "Sarah Johnson"]
         rules = [

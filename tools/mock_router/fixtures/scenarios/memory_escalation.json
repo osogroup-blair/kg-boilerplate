@@ -1,7 +1,6 @@
 [
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEntities",
    "contains": [
     "going back and forth about the software idea"
@@ -21,7 +20,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "ExtractedEdges",
    "contains": [
     "going back and forth about the software idea"
@@ -33,7 +31,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "SummarizedEntities",
    "contains": [
     "going back and forth about the software idea"
@@ -45,7 +42,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "NodeResolutions",
    "contains": [
     "going back and forth about the software idea"
@@ -63,7 +59,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "Person",
    "contains": [
     "going back and forth about the software idea"
@@ -73,7 +68,6 @@
  },
  {
   "when": {
-   "alias": "oso/general",
    "schema_name": "MemoryCandidates",
    "contains": [
     "going back and forth about the software idea"

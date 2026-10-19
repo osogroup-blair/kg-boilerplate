@@ -31,7 +31,7 @@ FINDING = "NewCo needs a state licence to operate in this sector (state licensin
 NOTE = "check NewCo licensing rules for the plan, private to the research agent"
 TASK = "Help Sarah assess the implications of starting a business"
 EMPTY_MEMORY_RULE = {
-    "when": {"alias": "oso/general", "schema_name": "MemoryCandidates", "contains": ["work at NewCo now"]},
+    "when": {"schema_name": "MemoryCandidates", "contains": ["work at NewCo now"]},
     "response": {"candidates": []},
 }
 
