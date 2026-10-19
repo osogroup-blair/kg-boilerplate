@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     # Model router
     oso_router_mode: Literal["mock", "live"] = "mock"
     oso_router_mock_url: str = "http://127.0.0.1:8782/v1"
-    oso_router_live_url: str = "http://127.0.0.1:8780/v1"
+    oso_router_live_url: str = "https://models.oso.group/v1"
     oso_router_api_key_api: SecretStr = SecretStr("mock-key")
     oso_router_api_key_worker: SecretStr = SecretStr("mock-key")
     model_purposes_path: Path = REPO_ROOT / "compat/model-purposes.yaml"

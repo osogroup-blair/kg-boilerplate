@@ -1,6 +1,6 @@
 """Live router verification kit.  Usage:
 
-    OSO_ROUTER_MODE=live OSO_ROUTER_BASE_URL=http://127.0.0.1:8780/v1 OSO_ROUTER_API_KEY=... make verify-router
+    OSO_ROUTER_MODE=live OSO_ROUTER_BASE_URL=https://models.oso.group/v1 OSO_ROUTER_API_KEY=... make verify-router
     python -m tools.verify_router --only LV-01,LV-05          # subset
     python -m tools.verify_router --self-test                  # run the kit against the in-process MOCK to prove the kit itself works
 

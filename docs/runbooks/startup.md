@@ -46,14 +46,14 @@ uv run kg keys revoke <prefix>                                      # takes effe
 ```
 
 ## Router: mock or live
-Default is the mock router (`OSO_ROUTER_MODE=mock`). To use the real Oso router (needs `./start-local.sh` in `oso_model_router` and a **non-admin** key per service):
+Default is the mock router (`OSO_ROUTER_MODE=mock`). To use the real Oso router (a **non-admin** key per service, issued on the router for the matching environment):
 ```bash
 export OSO_ROUTER_MODE=live OSO_ROUTER_API_KEY_API=... OSO_ROUTER_API_KEY_WORKER=...
 make up
 # then, as a user with the operator or admin role:
 curl -s -X POST localhost:8000/v1/operations/router-check -H "authorization: Bearer $KEY"
 ```
-Containers reach a router that listens on the host's network through `host.docker.internal:8780` (compose sets `extra_hosts`). On Linux that does **not** work for a router published only on `127.0.0.1` ("connection refused"): use the forwarder override, `make up OSO_ROUTER_NETWORK=<the router's network> [OSO_ROUTER_CONTAINER=model-gateway OSO_ROUTER_PORT=8780]` (`deploy/compose/docker-compose.live-router.yml` starts `router-proxy` on both networks; on this machine the network is `decision-model-service_default`). Never attach the api or worker to the router's network themselves: its `postgres`/`neo4j` service names collide with ours. Host-run tools always use `OSO_ROUTER_LIVE_URL=http://127.0.0.1:8780/v1`. An admin router key is detected from provider headers and logged as `router_key_is_admin` (an error under `ENV=production`). Phase 0's `make verify-router` remains the live verification kit.
+The live router is reached only at `https://models.oso.group/v1` (`OSO_ROUTER_LIVE_URL`), from host-run tools and from the api and worker containers alike: no local port and no `host.docker.internal`. The default is set in `.env.example`, the compose files and `kg_common.settings`. Keys are issued per environment on the router. Scripts must not call it with the default `Python-urllib` user agent (Cloudflare answers 403, error 1010); `httpx` and the OpenAI SDK are fine. An admin router key is detected from provider headers and logged as `router_key_is_admin` (an error under `ENV=production`). Phase 0's `make verify-router` remains the live verification kit.
 
 ## Tests
 ```bash

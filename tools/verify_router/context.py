@@ -71,7 +71,7 @@ class Ctx:
 def from_env(results_dir: Path) -> Ctx:
     if os.environ.get("OSO_ROUTER_MODE") != "live":
         raise SystemExit("OSO_ROUTER_MODE is not 'live'. Set OSO_ROUTER_MODE=live, OSO_ROUTER_BASE_URL and OSO_ROUTER_API_KEY, with the router running.")
-    base = os.environ.get("OSO_ROUTER_BASE_URL", "http://127.0.0.1:8780/v1").rstrip("/")
+    base = os.environ.get("OSO_ROUTER_BASE_URL", "https://models.oso.group/v1").rstrip("/")
     key = os.environ.get("OSO_ROUTER_API_KEY", "")
     if not key:
         raise SystemExit("OSO_ROUTER_API_KEY is empty. Export a non-admin router key (scope 'chat'); it is never printed or written.")

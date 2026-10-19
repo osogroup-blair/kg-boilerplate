@@ -49,7 +49,7 @@ Postgres dominates, and **search dominates Postgres**: exact cosine over every a
 - Docker Engine with Compose v2; NTP running (JWT validation allows 60 s of skew).
 - A user `kg-ops` that owns `/opt/kg` (a checkout of the tagged release) and may use Docker.
 - A **journal volume** for the deletion journal that no database backup includes (the compose `journal` volume, bound to a dedicated path; `chattr +a deletions.jsonl` on it where the filesystem supports it).
-- The model router reachable from the VM at `ROUTER_URL` (its host or VPN address). The reference compose speaks plain HTTP to it: put it on a private network or a VPN (threat model F-07).
+- The model router reachable from the VM at `ROUTER_URL`, which is `https://models.oso.group/v1` (outbound HTTPS to Cloudflare; the router is a standalone service and nothing connects to a router port). Model calls and their data cross the public internet over TLS: the egress policy decides what may be sent (threat model F-07).
 
 ## 3. First boot checklist
 1. `python scripts/prod_secrets.py` creates `deploy/compose/secrets/*` (a 0700 directory of 0444 files). Put the **real router key** (a non-admin key) into `oso_router_api_key_api` and `oso_router_api_key_worker`. Copy the whole directory into the password manager; losing `payload_keys` makes stored content unreadable forever ([payload-key-rotation.md](payload-key-rotation.md)).

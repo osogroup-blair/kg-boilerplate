@@ -13,7 +13,7 @@ x-python-env: &python-env
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:-kg-neo4j-dev}
   OSO_ROUTER_MODE: ${OSO_ROUTER_MODE:-mock}
   OSO_ROUTER_MOCK_URL: http://mock-router:8781/v1
-  OSO_ROUTER_LIVE_URL: http://host.docker.internal:8780/v1
+  OSO_ROUTER_LIVE_URL: ${OSO_ROUTER_LIVE_URL:-https://models.oso.group/v1}
   OSO_ROUTER_API_KEY_API: ${OSO_ROUTER_API_KEY_API:-mock-key}
   OSO_ROUTER_API_KEY_WORKER: ${OSO_ROUTER_API_KEY_WORKER:-mock-key}
   AUTH_KEY_PEPPER: ${AUTH_KEY_PEPPER:-dev-only-pepper-change-me-32-bytes-min}
@@ -109,7 +109,6 @@ services:
       WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}   # development: a settings change reaches the worker within seconds (production keeps 30)
     volumes: ["${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
     ports: ["127.0.0.1:${KG_API_PORT:-8000}:8000", "127.0.0.1:${KG_API_METRICS_PORT:-9100}:9100"]
-    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       migrate: {condition: service_completed_successfully}
       postgres: {condition: service_healthy}
@@ -134,7 +133,6 @@ services:
       WORKSPACE_EGRESS_TTL_SECONDS: ${WORKSPACE_EGRESS_TTL_SECONDS:-3}   # development: a settings change reaches the worker within seconds (production keeps 30)
     volumes: ["${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
     ports: ["127.0.0.1:${KG_API2_PORT:-8001}:8000", "127.0.0.1:${KG_API2_METRICS_PORT:-9102}:9100"]
-    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       migrate: {condition: service_completed_successfully}
       api: {condition: service_healthy}
@@ -165,7 +163,6 @@ services:
     volumes: ["${KG_FAULTS_HOST_DIR:-../../.local/faults}:/faults", "${KG_JOURNAL_HOST_DIR:-../../.local/deletion-journal}:/journal"]
     stop_grace_period: 30s
     ports: ["127.0.0.1:${KG_WORKER_METRICS_PORT:-9101}:9101"]
-    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       migrate: {condition: service_completed_successfully}
       postgres: {condition: service_healthy}

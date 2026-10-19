@@ -56,7 +56,7 @@ def out_dir() -> Path:
 
 def ctx_from_env() -> Ctx:
     env = os.environ
-    base = (env.get("OSO_ROUTER_BASE_URL") or env.get("OSO_ROUTER_LIVE_URL") or "http://127.0.0.1:8780/v1").rstrip("/")
+    base = (env.get("OSO_ROUTER_BASE_URL") or env.get("OSO_ROUTER_LIVE_URL") or "https://models.oso.group/v1").rstrip("/")
     key = env.get("OSO_ROUTER_API_KEY") or env.get("OSO_ROUTER_API_KEY_API") or ""
     if env.get("OSO_ROUTER_MODE") != "live":
         raise SystemExit("OSO_ROUTER_MODE is not 'live'.")

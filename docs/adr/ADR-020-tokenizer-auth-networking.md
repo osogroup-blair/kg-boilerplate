@@ -15,6 +15,8 @@
 - **OIDC path (documented, not built):** verify RS256/ES256 against the IdP's JWKS (`PyJWKClient`), pin algorithms, require `iss/aud/exp`, map a configured claim (or group→workspace table) to `workspace_id`. The `Principal` shape is unchanged, so no other code moves.
 
 ## Dev networking (NW-01)
+> **Superseded 2026-10-19 (owner decision):** the platform reaches the router only at `https://models.oso.group/v1`, from the host and from containers. The loopback / `host.docker.internal` arrangement below is history; it also does not work on Linux for a loopback-published router (tested: connection refused). See `docs/router-contract.md` section 12.
+
 - The router binds `127.0.0.1` only. Verified on macOS Docker Desktop: a container reaches a host-loopback-only service through `http://host.docker.internal:<port>`, and a container's own `127.0.0.1` does not.
 - Defaults: `OSO_ROUTER_BASE_URL=http://127.0.0.1:8780/v1` for host-run processes, `http://host.docker.internal:8780/v1` for containerised api/worker, with `extra_hosts: ["host.docker.internal:host-gateway"]` in compose for Linux CI. Do **not** rebind the router to `0.0.0.0`. Fallback if Docker Desktop changes behaviour: run api/worker on the host in dev.
 - Not yet verified against the real router process (it was not running during the offline run); LV-01 and `make verify-router` from a container cover it.
