@@ -1,0 +1,140 @@
+# The public sandbox: the production reference (docker-compose.prod.yml) plus a mock router, the broker, and the settings a throwaway public instance needs.
+#
+#   deploy/sandbox/setup.sh                       # secrets, and one random key that the platform and the mock router share
+#   docker compose -f deploy/compose/docker-compose.prod.yml -f deploy/sandbox/docker-compose.sandbox.yml --env-file .env.sandbox -p kg-sandbox up -d --build
+#
+# What is different from production, and why:
+#   * the "router" is the strict mock router on a network with no way out. The platform runs ENV=production (which refuses development defaults and the mock-key string),
+#     in `live` mode pointed at an internal URL with a random key, so nothing about the platform's own hardening is relaxed.
+#   * the database holds ONLY sandbox data and the host runs nothing else: graph tenancy is application-enforced (DEC-06), so the sandbox is isolated by host, not by tenant.
+#   * workspaces delete without a cooling-off (WORKSPACE_DELETION_COOLING_HOURS=0) through the same governed deletion request a real operator uses.
+#   * ALLOW_BREAKGLASS_KEYS=true so a visitor can sign in to the console with the admin key of their own throwaway workspace.
+#   * low limits: requests per minute per principal, and the broker caps sessions and sessions per address.
+#   * the edge uses Caddyfile.sandbox: the broker under /sandbox, the API on an allowlist, nothing of the operations surface, no /__mock, no metrics.
+name: kg-sandbox
+
+# (YAML anchors do not cross files, so the few things the prod file anchors are repeated here.)
+x-hardened: &hardened
+  read_only: true
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "20m", max-file: "5"}
+
+x-broker-env: &broker-env
+  # what `kg workspaces create` needs to load the platform's settings
+  DATABASE_URL_APP_FILE: /run/secrets/database_url_app
+  DATABASE_URL_OWNER_FILE: /run/secrets/database_url_owner
+  NEO4J_PASSWORD_FILE: /run/secrets/neo4j_password
+  AUTH_KEY_PEPPER_FILE: /run/secrets/auth_key_pepper
+  AUTH_JWT_SECRET_FILE: /run/secrets/auth_jwt_secret
+  TELEMETRY_HMAC_SECRET_FILE: /run/secrets/telemetry_hmac_secret
+  CONTENT_HMAC_SECRET_FILE: /run/secrets/content_hmac_secret
+  PAYLOAD_KEYS_FILE: /run/secrets/payload_keys
+  OSO_ROUTER_API_KEY_API_FILE: /run/secrets/oso_router_api_key_api
+  OSO_ROUTER_API_KEY_WORKER_FILE: /run/secrets/oso_router_api_key_worker
+  OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+  ENV: production
+  NEO4J_URI: bolt://neo4j:7687
+  NEO4J_USER: neo4j
+  OSO_ROUTER_MODE: live
+  OSO_ROUTER_LIVE_URL: http://mock-router:8781/v1
+  PAYLOAD_ACTIVE_KID: ${PAYLOAD_ACTIVE_KID:-prod1}
+  DELETION_JOURNAL_DIR: /journal
+  CORS_ALLOW_ORIGINS: '["${SANDBOX_SITE_ORIGIN}"]'
+  GRAPHITI_TELEMETRY_ENABLED: "false"
+  SERVICE_NAME: kg-sandbox-broker
+  SANDBOX_API_URL: http://api:8000
+  SANDBOX_PUBLIC_API_URL: https://${KG_PUBLIC_HOST}
+  SANDBOX_CONSOLE_URL: https://${KG_PUBLIC_HOST}
+  SANDBOX_MOCK_URL: http://mock-router:8781
+  SANDBOX_CLI: kg
+  SANDBOX_TTL_HOURS: ${SANDBOX_TTL_HOURS:-2}
+  SANDBOX_POOL_SIZE: ${SANDBOX_POOL_SIZE:-5}
+  SANDBOX_MAX_ACTIVE: ${SANDBOX_MAX_ACTIVE:-40}
+  SANDBOX_IP_PER_HOUR: ${SANDBOX_IP_PER_HOUR:-3}
+  SANDBOX_ALLOW_ORIGINS: ${SANDBOX_SITE_ORIGIN:?SANDBOX_SITE_ORIGIN is required (the static site's https origin)}
+  SANDBOX_TURNSTILE_SECRET_FILE: /run/secrets/turnstile_secret
+  SANDBOX_IP_SALT_FILE: /run/secrets/sandbox_ip_salt
+
+services:
+  mock-router:
+    <<: *hardened
+    build:
+      context: ../..
+      dockerfile: tools/mock_router/Dockerfile
+    image: kg-mock-router:${KG_VERSION:-p9}
+    environment:
+      MOCK_ROUTER_API_KEY: ${SANDBOX_ROUTER_KEY:?run deploy/sandbox/setup.sh}
+      MOCK_ROUTER_MAX_CLASSIFICATION: restricted
+      MOCK_ROUTER_STRICT_FIXTURES: "true"
+    networks: [router]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8781/health').status==200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  api:
+    environment:
+      OSO_ROUTER_LIVE_URL: http://mock-router:8781/v1
+      CORS_ALLOW_ORIGINS: '["${SANDBOX_SITE_ORIGIN}"]'
+      WORKSPACE_DELETION_COOLING_HOURS: "0"
+      ALLOW_BREAKGLASS_KEYS: "true"
+      PRINCIPAL_REQUESTS_PER_MINUTE: ${SANDBOX_REQUESTS_PER_MINUTE:-120}
+      CONTEXT_RATE_PER_MINUTE: ${SANDBOX_CONTEXT_PER_MINUTE:-20}
+    networks: [router]
+    depends_on:
+      mock-router: {condition: service_healthy}
+
+  worker:
+    environment:
+      OSO_ROUTER_LIVE_URL: http://mock-router:8781/v1
+      WORKSPACE_DELETION_COOLING_HOURS: "0"
+    networks: [router]
+    depends_on:
+      mock-router: {condition: service_healthy}
+
+  # the broker holds the owner database URL (to create workspaces through the CLI) and the mock router's control plane: it is never reachable from outside; the edge forwards /sandbox/* only
+  broker:
+    <<: *hardened
+    build:
+      context: ../..
+      dockerfile: deploy/sandbox/broker.Dockerfile
+      args: {BASE: "kg-python:${KG_VERSION:-p9}"}
+    image: kg-sandbox-broker:${KG_VERSION:-p9}
+    command: ["python", "-m", "kg_sandbox"]
+    environment: *broker-env
+    secrets: [database_url_app, database_url_owner, neo4j_password, auth_key_pepper, auth_jwt_secret, telemetry_hmac_secret, content_hmac_secret, payload_keys, oso_router_api_key_api, oso_router_api_key_worker, oidc_client_secret, turnstile_secret, sandbox_ip_salt]
+    volumes: ["sandbox_data:/data", "journal:/journal:ro"]
+    networks: [edge, internal, router]
+    depends_on:
+      api: {condition: service_healthy}
+      mock-router: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8020/sandbox/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  edge:
+    volumes:
+      - ../sandbox/Caddyfile.sandbox:/etc/caddy/Caddyfile:ro   # relative to deploy/compose (the first -f file)
+    depends_on:
+      broker: {condition: service_healthy}
+
+networks:
+  router: {internal: true}   # api, worker, broker and the mock router; no way out
+
+volumes:
+  sandbox_data:
+
+secrets:
+  turnstile_secret:
+    file: ${KG_SECRETS_DIR:-./secrets}/turnstile_secret
+  sandbox_ip_salt:
+    file: ${KG_SECRETS_DIR:-./secrets}/sandbox_ip_salt

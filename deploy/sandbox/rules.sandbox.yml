@@ -1,0 +1,31 @@
+# Alert rules for the sandbox host. Load next to deploy/observability/rules.yml; the broker exposes /sandbox/metrics on its internal port only.
+groups:
+  - name: sandbox
+    rules:
+      - alert: SandboxNearCap
+        expr: kg_sandbox_sessions{state="active"} >= 0.9 * kg_sandbox_max_active
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "The sandbox has been at 90% of its session cap for 10 minutes"}
+      - alert: SandboxPoolEmpty
+        expr: kg_sandbox_sessions{state="pool"} == 0 and kg_sandbox_pool_target > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "No pre-seeded workspace is waiting: new visitors will wait about a minute while one is seeded"}
+      - alert: SandboxReaperStalled
+        expr: kg_sandbox_overdue > 0 and (time() - kg_sandbox_reaper_last_run_timestamp_seconds) > 600
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Expired sandbox sessions are not being deleted: the 2-hour promise is broken"}
+      - alert: SandboxDeletingStuck
+        expr: kg_sandbox_sessions{state="deleting"} > 3
+        for: 30m
+        labels: {severity: warning}
+        annotations: {summary: "Several workspaces have been 'deleting' for 30 minutes: check the deletion requests"}
+  - name: sandbox-host
+    rules:
+      - alert: SandboxDiskLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.2
+        for: 15m
+        labels: {severity: critical}
+        annotations: {summary: "Less than 20% disk free on the sandbox host (a full disk wedges Docker)"}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly wipe and rebuild of the public sandbox (the backstop behind the 2-hour reaper)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/kg-boilerplate
+# down -v drops every volume: Postgres, Neo4j, the broker's session file. Nothing else lives on this host. The pool refills on start.
+ExecStart=/usr/bin/docker compose -f deploy/compose/docker-compose.prod.yml -f deploy/sandbox/docker-compose.sandbox.yml --env-file .env.sandbox -p kg-sandbox down -v
+ExecStart=/usr/bin/docker compose -f deploy/compose/docker-compose.prod.yml -f deploy/sandbox/docker-compose.sandbox.yml --env-file .env.sandbox -p kg-sandbox up -d --build
