@@ -7,7 +7,7 @@
       "missing": [],
       "ok": true,
       "title": "Account manager prepares the Globex renewal",
-      "tokens": "449/800"
+      "tokens": "453/800"
     },
     {
       "forbidden_present": [],
@@ -16,7 +16,7 @@
       "missing": [],
       "ok": true,
       "title": "Initech has no renewal date or budget owner on file, so both are reported as unknown",
-      "tokens": "203/800"
+      "tokens": "202/800"
     },
     {
       "forbidden_present": [],
@@ -34,7 +34,7 @@
       "missing": [],
       "ok": true,
       "title": "Marcus Lee now works for Initech, not Globex (valid time, backdated update)",
-      "tokens": "111/400"
+      "tokens": "109/400"
     },
     {
       "forbidden_present": [],
@@ -43,7 +43,7 @@
       "missing": [],
       "ok": true,
       "title": "Marcus Lee on 2026-06-01 still worked for Globex",
-      "tokens": "135/400"
+      "tokens": "134/400"
     },
     {
       "forbidden_present": [],
@@ -52,7 +52,7 @@
       "missing": [],
       "ok": true,
       "title": "Initech's account manager asking about Globex gets no Globex contact, memory or plan",
-      "tokens": "108/600"
+      "tokens": "107/600"
     },
     {
       "forbidden_present": [],
@@ -61,7 +61,7 @@
       "missing": [],
       "ok": true,
       "title": "Globex's account manager asking about Initech gets no Initech contact or memory",
-      "tokens": "173/600"
+      "tokens": "174/600"
     },
     {
       "forbidden_present": [],
@@ -70,7 +70,7 @@
       "missing": [],
       "ok": true,
       "title": "What blocks the Globex data migration",
-      "tokens": "217/500"
+      "tokens": "215/500"
     },
     {
       "forbidden_present": [],

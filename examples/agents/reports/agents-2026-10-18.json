@@ -56,7 +56,7 @@
       "evidence": {
         "backend": "sdk",
         "items": 4,
-        "tokens": "259/600",
+        "tokens": "266/600",
         "turns": 2
       },
       "id": "3",
@@ -91,7 +91,7 @@
       ],
       "error": null,
       "evidence": {
-        "agent over its request quota": "QuotaExceeded (quota_exceeded), retry_after 47s",
+        "agent over its request quota": "QuotaExceeded (quota_exceeded), retry_after 5s",
         "agent with no grant asks for Sarah": "no memories, no finding, no private facts",
         "cases": 8,
         "compromised agent": "key revoked; 1 shared memory disputed, 1 review item opened",

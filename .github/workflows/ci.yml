@@ -1,4 +1,4 @@
-# Mirrors `make check`. Inert until the repository has a remote.
+# Mirrors `make check`, plus the examples on a fresh clone (the `examples` job).
 name: ci
 on:
   push:
@@ -67,6 +67,35 @@ jobs:
       - name: Release sweep against two API replicas (nightly and on demand)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: make test-release
+
+  examples:
+    # A runner is a fresh clone: this job is the "fresh clone, make up seed examples test-examples" gate of phase 10. It does not depend on `check` so a red
+    # integration run elsewhere cannot hide an examples regression (or the reverse).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.0"
+      - run: make sync examples-install
+      - name: Stack (postgres, neo4j, mock router, migrations, api, worker) and the MCP server
+        run: |
+          make up seed
+          make mcp-up
+      - name: The examples (Sarah, the CRM domain, agents through the SDK and MCP)
+        run: make examples
+      - name: The examples and the seven notebooks as tests
+        run: make test-examples
+      - name: Example reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-reports
+          path: |
+            examples/sarah/reports
+            examples/domains/crm/reports
+            examples/agents/reports
+          if-no-files-found: ignore
 
   scan:
     runs-on: ubuntu-latest

@@ -1,7 +1,7 @@
 {
   "mode": "mock",
   "name": "Sarah two-agent scenario",
-  "passed": false,
+  "passed": true,
   "steps": [
     {
       "at_ids": [
@@ -73,10 +73,14 @@
         "AT-10",
         "AGT"
       ],
-      "error": "TimeoutError: the outbox to drain not reached in 180s; last state: {'memory_expire/pending': 1}",
-      "evidence": {},
+      "error": null,
+      "evidence": {
+        "authority_class": "agent_generated",
+        "finding_status": "active",
+        "note_status": "active"
+      },
       "id": "5",
-      "passed": false,
+      "passed": true,
       "title": "Research Agent publishes a sourced finding"
     },
     {
@@ -141,10 +145,15 @@
         "AT-13",
         "MEM-06"
       ],
-      "error": "TimeoutError: the outbox to drain not reached in 180s; last state: {'memory_expire/pending': 1}",
-      "evidence": {},
+      "error": null,
+      "evidence": {
+        "episode_retained": true,
+        "gone_from_next_context": true,
+        "labelled_unverified": true,
+        "rejected": true
+      },
       "id": "9",
-      "passed": false,
+      "passed": true,
       "title": "Reviewer rejects the wrong 'Michael manages Sarah'; the next context omits it"
     },
     {
@@ -177,7 +186,7 @@
       "evidence": {
         "after_replay": "indexed",
         "context_status_during": "complete",
-        "during_outage": "processing"
+        "during_outage": "partial"
       },
       "id": "V",
       "passed": true,

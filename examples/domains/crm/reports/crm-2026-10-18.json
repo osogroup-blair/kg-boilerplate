@@ -68,6 +68,41 @@
       "id": "4",
       "passed": true,
       "title": "Meeting notes and a support ticket are ingested; the account plan is published to the Globex account project"
+    },
+    {
+      "at_ids": [
+        "CTX"
+      ],
+      "error": null,
+      "evidence": {
+        "facts": 6,
+        "memories": 3,
+        "status": "complete",
+        "tokens": 453,
+        "unknowns": []
+      },
+      "id": "5",
+      "passed": true,
+      "title": "Renewal prep for Globex"
+    },
+    {
+      "at_ids": [
+        "CTX"
+      ],
+      "error": null,
+      "evidence": {
+        "facts": 2,
+        "memories": 1,
+        "status": "complete",
+        "tokens": 202,
+        "unknowns": [
+          "No verified budget owner for Initech",
+          "No verified renewal date for Initech"
+        ]
+      },
+      "id": "6",
+      "passed": true,
+      "title": "Renewal prep for Initech: the missing renewal date and budget owner show as unknowns"
     }
   ]
 }

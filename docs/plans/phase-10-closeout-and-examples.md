@@ -227,6 +227,8 @@ One run in a fresh workspace, in blueprint order. Every step records its AT ids 
 - **`docs/guides/extend.md`:** add a domain (links to add-a-domain), add or narrow a context profile, onboard an agent, add an ingestion source, swap the router or embedding model (re-embed runbook), production deployment (runbook), and where the hard rules live (RLS, `SubjectFilter`, egress).
 - **ROADMAP Phase 10 status** paragraph in the usual shape.
 
+- **Built (2026-10-18):** README quickstart, `examples/README.md`, `docs/architecture/overview.md` (mermaid diagrams, ADR-linked), `docs/guides/extend.md`.
+
 #### WP-B6: Make targets, tests and CI
 - **Targets** (with `##` help text):
   - `examples-install`;
@@ -237,6 +239,8 @@ One run in a fresh workspace, in blueprint order. Every step records its AT ids 
 - **`tests/examples/`:** one test per example and notebook, the CRM config-only check, the no-committed-outputs check, and a run under `KG_REPLICAS=2` in the nightly sweep (X11).
 - **CI (`.github/workflows/ci.yml`):** after the existing clean-start demos, run `make examples-install examples test-examples`. A GitHub runner is a fresh clone by definition, so this job **is** the fresh-clone gate. Upload the Sarah and CRM reports as artifacts.
 - **Release candidate:** add an `examples` step to `scripts/release_candidate.py` (`STEPS`) after `test-e2e`, with the reports as evidence.
+
+- **Built (2026-10-18):** `make examples`, a CI `examples` job (independent of `check`, because `check` is red for four unrelated integration failures: see the handoff), and an `examples` step in `scripts/release_candidate.py`. The CI job has not run on GitHub yet.
 
 #### WP-B7: Final release-candidate run and hand-over
 1. Clean tree; disk check (WP-A2); the perf stack is down (`make perf-down`).

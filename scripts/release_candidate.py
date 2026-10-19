@@ -2,7 +2,7 @@
 
     python scripts/release_candidate.py [--allow-dirty] [--fail-fast] [--skip STEP ...] [--only STEP ...]
 
-Steps (each a `make` target, so a failure reproduces by hand): reset-and-demos · check · test-release · test-resilience · test-e2e · eval · scan · obs-test · prod-smoke · backup ·
+Steps (each a `make` target, so a failure reproduces by hand): reset-and-demos · check · test-release · test-resilience · test-e2e · examples · eval · scan · obs-test · prod-smoke · backup ·
 restore-rehearsal · baseline. It never stops at the first failure unless --fail-fast: the owner needs the whole picture. Writes docs/release/rc-report-<date>.md (status per step, the
 duration, the artefacts to open) and exits non-zero if any step failed. It does NOT tag: the owner signs docs/release/checklist.md first, then runs `git tag v1.0.0-rc1`.
 
@@ -27,6 +27,11 @@ STEPS: list[tuple[str, list[str], str]] = [
     ("test-release", ["test-release"], f"eval/reports/{TODAY}/release-sweep.md (SEC-01..06, AT-01..18, two API replicas)"),
     ("test-resilience", ["test-resilience"], "FI-01..23 (tests/resilience); FI-20 and FI-22 are emulated"),
     ("test-e2e", ["test-e2e"], "Playwright operator flows"),
+    (
+        "examples",
+        ["examples-install", "examples", "test-examples"],
+        "examples/*/reports (Sarah 11/11, CRM benchmark, agents 5/5) and the seven notebooks run top to bottom",
+    ),
     ("eval", ["eval-all", "eval-gate"], "eval/reports/gate/ (strict metrics exact, proposed inside tolerance)"),
     ("scan", ["scan"], f"eval/reports/{TODAY}/scan.json, SBOMs in eval/reports/sbom/"),
     ("obs-test", ["obs-test"], "deploy/observability/rules_test.yml"),
