@@ -1,0 +1,52 @@
+{
+  "entities": [
+    {"key": "northwind", "type": "Customer", "name": "Northwind", "external_ids": [{"system": "desk", "value": "CUST-9"}], "source_ref": "CUST-9"},
+    {"key": "alex", "type": "Requester", "name": "Alex Kim", "external_ids": [{"system": "desk", "value": "REQ-1"}], "source_ref": "REQ-1"},
+    {"key": "jo", "type": "Requester", "name": "Jo Park", "external_ids": [{"system": "desk", "value": "REQ-2"}], "source_ref": "REQ-2"},
+    {"key": "sam", "type": "Engineer", "name": "Sam Ortiz", "external_ids": [{"system": "desk", "value": "ENG-1"}], "source_ref": "ENG-1"},
+    {"key": "riya", "type": "Engineer", "name": "Riya Patel", "external_ids": [{"system": "desk", "value": "ENG-2"}], "source_ref": "ENG-2"},
+    {"key": "pulse", "type": "Product", "name": "Pulse Dashboard", "source_ref": "PROD-1"},
+    {"key": "t101", "type": "Ticket", "name": "TCK-101 Dashboard export fails", "external_ids": [{"system": "desk", "value": "TCK-101"}], "source_ref": "TCK-101", "attributes": {"severity": "high"}},
+    {"key": "t102", "type": "Ticket", "name": "TCK-102 Slow dashboard load", "external_ids": [{"system": "desk", "value": "TCK-102"}], "source_ref": "TCK-102"}
+  ],
+  "relationships": [
+    {"id": "t101_alex", "type": "OPENED_BY", "source": "t101", "target": "alex", "valid_from": "2026-10-01", "source_ref": "desk_001"},
+    {"id": "t101_nw", "type": "FOR_CUSTOMER", "source": "t101", "target": "northwind", "valid_from": "2026-10-01", "source_ref": "desk_002"},
+    {"id": "t101_pulse", "type": "ABOUT_PRODUCT", "source": "t101", "target": "pulse", "valid_from": "2026-10-01", "source_ref": "desk_003"},
+    {"id": "t101_sam", "type": "ASSIGNED_TO", "source": "t101", "target": "sam", "valid_from": "2026-10-02", "source_ref": "desk_004"},
+    {"id": "t102_jo", "type": "OPENED_BY", "source": "t102", "target": "jo", "valid_from": "2026-10-03", "source_ref": "desk_005"},
+    {"id": "t102_nw", "type": "FOR_CUSTOMER", "source": "t102", "target": "northwind", "valid_from": "2026-10-03", "source_ref": "desk_006"},
+    {"id": "t102_pulse", "type": "ABOUT_PRODUCT", "source": "t102", "target": "pulse", "valid_from": "2026-10-03", "source_ref": "desk_007"}
+  ],
+  "reassign": {"ticket": "t101", "to": "riya", "valid_from": "2026-10-10", "source_ref": "desk_008"},
+  "conversations": [
+    {
+      "ref": "call_tck101",
+      "occurred_at": "2026-10-11T10:00:00Z",
+      "subjects": ["alex", "riya", "t101"],
+      "content": "Support call note, TCK-101: Alex Kim said the dashboard export fails only for files over 2 GB. Riya Patel suspects a proxy timeout.",
+      "entities": ["Alex Kim", "Riya Patel", "Pulse Dashboard"],
+      "memory": {
+        "type": "episodic",
+        "summary": "Alex Kim reports exports fail only above 2 GB; Riya Patel suspects a proxy timeout",
+        "content": "Alex Kim reported that the Pulse Dashboard export fails only for files over 2 GB, and Riya Patel suspects a proxy timeout.",
+        "subject_names": ["Alex Kim"]
+      },
+      "attributes": {}
+    },
+    {
+      "ref": "call_tck102",
+      "occurred_at": "2026-10-12T10:00:00Z",
+      "subjects": ["jo", "t102"],
+      "content": "Support call note, TCK-102: Jo Park said the dashboard takes about a minute to load on the Monday report.",
+      "entities": ["Jo Park", "Pulse Dashboard"],
+      "memory": {
+        "type": "episodic",
+        "summary": "Jo Park says the Monday report takes about a minute to load",
+        "content": "Jo Park reported that the Pulse Dashboard takes about a minute to load the Monday report.",
+        "subject_names": ["Jo Park"]
+      },
+      "attributes": {}
+    }
+  ]
+}

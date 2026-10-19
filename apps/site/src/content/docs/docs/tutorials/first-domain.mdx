@@ -1,0 +1,174 @@
+---
+title: Model your own domain
+description: Build a support desk on the platform, from an empty ontology to a triage context, with no platform code. The finished domain runs as make demo-support.
+sidebar:
+  order: 1
+---
+import { Tabs, TabItem, Aside } from "@astrojs/starlight/components";
+
+You will model a **support desk**: customers, the people who open tickets, the engineers who work them, the products tickets are about. By the end an agent asks "triage TCK-101" and gets the current assignee, the call note, an honest *unknown*, and nothing about people it may not see.
+
+**Time:** about 30 minutes. **You need:** the [quickstart](/docs/get-started/quickstart/) done (`make up seed`). **The finished domain** lives in `examples/domains/support/`; `make demo-support` runs it.
+
+<Aside type="tip">This is *configuration and data only*. A test fails if platform source ever mentions the support domain. If you find yourself wanting to change `apps/` or `packages/`, stop: it is a missing feature or a bug, so fix it generically, in its own commit.</Aside>
+
+## 1. Decide what can be known
+
+Write down the things and the relationships, in plain words, before any YAML:
+
+| Thing | Notes |
+|---|---|
+| **Customer** | an organisation |
+| **Requester** | a person at a customer. Their data is sensitive: needs a **grant** |
+| **Engineer** | internal |
+| **Product** | what tickets are about |
+| **Ticket** | has a `severity` attribute |
+
+| Relationship | Notes |
+|---|---|
+| `OPENED_BY` (Ticket → Requester) | when it was opened |
+| `FOR_CUSTOMER` (Ticket → Customer) | |
+| `ABOUT_PRODUCT` (Ticket → Product) | |
+| `ASSIGNED_TO` (Ticket → Engineer) | **a new assignment ends the previous one** |
+
+## 2. Write the ontology
+
+Create `ontology.yaml`. Start with the entity types. `access: subject_scoped` on `Requester` is the line that hides a requester's facts and memories from anyone without a grant on that person:
+
+```yaml
+ontology: {id: support-desk, version: 1.0.0, mode: strict}
+entity_types:
+  Requester:
+    description: A person at a customer who opens tickets
+    identity: {key: platform_uuid, external_id_systems: [desk], aliases: [name]}
+    allowed_classifications: [internal, confidential]
+    access: subject_scoped
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Ticket:
+    description: A support ticket
+    identity: {key: platform_uuid, external_id_systems: [desk]}
+    allowed_classifications: [internal, confidential]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      severity: {type: string, required: false, max_length: 20}
+  # Customer, Engineer and Product follow the same pattern: see examples/domains/support/ontology.yaml
+```
+
+Identity comes from a declared system of record (`desk`), never from a name. Now the relationships. The `fact_template` renders facts written by commands as sentences, and `ASSIGNED_TO` uses the `succession` rule:
+
+```yaml
+relationship_types:
+  ASSIGNED_TO:
+    description: The engineer working a ticket; a new assignment ends the previous one
+    source: Ticket
+    target: Engineer
+    temporal: true
+    fact_template: "{source} is assigned to {target}"
+    rules:
+      - require_source          # every write names its source system and reference
+      - preserve_valid_time     # a temporal fact needs valid_from
+      - kind: succession        # a new fact starting inside an old one ends the old one
+        params: {match: [source]}
+```
+
+Finally a **context profile** for triage. `expected_signals` is how the engine reports *unknowns* deterministically: here, a ticket with no `severity` attribute is reported as "No verified severity":
+
+```yaml
+context_profiles:
+  ticket_triage:
+    max_tokens: 600
+    include: [current_facts, relevant_facts, episodic, semantic, uncertainty]
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic], limit_per_type: 6}
+    current_facts: always
+    expected_signals:
+      - {key: severity, label: severity, for_types: [Ticket], satisfied_by: [{attribute: severity}]}
+```
+
+## 3. Validate it
+
+Use the platform's own validator before publishing anything. It names errors by path:
+
+```bash
+uv run python - <<'PY'
+from pathlib import Path
+from kg_ontology.validate import validate_text
+spec, _, report = validate_text(Path("examples/domains/support/ontology.yaml").read_text())
+print("errors:", report.errors or "none", "| profiles:", sorted(spec.context_profiles))
+PY
+```
+
+You can also create a draft in the console (Ontology) and press *Validate*, or *Simulate* to run it on sample conversations in an isolated namespace first.
+
+## 4. Write the world as data
+
+`events/timeline.json` has what the desk system writes by **command**: customers, requesters, engineers, a product, two tickets, their relationships and a reassignment. Notice that Ticket TCK-101 has `"severity": "high"` and TCK-102 has none. It also has two **conversations** (support-call notes) that go through extraction.
+
+Commands make zero model calls, and the `succession` rule ends Sam's assignment when Riya's starts:
+
+```text
+TCK-101 is assigned to Sam Ortiz   (from 2026-10-02)
+TCK-101 is assigned to Riya Patel  (from 2026-10-10)   → Sam's assignment now ends 2026-10-10
+```
+
+## 5. Give the offline model its answers
+
+Examples run against the **strict mock router**, so every structured question the pipeline asks about a conversation needs a prepared answer or the run times out waiting. For each conversation that means: `ExtractedEntities`, `ExtractedEdges`, `MemoryCandidates` and, once the workspace has nodes, `NodeResolutions` and `SummarizedEntities`; an entity type with attributes beyond its name asks one more request named after the type. You do not write these by hand: `examples/domains/crm/mock_rules.py::rules_for` builds them all from the timeline. With a real router none of this is needed.
+
+## 6. Register agents with different grants
+
+```python
+admin.register_principal(ws, "triage-agent", "agent", allowed_profiles=["ticket_triage"],
+                         grants=[scope("subject", alex_id, "read")])     # read on ONE requester
+admin.register_principal(ws, "ungranted-agent", "agent", allowed_profiles=["ticket_triage"])
+```
+
+`triage-agent` can use only the `ticket_triage` profile and sees only Alex Kim. It has no grant on Jo Park, so everything touching Jo is invisible to it.
+
+## 7. Run it
+
+```bash
+make demo-support
+```
+
+You should see eight passing steps. Two of the printed packages teach the most.
+
+**TCK-101** for the triage agent: the current assignee, and the call note about the 2 GB limit:
+
+```text
+# CURRENT VERIFIED FACTS
+- TCK-101 Dashboard export fails was opened by Alex Kim (since 2026-10-01)
+- TCK-101 Dashboard export fails is assigned to Riya Patel (since 2026-10-10)
+- TCK-101 Dashboard export fails is for Northwind (since 2026-10-01)
+- TCK-101 Dashboard export fails is about Pulse Dashboard (since 2026-10-01)
+# RELEVANT EXPERIENCES
+- Alex Kim reported that the Pulse Dashboard export fails only for files over 2 GB, ... (unverified)
+```
+
+**TCK-102**: no `severity` on file, so the engine says so. And Jo Park, who opened it, is **nowhere** in the package, because the agent holds no grant on Jo:
+
+```text
+# CURRENT VERIFIED FACTS
+- TCK-102 Slow dashboard load is for Northwind (since 2026-10-03)
+- TCK-102 Slow dashboard load is about Pulse Dashboard (since 2026-10-03)
+# MATERIAL UNKNOWNS / CONFLICTS
+- No verified severity for TCK-102 Slow dashboard load
+```
+
+Time works too: asked `as_of` 2026-10-05, the same ticket is "assigned to Sam Ortiz".
+
+## What to try next
+
+- Remove `access: subject_scoped` from `Requester`, publish a new version, and watch the second package gain Jo Park. That one line is the permission model.
+- Add a `severity` to TCK-102 with a command and watch the unknown disappear.
+- Add `escalated_to` as a relationship with `require_review_if_inferred`, so extracted escalations wait for a person.
+- Explore the workspace yourself: `make demo-support` leaves its keys in `.local/examples/support-latest.json`, and the console's Graph Explorer and Context Lab show the same world.
+
+:::note[A gotcha worth knowing]
+The first version of the triage task text ("Triage ticket TCK-101: the dashboard export fails") did **not** surface Alex's call note: the note was below the relevance threshold for that wording, and the response said so in `excluded_source_counts: {below_threshold: 1}`. A memory shows up when the task overlaps it. Ask what an agent would ask.
+:::
+
+## Where next
+
+[Connect an agent over the SDK](/docs/tutorials/connect-an-agent-sdk/), [write your own context profiles](/docs/guides/write-context-profiles/), or read [the add-a-domain guide](/docs/guides/add-a-domain/) for the full file list and its gotchas.

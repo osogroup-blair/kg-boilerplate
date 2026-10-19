@@ -1,0 +1,67 @@
+---
+title: Ingest your own source
+description: Send events from your own system. Use commands for a system of record and interactions for free text, with idempotency, consent and a way to watch the pipeline.
+sidebar:
+  order: 4
+---
+
+Any client can feed the platform. The first decision is which path your source is.
+
+| Your source | Use | Why |
+|---|---|---|
+| A **system of record** that owns the truth (HR, CRM, ticketing) | **Commands**: `POST /v1/entities`, `/v1/relationships` | Deterministic, validated by the ontology, no model, `authoritative_system` |
+| **Free text** (chat, meeting notes, email, documents) | **Interactions**: `POST /v1/interactions` | Extracted into labelled, unverified proposals |
+
+## A system of record: register an app
+
+Register an **app** with `trusted_source: true`. Its commands are authoritative, and the ontology's rules still apply, including `require_source`:
+
+```bash
+curl -s -X POST $KG/v1/principals -H "Authorization: Bearer $ADMIN" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"app","handle":"desk-app","display_name":"desk-app","trusted_source":true,
+       "grants":[{"scope_kind":"subject","scope_ref":"*","privileges":["read","propose","publish"]}]}'
+```
+
+Then write facts. A repeated `Idempotency-Key` with the same body is one write; a different body under the same key is a 409:
+
+```bash
+curl -s -X POST $KG/v1/entities -H "Authorization: Bearer $APP_KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Requester","name":"Alex Kim","source_system":"desk","source_ref":"REQ-1",
+       "external_ids":[{"system":"desk","value":"REQ-1"}]}'
+```
+
+## Free text: send an interaction
+
+```bash
+curl -s -X POST $KG/v1/interactions -H "Authorization: Bearer $APP_KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"source_system":"desk-calls","source_ref":"call_tck101","kind":"message",
+       "content":"Support call note, TCK-101: Alex Kim said the dashboard export fails only for files over 2 GB.",
+       "occurred_at":"2026-10-11T10:00:00Z",
+       "subject_refs":[{"entity_id":"<Alex Kim id>"}]}'
+# 202 {"event_id": "...", "status": "accepted", "status_url": "/v1/interactions/..."}
+```
+
+Things to get right:
+
+- **`Idempotency-Key`** is required. Generate one per *logical* event and reuse it on retry; never reuse a key for a different body.
+- **`subject_refs`** anchor the conversation to entities, which is how the pipeline links mentions to the right people instead of guessing from names.
+- **`occurred_at`** is when it happened (valid time); the platform stamps record time itself.
+- **Consent and classification:** the effective consent is the stricter of the request and the submitting principal's `model_disclosure`; a denied event makes zero model calls and is recorded as `skipped_by_policy`.
+- **A new kind of payload** that needs parsing is a new `normalize` step in the worker (`packages/ingestion`).
+
+## Watch it
+
+The `202` is acceptance, not completion. Poll `GET /v1/interactions/{event_id}` (a principal reads only its own submissions; staff read all) and look at `processing_status` and `stages`. The [write-path playground](/see-it/write-path/) replays one such run:
+
+```text
+normalize → graph_ingest → memory_propose → memory_embed   =>  indexed
+```
+
+If a stage fails it is retried with backoff, then dead-lettered; you can replay an interaction (`POST /v1/interactions/{id}/replay`) once the cause is fixed. For a stuck job see [stuck-job-replay](/docs/operations/stuck-job-replay/) and [extraction-quarantine](/docs/operations/extraction-quarantine/).
+
+## Offline: give the mock router its answers
+
+If you develop against the mock router in strict mode, add a rule for each structured request your conversations trigger ([the first-domain tutorial](/docs/tutorials/first-domain/#5-give-the-offline-model-its-answers) shows how). With a real router, nothing to do.

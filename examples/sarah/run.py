@@ -8,7 +8,7 @@ from pathlib import Path
 
 from examples._kit.env import ROOT, load_env
 from examples._kit.report import Report
-from examples._kit.workspace import fresh_workspace
+from examples._kit.workspace import fresh_workspace, save_for_exploring
 from examples.sarah.steps import Scenario
 
 ONTOLOGY = ROOT / "examples" / "ontologies" / "personal-knowledge-governance.yaml"
@@ -23,7 +23,9 @@ def main() -> int:
     ws = fresh_workspace(env, "sarah", ontology=ONTOLOGY)
     print(f"workspace {ws.slug}")
     report = Report("Sarah two-agent scenario", "live" if env.live else "mock")
-    Scenario(env, ws, report).run_all()
+    scenario = Scenario(env, ws, report)
+    scenario.run_all()
+    print(f"keys and ids to explore this workspace: {save_for_exploring(ws, 'sarah', scenario.ids)}")
     import time
 
     report.write(args.reports, f"sarah-{time.strftime('%Y-%m-%d')}")

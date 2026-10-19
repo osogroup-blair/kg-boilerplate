@@ -1,0 +1,42 @@
+---
+title: Tour of the console
+description: Every screen of the admin console, what it is for, and which concept it shows. Real screenshots from the seeded Sarah workspace.
+sidebar:
+  order: 3
+---
+
+The admin console is a React app (`apps/admin`, `make admin-dev`, [http://localhost:5273](http://localhost:5273)) that talks to the same API as everything else. It is how people review, correct, delete and explore. The screenshots below are the seeded Sarah workspace from `make demo-sarah`, in light and dark (your browser picks). Sign in with a key from `.local/dev-credentials.json` (for example `demo/admin@demo`); in production people sign in with single sign-on and API keys are break-glass.
+
+export const shots = [
+  { id: "dashboard", title: "Dashboard", what: "Health of Postgres, Neo4j, the router (mock or live) and the worker; the outbox backlog and dead letters; who is registered; the latest audit events.", concept: "/docs/concepts/security-model/", conceptLabel: "Security model" },
+  { id: "ontology", title: "Ontology", what: "The active version, its entity and relationship types, rules, profiles and the YAML. Create a draft, validate it, diff it, simulate it in an isolated namespace, publish, roll back.", concept: "/docs/concepts/ontology/", conceptLabel: "The ontology" },
+  { id: "entities", title: "Entities", what: "A directory of the things the platform knows, with search and type filters. Open one for its facts, history, mentions and evidence; create or correct entities by command.", concept: "/docs/concepts/commands-vs-extraction/", conceptLabel: "Commands vs extraction" },
+  { id: "graph", title: "Graph Explorer", what: "The projected graph around an entity: hops, entity types, a True on date (valid time) and Known on (record time). Dashed lines are unverified; faded lines have ended; a dashed ring is a candidate whose identity is undecided.", concept: "/docs/concepts/ledger-and-graph/", conceptLabel: "Ledger and graph" },
+  { id: "memories", title: "Memory Explorer", what: "Curated memories by type, status, scope and subject, with provenance, usage, and actions to supersede, expire, dispute or publish.", concept: "/docs/concepts/curated-memory/", conceptLabel: "Curated memory" },
+  { id: "context-lab", title: "Context Lab", what: "Build a context as any agent (act-as), at any budget and as_of, and read the trace: what was included, left out and why. This is where you debug a bad answer.", concept: "/docs/concepts/context-engine/", conceptLabel: "The context engine" },
+  { id: "reviews", title: "Review Queue", what: "The proposals waiting for a person: contradictions, identity matches, memory proposals and conflicts, consolidation proposals, deletion exceptions. Decide with a reason code.", concept: "/docs/concepts/identity/", conceptLabel: "Identity and review" },
+  { id: "interactions", title: "Interactions and episodes", what: "Every submitted event with its pipeline stages (normalize, graph, memory), status, retries and replay. The write path made visible.", concept: "/docs/concepts/commands-vs-extraction/", conceptLabel: "Commands vs extraction" },
+  { id: "deletions", title: "Deletions", what: "Deletion requests, legal holds and suppressions, and each request's receipt: what was removed from which store, what was kept and why, and the verification result.", concept: "/docs/concepts/governance/", conceptLabel: "Governance" },
+  { id: "agents", title: "Agents and access", what: "Register agents and apps, edit grants and privileges, issue and revoke keys, see usage and activity, and revoke as retired or compromised.", concept: "/docs/concepts/multi-agent/", conceptLabel: "Multi-agent access" },
+  { id: "operations", title: "Operations", what: "Backlog by stage, dead letters, job retry and cancel, freshness, latency, cost, alerts, backups and the router check.", concept: "/docs/operations/overview/", conceptLabel: "Operations" },
+];
+
+{shots.map((s) => (
+  <section>
+    <h2 id={s.id}>{s.title}</h2>
+    <p>{s.what}</p>
+    <picture>
+      <source srcset={`/console/${s.id}-dark.webp`} media="(prefers-color-scheme: dark)" />
+      <img src={`/console/${s.id}-light.webp`} alt={`The ${s.title} screen of the admin console`} width="1440" height="900" loading="lazy" style="border: 1px solid var(--sl-color-gray-5); border-radius: 8px; max-width: 100%; height: auto;" />
+    </picture>
+    <p><small>Concept: <a href={s.concept}>{s.conceptLabel}</a></small></p>
+  </section>
+))}
+
+## Roles decide what you see
+
+A workspace admin sees everything; a **reviewer** sees reviews and evidence; an **operator** sees operations; agents and apps have no console. A different workspace's admin (`other_demo/admin@other`) sees none of this data, and the console says nothing about it.
+
+## Retaking the screenshots
+
+`apps/site/scripts/console-shots.mjs` retakes every screenshot against your own stack. It needs `make up seed`, a workspace from `make demo-sarah`, and `make admin-dev` running. Set `CHROMIUM_PATH` if Playwright's matching browser is not installed.

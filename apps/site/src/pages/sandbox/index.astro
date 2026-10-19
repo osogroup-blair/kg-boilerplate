@@ -1,0 +1,33 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import SandboxLauncher from "../../islands/SandboxLauncher";
+---
+<Layout title="Sandbox · Knowledge Graph Boilerplate" description="A private, two-hour workspace on a public instance: real API, real console, recorded model answers.">
+  <div class="wrap" style="padding-block: 2.5rem 3rem">
+    <h1>Try it in a sandbox</h1>
+    <p class="lead">A private workspace on a public instance of the platform, pre-loaded with a scenario. You get API keys, the admin console and a guided tour. It is deleted two hours after you start it.</p>
+    <SandboxLauncher client:load />
+    <section style="margin-top:2.5rem">
+      <h2 id="what">What the sandbox is, and is not</h2>
+      <div class="grid c2">
+        <div class="card">
+          <h3>It is</h3>
+          <ul>
+            <li>The real platform: the same API, ontology engine, permissions, context engine, deletion and audit as a production deployment.</li>
+            <li>Isolated: your workspace, your keys, nothing shared with another visitor. Its databases hold nothing else.</li>
+            <li>Writable by every deterministic path: commands, explicit memories, corrections, deletions, grants.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>It is not</h3>
+          <ul>
+            <li><b>A live language model.</b> The model router is a recorded stand-in. Conversations you send as scripted events are extracted with prepared answers; free text is not sent through a model. That keeps it free, fast and safe, and shows the real pipeline without pretending to be one.</li>
+            <li>A place for personal data. Everything is deleted after two hours, but please don't type anything you wouldn't post publicly.</li>
+            <li>Production-sized: workspaces and rate limits are small by design.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="muted">To run against a real model, deploy it yourself: <a href="/docs/guides/going-live-with-a-real-router/">going live with a real router</a>.</p>
+    </section>
+  </div>
+</Layout>

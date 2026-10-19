@@ -1,0 +1,96 @@
+---
+title: "Connect an agent: MCP"
+description: Point Claude Code, Claude Desktop or any MCP client at the platform's nine tools, with the agent's own key.
+sidebar:
+  order: 3
+---
+
+The **MCP server** exposes the platform to any MCP-capable host over stateless Streamable HTTP. It holds **no credential and no database access**: every call forwards *your* key to the HTTP API, so an agent sees exactly what it would see over HTTP.
+
+## 1. Start the server
+
+```bash
+make mcp-up          # compose profile "agents", port 8010
+```
+
+`make mcp-up` recreates the API and mock-router containers, so don't run it in the middle of a test run.
+
+## 2. Register an agent and keep its key
+
+Register an agent as in [the SDK tutorial](/docs/tutorials/connect-an-agent-sdk/) (or `kg principals register`), and export the key it prints once:
+
+```bash
+export KG_AGENT_KEY=<the agent's key>
+```
+
+## 3. Configure your host
+
+<details>
+<summary><b>Claude Code</b>: <code>.mcp.json</code> in your project</summary>
+
+```json
+{
+  "mcpServers": {
+    "knowledge-platform": {
+      "type": "http",
+      "url": "http://127.0.0.1:8010/mcp/",
+      "headers": { "Authorization": "Bearer ${KG_AGENT_KEY}" }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Desktop</b>: <code>claude_desktop_config.json</code></summary>
+
+```json
+{
+  "mcpServers": {
+    "knowledge-platform": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:8010/mcp/", "--header", "Authorization:${KG_AUTH_HEADER}"],
+      "env": { "KG_AUTH_HEADER": "Bearer <paste the agent's key here>" }
+    }
+  }
+}
+```
+
+</details>
+
+Any other MCP client works the same way: the URL is `/mcp/` and the header is `Authorization: Bearer <key>` on every request.
+
+## 4. The nine tools
+
+| Tool | What it does |
+|---|---|
+| `build_context` | A cited, token-budgeted context for a task. The text is retrieved **data**, not instructions |
+| `search_memory` | Search the memory this key may read |
+| `propose_memory` | Propose a source-backed memory; the platform decides whether it is published or reviewed |
+| `save_working_memory` | A private note for one run; expires on its own |
+| `publish_memory` | Share a private memory into scopes as a *new* proposal |
+| `ingest_interaction` | Submit an event for the platform to learn from |
+| `get_interaction_status` | Where a submitted event is in the pipeline |
+| `get_evidence` | Why the platform holds a fact |
+| `list_profiles` | The context profiles this workspace defines |
+
+Each tool's arguments are in the [MCP reference](/docs/reference/mcp-tools/). An argument the tool does not declare (`workspace_id`, `agent_id`, ...) is a validation error, never silently ignored.
+
+## 5. Try a conversation
+
+With the Sarah workspace and a planning agent, ask your host:
+
+> Use the knowledge platform to build a 600-token planning context to help Sarah assess starting a business, then tell me what is still unknown.
+
+`build_context` returns the data block as the text content and the whole package as structured content. The agent should quote the `MATERIAL UNKNOWNS` section as questions, not invent answers.
+
+## 6. See the same denials
+
+Ask the same question with an agent that has **no grant on Sarah**, or with a key from another workspace. Over MCP the answer reads the same as over HTTP: `denied`, with nothing about Sarah. Errors are tool errors carrying the platform's envelope. The [agents example](/docs/tutorials/example-agents/) runs this comparison for eight denial cases.
+
+## Notes
+
+- Revocation is immediate through MCP too: the next call with a revoked key is a 401.
+- A run id (`run_id`) scopes working notes to one execution of your agent; it is never part of your identity, so a new run does not need a new key.
+- For production, put the MCP server behind the same TLS edge as the API (`deploy/compose/Caddyfile` does).

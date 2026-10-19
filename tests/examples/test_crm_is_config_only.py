@@ -18,6 +18,8 @@ def test_the_platform_does_not_mention_the_crm_domain() -> None:
                 f.is_file()
                 and f.suffix in {".py", ".yaml", ".yml", ".json", ".ts", ".tsx", ".sql"}
                 and "node_modules" not in f.parts
+                and f.relative_to(ROOT).parts[:2]
+                != ("apps", "site")  # the public site shows the example domains; it is documentation, not platform source
                 and f.stat().st_size < 2_000_000
             ):
                 if CRM_WORDS.search(f.read_text(errors="ignore")):

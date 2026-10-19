@@ -1,0 +1,281 @@
+---
+title: API recipes
+description: Twenty tasks as copy-paste calls in curl, the Python SDK and MCP. Every route here is checked against the OpenAPI contract in CI.
+sidebar:
+  order: 1
+---
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+Set these once. In a local stack the keys come from `.local/dev-credentials.json` or from `.local/examples/sarah-latest.json` (run `make demo-sarah`); in a sandbox they are on your session page.
+
+```bash
+export KG=http://localhost:8000
+export KEY=<an API key>             # an agent key for the agent recipes, an admin key for the admin ones
+export SARAH=<an entity id>
+```
+
+Write calls (`POST`, `PUT`, `DELETE`) take an `Idempotency-Key`: one per logical write, reused on retry, never reused for a different body. The [interactive reference](/api/) lets you run any of these. Where the SDK or MCP has a helper it is shown; for admin calls use HTTP (the SDK deliberately has no admin surface).
+
+## Who am I
+
+```bash
+curl -s $KG/v1/me -H "Authorization: Bearer $KEY"
+```
+
+Returns your principal and workspace, taken from the key.
+
+## Which context profiles can I use
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s $KG/v1/context/profiles -H "Authorization: Bearer $KEY"
+```
+</TabItem>
+<TabItem label="Python">
+```python
+profiles = kg.list_profiles()
+```
+</TabItem>
+<TabItem label="MCP">
+Call the `list_profiles` tool with no arguments.
+</TabItem>
+</Tabs>
+
+## Create an entity by command
+
+```bash
+curl -s -X POST $KG/v1/entities -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"Person","name":"Sarah Johnson","source_system":"hr","source_ref":"E-1001","external_ids":[{"system":"hr","value":"E-1001"}]}'
+```
+
+Needs an app or admin key with the right grants. No model is called.
+
+## Assert a relationship
+
+```bash
+curl -s -X POST $KG/v1/relationships -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"WORKS_AT","source":{"entity_id":"'$SARAH'"},"target":{"entity_id":"'$ACME'"},"valid_from":"2024-06-01","attributes":{"role":"Engineering Manager"},"source_system":"hr","source_ref":"evt_002"}'
+```
+
+## End a relationship
+
+```bash
+curl -s -X POST $KG/v1/relationships/$FACT/end -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"valid_to":"2027-02-01T00:00:00Z","source_recorded_at":"2027-02-05T09:00:00Z","source_system":"hr","source_ref":"evt_006"}'
+```
+
+`valid_to` is when it stopped being true; `source_recorded_at` is when the source learned it.
+
+## Build a context at a budget
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s -X POST $KG/v1/context/build -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"task":"Help Sarah assess the implications of starting a business","subject_ids":["'$SARAH'"],"profile":"planning","max_tokens":600,"project":"newco-plan"}'
+```
+</TabItem>
+<TabItem label="Python">
+```python
+ctx = kg.build_context("Help Sarah assess the implications of starting a business",
+                       subject_ids=[SARAH], profile="planning", max_tokens=600, project="newco-plan")
+print(ctx.status, ctx.budgets.used_tokens, ctx.as_prompt_block())
+```
+</TabItem>
+<TabItem label="MCP">
+Call `build_context` with `{"task": "...", "subject_ids": ["<id>"], "profile": "planning", "max_tokens": 600, "project": "newco-plan"}`.
+</TabItem>
+</Tabs>
+
+## Build a context as of a date
+
+```bash
+curl -s -X POST $KG/v1/context/build -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"task":"Where does Sarah work?","subject_ids":["'$SARAH'"],"profile":"planning","max_tokens":400,"as_of":"2027-03-01T00:00:00Z"}'
+```
+
+`as_of` must carry a timezone.
+
+## List an entity's relationships as of a date
+
+```bash
+curl -s "$KG/v1/entities/$SARAH/relationships?as_of=2026-12-01T00:00:00Z" -H "Authorization: Bearer $KEY"
+```
+
+Use `known_at=` instead to ask what the platform knew at a moment.
+
+## Submit an interaction
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s -X POST $KG/v1/interactions -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"source_system":"chat","source_ref":"evt_003","kind":"message","content":"Sarah Johnson: I am considering entrepreneurship.","occurred_at":"2026-10-10T09:00:00Z","subject_refs":[{"entity_id":"'$SARAH'"}]}'
+```
+</TabItem>
+<TabItem label="Python">
+```python
+acc = kg.ingest_interaction(source_system="chat", source_ref="evt_003", kind="message",
+                            content="Sarah Johnson: I am considering entrepreneurship.",
+                            occurred_at="2026-10-10T09:00:00Z", subject_refs=[{"entity_id": SARAH}])
+```
+</TabItem>
+<TabItem label="MCP">
+Call `ingest_interaction` with the same fields.
+</TabItem>
+</Tabs>
+
+## Check an interaction's status
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s $KG/v1/interactions/$EVENT -H "Authorization: Bearer $KEY"
+```
+</TabItem>
+<TabItem label="Python">
+```python
+status = kg.get_interaction_status(acc.event_id)
+```
+</TabItem>
+<TabItem label="MCP">
+Call `get_interaction_status` with `{"event_id": "<id>"}`.
+</TabItem>
+</Tabs>
+
+## Save an explicit memory
+
+```bash
+curl -s -X POST $KG/v1/memories -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"semantic","content":"Sarah prefers written summaries.","subject_ids":["'$SARAH'"],"purpose":"preference"}'
+```
+
+## Propose a sourced memory
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s -X POST $KG/v1/memories/proposals -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"semantic","content":"NewCo needs a state licence.","scopes":[{"kind":"project","ref":"newco-plan"}],"source_event_ids":["'$EVENT'"],"subject_ids":["'$SARAH'"],"purpose":"research finding"}'
+```
+</TabItem>
+<TabItem label="Python">
+```python
+kg.propose_memory(type="semantic", content="NewCo needs a state licence.",
+                  scopes=[{"kind": "project", "ref": "newco-plan"}],
+                  source_event_ids=[str(acc.event_id)], subject_ids=[SARAH], purpose="research finding")
+```
+</TabItem>
+<TabItem label="MCP">
+Call `propose_memory` with the same fields.
+</TabItem>
+</Tabs>
+
+## Search memory
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s -X POST $KG/v1/memories/search -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"query":"state licence","limit":5}'
+```
+</TabItem>
+<TabItem label="Python">
+```python
+hits = kg.search_memory("state licence", limit=5)
+```
+</TabItem>
+<TabItem label="MCP">
+Call `search_memory` with `{"query": "state licence", "limit": 5}`.
+</TabItem>
+</Tabs>
+
+## Search the graph
+
+```bash
+curl -s -X POST $KG/v1/graph/search -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"query":"Sarah","limit":10}'
+```
+
+## See why the platform holds a fact
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -s $KG/v1/relationships/$FACT/evidence -H "Authorization: Bearer $KEY"
+```
+</TabItem>
+<TabItem label="Python">
+```python
+evidence = kg.get_evidence(FACT)
+```
+</TabItem>
+<TabItem label="MCP">
+Call `get_evidence` with `{"fact_id": "<id>"}`.
+</TabItem>
+</Tabs>
+
+## Reject a wrongly extracted fact
+
+Read the fact first to get its revision, then correct it with `If-Match`:
+
+```bash
+curl -s -X POST $KG/v1/relationships/$FACT/corrections -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H 'If-Match: W/"rev-1"' -H "Content-Type: application/json" \
+  -d '{"kind":"reject","reason_code":"incorrect_extraction"}'
+```
+
+Preview the impact first with `GET /v1/relationships/$FACT/corrections/preview?kind=reject`.
+
+## Request a deletion
+
+```bash
+curl -s -X POST $KG/v1/deletion-requests -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"subject","target_id":"'$MICHAEL'","reason_code":"data_subject_request"}'
+```
+
+Then poll `GET /v1/deletion-requests/{request_id}` until `status` is `completed`, and read the `receipt`.
+
+## Register an agent
+
+```bash
+curl -s -X POST $KG/v1/principals -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"agent","handle":"planning-agent","display_name":"Planning agent","allowed_profiles":["planning"],"grants":[{"scope_kind":"subject","scope_ref":"'$SARAH'","privileges":["read"]}]}'
+```
+
+The response includes the agent's key **once**.
+
+## Grant an existing principal access
+
+```bash
+curl -s -X POST $KG/v1/principals/$PRINCIPAL/grants -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"scope_kind":"project","scope_ref":"newco-plan","privileges":["read","propose"]}'
+```
+
+## Revoke an agent
+
+```bash
+curl -s -X POST $KG/v1/principals/$PRINCIPAL/revoke -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"compromised","note":"key found in a log"}'
+```
+
+It takes effect on the very next request, through HTTP, the SDK and MCP.
+
+## Decide a review item
+
+```bash
+curl -s "$KG/v1/reviews?status=open" -H "Authorization: Bearer $KEY"
+curl -s -X POST $KG/v1/reviews/$REVIEW/decision -H "Authorization: Bearer $KEY" -H "Idempotency-Key: $(uuidgen)" \
+  -H "If-Match: $ETAG" -H "Content-Type: application/json" -d '{"decision":"reject","rationale_code":"incorrect_extraction"}'
+```

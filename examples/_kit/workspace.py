@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -39,3 +40,15 @@ def fresh_workspace(env: Env, example: str, *, ontology: Path | None = None) -> 
     if not m:
         raise RuntimeError("could not find the administrator key in the CLI output (it is printed once)")
     return Workspace(slug=slug, admin_key=m.group(1), base_url=env.base_url, keys={})
+
+
+def save_for_exploring(ws: Workspace, example: str, ids: dict[str, str]) -> Path:
+    """Leaves the run's keys and ids in `.local/examples/<example>-latest.json` (git-ignored, mode 0600) so you can poke at the workspace with curl, the SDK or the console."""
+    out = ROOT / ".local" / "examples"
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / f"{example}-latest.json"
+    path.write_text(
+        json.dumps({"workspace": ws.slug, "base_url": ws.base_url, "keys": {"admin": ws.admin_key, **ws.keys}, "ids": ids}, indent=2) + "\n"
+    )
+    path.chmod(0o600)
+    return path

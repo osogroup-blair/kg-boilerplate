@@ -19,7 +19,7 @@ from examples._kit.env import ROOT, Env, load_env
 from examples._kit.report import Report
 from examples._kit.runner import Runner
 from examples._kit.show import show_context
-from examples._kit.workspace import fresh_workspace
+from examples._kit.workspace import fresh_workspace, save_for_exploring
 from examples.domains.crm.mock_rules import rules_for
 
 HERE = Path(__file__).parent
@@ -221,6 +221,9 @@ def main() -> int:
             crm.step("5", "Renewal prep for Globex", ["CTX"], lambda: summary(crm.show("globex-am", "Globex renewal_prep", task="Prepare the Globex renewal", subject_ids=[crm.ids["globex"], crm.ids["dana"]], profile="renewal_prep", max_tokens=800, project="acct-globex")))  # fmt: skip
             crm.step("6", "Renewal prep for Initech: the missing renewal date and budget owner show as unknowns", ["CTX"], lambda: summary(crm.show("initech-am", "Initech renewal_prep", task="Prepare the Initech renewal", subject_ids=[crm.ids["initech"], crm.ids["priya"]], profile="renewal_prep", max_tokens=800, project="acct-initech")))  # fmt: skip
         result = crm.evaluate()
+    print(
+        f"keys and ids to explore this workspace: {save_for_exploring(ws, 'crm', {k: v for k, v in crm.ids.items() if not k.startswith(('fact:', 'event:'))})}"
+    )
     for r in result["cases"]:
         print(
             f"  {'ok  ' if r['ok'] else 'FAIL'} {r['id']:<34} {r['tokens']:>9}  {' '.join(['missing=' + str(r['missing'])] if r['missing'] else [])} {'forbidden=' + str(r['forbidden_present']) if r['forbidden_present'] else ''} {'LEAK=' + str(r['leaked']) if r['leaked'] else ''}"

@@ -1,0 +1,98 @@
+# A third domain, written for the tutorial "Model your own domain" (docs: /docs/tutorials/first-domain/): a support desk. Customers, the people who open tickets,
+# the engineers who work them, the products they are about. Nothing outside this folder is support-specific: the platform is configured, not changed.
+ontology:
+  id: support-desk
+  version: 1.0.0
+  mode: strict
+entity_types:
+  Customer:
+    description: A customer organisation
+    identity: {key: platform_uuid, external_id_systems: [desk]}
+    allowed_classifications: [internal, confidential]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Requester:
+    description: A person at a customer who opens tickets
+    identity: {key: platform_uuid, external_id_systems: [desk], aliases: [name]}
+    allowed_classifications: [internal, confidential]
+    access: subject_scoped            # a requester's facts and memories need a grant on that person
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Engineer:
+    description: A support engineer
+    identity: {key: platform_uuid, external_id_systems: [desk]}
+    allowed_classifications: [internal, confidential]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Product:
+    description: A product we support
+    identity: {key: platform_uuid}
+    allowed_classifications: [internal, confidential]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+  Ticket:
+    description: A support ticket
+    identity: {key: platform_uuid, external_id_systems: [desk]}
+    allowed_classifications: [internal, confidential]
+    attributes:
+      name: {type: string, required: true, max_length: 200}
+      severity: {type: string, required: false, max_length: 20}
+relationship_types:
+  OPENED_BY:
+    description: The person who opened a ticket
+    source: Ticket
+    target: Requester
+    temporal: true
+    fact_template: "{source} was opened by {target}"
+    rules: [require_source, preserve_valid_time]
+  FOR_CUSTOMER:
+    description: The customer a ticket belongs to
+    source: Ticket
+    target: Customer
+    temporal: true
+    fact_template: "{source} is for {target}"
+    rules: [require_source]
+  ABOUT_PRODUCT:
+    description: The product a ticket is about
+    source: Ticket
+    target: Product
+    temporal: true
+    fact_template: "{source} is about {target}"
+    rules: [require_source]
+  ASSIGNED_TO:
+    description: The engineer working a ticket; a new assignment ends the previous one
+    source: Ticket
+    target: Engineer
+    temporal: true
+    fact_template: "{source} is assigned to {target}"
+    rules:
+      - require_source
+      - preserve_valid_time
+      - kind: succession
+        params: {match: [source]}
+context_profiles:
+  ticket_triage:
+    max_tokens: 600
+    max_items: 20
+    include: [current_facts, relevant_facts, episodic, semantic, uncertainty]
+    evidence_required: false
+    compression: [structured, extractive]
+    graph: {enabled: true, hops: 1, limit: 20}
+    memory: {types: [episodic, semantic], limit_per_type: 6}
+    current_facts: always
+    required_current_k: 3
+    expected_signals:                 # the engine reports what is missing; no model guesses
+      - {key: severity, label: severity, for_types: [Ticket], satisfied_by: [{attribute: severity}]}
+memory_policies:
+  default:
+    extraction: enabled
+    extraction_min_importance: 0.5
+    max_memories_per_interaction: 3
+    auto_activate: [episodic, semantic]
+    procedural_requires_review: true
+    agent_shared_requires_review: false
+    working_ttl_hours: 24
+    max_content_chars: 2000
+    default_extracted_scope: subject
+    excluded_classifications: [local_only]
+    archive_after_days: null
