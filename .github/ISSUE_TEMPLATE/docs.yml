@@ -1,0 +1,12 @@
+name: Documentation problem
+description: A page is wrong, unclear or missing
+labels: [docs]
+body:
+  - type: input
+    id: page
+    attributes: {label: The page, placeholder: "https://.../docs/..."}
+    validations: {required: true}
+  - type: textarea
+    id: what
+    attributes: {label: What is wrong or missing}
+    validations: {required: true}

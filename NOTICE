@@ -1,0 +1,5 @@
+Knowledge Graph Boilerplate
+Copyright 2026 Oso Group
+
+This product includes software developed by Oso Group (https://github.com/osogroup-blair/kg-boilerplate).
+Third-party components keep their own licences; see the lock files (uv.lock, apps/*/package-lock.json) and the SBOMs produced by `make scan`.

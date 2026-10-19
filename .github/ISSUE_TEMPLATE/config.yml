@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea (Discussions)
+    url: https://github.com/osogroup-blair/kg-boilerplate/discussions
+    about: Ask how something works, or share what you built. (The maintainer enables Discussions in the repository settings.)
+  - name: Report a security vulnerability
+    url: https://github.com/osogroup-blair/kg-boilerplate/security/advisories/new
+    about: Report privately. Please do not open a public issue.
