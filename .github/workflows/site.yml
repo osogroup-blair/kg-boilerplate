@@ -1,0 +1,115 @@
+# The public site (apps/site): build it, run its gate, and publish it. Runs when anything the site shows or is generated from changes.
+name: site
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/site/**"
+      - "docs/**"
+      - "examples/**/README.md"
+      - "examples/domains/support/**"
+      - "examples/agents/minimal_agent.py"
+      - "contracts/openapi.json"
+      - "sdk/**"
+      - "apps/mcp/**"
+      - "apps/cli/**"
+      - "apps/sandbox/**"
+      - "deploy/sandbox/**"
+      - "Makefile"
+      - "eval/reports/**"
+      - "scripts/site/**"
+      - "scripts/sandbox_smoke.py"
+      - "tools/replay_capture/**"
+      - "packages/common/src/kg_common/settings.py"
+      - "packages/ontology/src/**"
+      - "*.md"
+      - "LICENSE"
+      - ".github/workflows/site.yml"
+  pull_request:
+    paths:
+      - "apps/site/**"
+      - "docs/**"
+      - "examples/**/README.md"
+      - "examples/domains/support/**"
+      - "examples/agents/minimal_agent.py"
+      - "contracts/openapi.json"
+      - "sdk/**"
+      - "apps/mcp/**"
+      - "apps/cli/**"
+      - "apps/sandbox/**"
+      - "deploy/sandbox/**"
+      - "Makefile"
+      - "eval/reports/**"
+      - "scripts/site/**"
+      - "scripts/sandbox_smoke.py"
+      - "tools/replay_capture/**"
+      - "packages/common/src/kg_common/settings.py"
+      - "packages/ontology/src/**"
+      - "*.md"
+      - "LICENSE"
+      - ".github/workflows/site.yml"
+  schedule:
+    - cron: "41 5 * * 1"       # weekly: external links (never blocks a pull request)
+  workflow_dispatch:
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://kg.oso.group' }}
+      PUBLIC_SANDBOX_URL: ${{ vars.PUBLIC_SANDBOX_URL }}
+      PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/site/package-lock.json
+      - run: make sync site-install
+      - name: Chromium for the browser step of the gate
+        run: cd apps/site && npx playwright install --with-deps chromium
+      - name: The site gate (generation, tests, snippets, tapes, types, build, links, budgets, accessibility)
+        run: make site-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: apps/site/dist
+          retention-days: 14
+      - name: Publish to Cloudflare Pages (preview on pull requests, production on main; needs the repository secrets and the SITE_DEPLOY variable)
+        if: vars.SITE_DEPLOY == 'true' && github.event_name != 'schedule'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/site/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || 'kg-boilerplate' }} --branch=${{ github.head_ref || github.ref_name }}
+
+  external-links:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: site
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --max-retries 3 --timeout 20 --accept 200,201,204,301,302,303,307,308,429 --exclude 'localhost|127\.0\.0\.1|kg\.example|models\.oso\.group' 'dist/**/*.html'
+          fail: false
+
+  sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.13.0"
+      - run: make sync
+      - name: Caddy image for the edge checks
+        run: docker pull caddy:2-alpine
+      - name: Everything about the public sandbox that can be proved without deploying it
+        run: make sandbox-smoke

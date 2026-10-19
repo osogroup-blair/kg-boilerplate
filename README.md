@@ -1,5 +1,7 @@
 # Knowledge and memory platform
 
+**New here?** The public site has interactive playgrounds (no install), a sandbox, the docs and an API reference: build it with `make site-dev` (the deployed address is set when the owner publishes it, see [the site plan](docs/plans/phase-11-public-site-and-playgrounds.md)).
+
 A multi-tenant knowledge graph and curated-memory service for agents and applications. Facts live in a deterministic Postgres ledger (row-level security) and are projected into a Graphiti/Neo4j graph; curated memory has scoped hybrid search; a task-aware **context engine** turns both into a bounded, cited, permission-filtered package (`POST /v1/context/build`). Around it: multi-agent ACLs, governance (corrections, consolidation, deletion with a restore-proof journal), an admin console, a Python SDK and an MCP server.
 
 ## Try it in about ten minutes
@@ -23,7 +25,9 @@ make help               # every target
 ## What to read
 | Read | For |
 |---|---|
-| [examples/README.md](examples/README.md) | the working examples: the Sarah scenario, the CRM second domain, agents (SDK and MCP), seven notebooks |
+| [examples/README.md](examples/README.md) | the working examples: the Sarah scenario, the CRM and support-desk domains, agents (SDK and MCP), seven notebooks |
+| [apps/site](apps/site) | the public site: landing page, six replay playgrounds, the docs (concepts, tutorials, guides, a generated reference), the API reference. `make site-dev`, `make site-check` |
+| [deploy/sandbox](deploy/sandbox/README.md) | the hosted sandbox: a throwaway public instance on a mock router (an owner deploys it) |
 | [docs/architecture/overview.md](docs/architecture/overview.md) | how the pieces fit: write path, read path, time, security rules, with links to the ADRs |
 | [docs/guides/extend.md](docs/guides/extend.md) | add a domain, a profile, an agent, an ingestion source; swap the router or the embedding model; deploy |
 | [docs/agent-integration.md](docs/agent-integration.md) | the contract for an agent that asks for context and writes back |
@@ -36,3 +40,6 @@ make help               # every target
 
 ## Repository map
 `apps/` api, worker, cli, mcp, admin (React) · `packages/` domain logic, one package per concern · `sdk/python` the client · `examples/` runnable examples and notebooks · `eval/` frozen evaluation suites, the release gate and the load harness · `tools/` mock router, backups, live-session and router checks · `deploy/` compose files and observability · `docs/` architecture, ADRs, runbooks, plans, release records.
+
+## Contributing, security, licence
+[CONTRIBUTING.md](CONTRIBUTING.md) says how to set up and what to run before a pull request; [SECURITY.md](SECURITY.md) says how to report a vulnerability privately; the code is under the [Apache License 2.0](LICENSE) (the owner confirms this choice: DEC-13 in [docs/release/decisions.md](docs/release/decisions.md)).

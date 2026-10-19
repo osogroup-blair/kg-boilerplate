@@ -458,6 +458,27 @@ All examples run against `docker compose up` plus one seed command and are cover
   - **CI had been red since the first push** and only went green once three environment assumptions were removed: Graphiti's indices were built only by the compose worker, the dump helpers needed the compose `postgres` service, and `make up` collided with the job's own service containers on host ports. A fresh CI database is the cheapest way to find tests that quietly depend on a long-lived dev stack.
 
 
+## Phase 11 — Public Site, Documentation and Playgrounds
+
+**Detailed plan:** [docs/plans/phase-11-public-site-and-playgrounds.md](docs/plans/phase-11-public-site-and-playgrounds.md). Audience: open-source developers evaluating or forking the boilerplate. Stack: Astro and Starlight in `apps/site`.
+
+1. **Landing page** with numbers generated from the evaluation reports, not typed.
+2. **Docs** built from the repository's own Markdown (an allowlist, `apps/site/import-map.yaml`), plus concepts, tutorials, guides and a reference generated from the code (OpenAPI, SDK, MCP tools, CLI, Makefile, settings, ontology spec, rule catalog, errors).
+3. **Six static playgrounds** that replay recordings ("tapes") of the real platform: the Sarah scenario, the context explorer, time travel, the permission lens, the graph viewer, the write path.
+4. **An interactive API reference** (Scalar) and tested recipes.
+5. **A hosted sandbox** on a mock router: a broker, a deployment overlay, an edge allowlist, alerts and pre-launch checks. Deploying it is an owner action.
+6. **Open-source readiness:** licence, contribution, security and conduct files, templates, changelog.
+
+**Status (2026-10-18): built and verified locally; not deployed, not committed.** The owner still has to confirm DEC-13..19, publish the site, deploy and verify the sandbox, and do the fresh-reader test.
+- Verified: `make site-check` (generation is deterministic; nothing private is published; internal links; every `make` target, module and API route named in the docs exists; tapes valid and free of key-shaped strings; `astro check`; 14 unit tests and 19 Python tests; the build of about 140 pages; page-weight budgets; 46 browser checks including accessibility (axe, serious and critical), phone-width overflow, every diagram, every playground); `make sandbox-smoke` (15 checks, including the real Caddy answering 404 for the denied paths); `make sandbox-test` against the dev stack (a real workspace seeded in about 8 s, its keys used, both scripted events indexed, the session ended through the governed deletion request); `make demo-support` 8/8; `make lint typecheck` and the 22 import contracts.
+- Built: `apps/site`, `scripts/site`, `tools/replay_capture`, `apps/sandbox`, `deploy/sandbox`, `examples/domains/support` (the tutorial domain), `examples/agents/minimal_agent.py`, the Makefile targets `site-*`, `tapes`, `tapes-check`, `sandbox-*`, `demo-support`, `demo-agent`, `.github/workflows/site.yml`, and the open-source files.
+- Deviations from the plan are listed at the end of the plan document. The ones that matter: the sandbox hands out the **workspace administrator** key of the visitor's own throwaway workspace (only agents and apps can be registered through the API); the console is served at the sandbox host's root; Tailwind was not used on the site; tapes are recorded against the dev stack rather than a separate compose project; Lighthouse is replaced by a page-weight check and an axe run.
+- Surprises worth knowing next:
+  - **A denied context build leaves no trace** (`context_id` is null), so the sandbox cannot tick "ask as an agent with no grant" for the visitor; those tour tasks are self-ticked.
+  - **`ENV=production` refuses the mock-key string but not a mock router**, so the sandbox runs the production settings against a mock router with a random key; nothing about the platform's hardening is relaxed.
+  - **Relevance matters in a context**: a memory whose text does not overlap the task is excluded as `below_threshold`, which the support-desk tutorial turns into a lesson.
+  - **`astro-mermaid` needs `vscode-jsonrpc` pinned to 8.2.0** as a direct dependency (hoisting otherwise breaks langium's import).
+
 ---
 
 ## How We'll Use This Roadmap

@@ -48,3 +48,19 @@ Open questions for the owner: whether search is in or out of the first SLO set u
 | Content-reader database role | **Not adopted** (ADR-048). |
 | LISTEN/NOTIFY outbox dispatch | **Kept as polling.** Cache invalidation uses NOTIFY (ADR-050); job dispatch stays on `SKIP LOCKED` polling unless the baseline's queue-wait numbers say otherwise. |
 | Production target | Single VM + Docker Compose reference (ADR-053); Kubernetes is not provided. |
+
+## DEC-13 .. DEC-19: the public site and sandbox (phase 11)
+
+**Decided by the implementing agent on the owner's instruction to use best judgement (2026-10-18). The owner confirms or changes each; none of them is irreversible.**
+
+| DEC | Question | Decision taken | What changing it costs |
+|---|---|---|---|
+| DEC-13 | Licence | **Apache-2.0** (`LICENSE`, `NOTICE`): permissive, with an explicit patent grant | One file and the README line; do it before the first release |
+| DEC-14 | Public name and domain | Placeholder **`kg.oso.group`** (site) and **`sandbox.kg.oso.group`** (sandbox); two hosts so the static site and the API never share an origin. Set `SITE_URL` when building | A build variable and the CORS origins |
+| DEC-15 | Static hosting | **Cloudflare Pages** through `.github/workflows/site.yml` (preview per pull request), enabled by the `SITE_DEPLOY` variable and two secrets. Nothing deploys until the owner sets them | A different deploy step in one workflow |
+| DEC-16 | Sandbox host and budget | One dedicated VM of the small size from the production sizing table (8 vCPU, 16 GB; about 40 to 60 EUR a month), **its own Postgres and Neo4j**, a cap of 40 live sessions | Compose variables |
+| DEC-17 | Sandbox abuse control | Cloudflare Turnstile on "Start a sandbox" (optional until its secret is set), at most 3 sessions per address per hour, 120 requests a minute per principal, bodies capped at the edge | Variables and the Caddyfile |
+| DEC-18 | Analytics | **None.** No cookies, so no banner | Adding a cookieless counter is one script tag |
+| DEC-19 | Launch status | Launch as **pre-1.0** with the status box on the landing page and the README, unless `v1.0.0-rc1` is tagged first | The landing page's status section |
+
+Still open for the owner: the security contact in `SECURITY.md` (it names GitHub's private vulnerability reporting, which the owner enables), whether to enable GitHub Discussions, and the repository description, homepage and topics.

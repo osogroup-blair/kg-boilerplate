@@ -81,10 +81,16 @@ jobs:
         run: |
           make demo-p1
           make demo-p2
-      - name: The examples (Sarah, the CRM domain, agents through the SDK and MCP)
+      - name: The examples (Sarah, the CRM and support-desk domains, agents through the SDK and MCP)
         run: make examples
+      - name: The tutorial agent (reads the keys the Sarah example left behind)
+        run: make demo-agent
       - name: The examples and the seven notebooks as tests
         run: make test-examples
+      - name: The public sandbox broker against the real stack (seeds a workspace, uses its keys, ends it)
+        run: make sandbox-test
+      - name: The site's recorded tapes still match what the platform does (shape, not bytes)
+        run: make tapes-check ARGS="--rerecord"
       - name: Example reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,6 +100,7 @@ jobs:
             examples/sarah/reports
             examples/domains/crm/reports
             examples/agents/reports
+            examples/domains/support/reports
           if-no-files-found: ignore
 
   scan:

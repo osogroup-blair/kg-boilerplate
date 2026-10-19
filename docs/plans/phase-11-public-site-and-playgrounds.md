@@ -23,7 +23,7 @@
 - CI is green on `main` (`check`, `examples`, `scan`, `observability`). The release candidate and the owner actions in the handoff are still open; they do not block this phase's early work, but the public launch (WP-D4) waits for `v1.0.0-rc1` or states the pre-release status plainly.
 - The examples run fully offline on the strict mock router, so everything the static demos need can be recorded deterministically.
 
-**Status:** ready for a coding agent once the owner answers the WP-A0 decisions. Owner actions are marked **(owner)**: an agent prepares them but never fakes them.
+**Status (updated 2026-10-18): implemented and verified locally; see section 12 for what was built, what deviated and what is left. Nothing is deployed or committed.** Owner actions are marked **(owner)**: an agent prepares them but never fakes them.
 
 ---
 
@@ -489,3 +489,57 @@ One commit per work-package group, messages ending with the repository's Co-Auth
 7. "Phase 11 (7/n): CI and deploy, launch checklist" (D2, D4)
 
 Platform fixes found along the way get their own commits with their own tests (§4).
+
+---
+
+## 12. Implementation record (2026-10-18)
+
+The owner asked for the whole phase to be done without stopping for approval, using best judgement on decisions. DEC-13..19 were therefore **taken, not asked**; they are recorded with their reversal costs in [decisions.md](../release/decisions.md) for the owner to confirm.
+
+### What was built, by work package
+| WP | Where | State |
+|---|---|---|
+| A0 | `docs/release/decisions.md` | Decisions taken and recorded; owner to confirm |
+| A1 | `apps/site`, `make site-*` | Done. Astro 7 + Starlight 0.42 + React 18 islands, Pagefind search, Mermaid diagrams |
+| A2 | `scripts/site/import_docs.py`, `apps/site/import-map.yaml` | Done. An allowlist; links rewritten to site pages or GitHub; tests forbid machine paths, keys and plan documents |
+| B1 | `apps/site/src/pages/index.astro`, `scripts/site/gen_proof.py` | Done. Every number is read from `eval/reports/`; a test forbids hand-typed metrics |
+| B2 | `docs/get-started`, `docs/tutorials`, `examples/domains/support`, `examples/agents/minimal_agent.py` | Done. The first-domain tutorial is a running example (`make demo-support`, 8/8); the SDK tutorial is a running file (`make demo-agent`) |
+| B3 | `docs/concepts` (11 pages + the imported architecture overview) | Done. Request and response examples come from tapes through the `TapeCall` component |
+| B4 | `scripts/site/gen_reference.py` | Done. API operations, Python SDK, MCP tools, CLI, make targets, configuration (secret defaults redacted), ontology spec, rule catalog, errors, ADRs, threat model. The recipes are hand-written and checked against the OpenAPI contract |
+| B5 | `docs/guides`, FAQ, glossary, troubleshooting, operations overview | Done |
+| B6 | `LICENSE`, `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, `.github/` templates | Done. Repository description, homepage and topics are the owner's |
+| C1 | `tools/replay_capture` (`make tapes`, `make tapes-check`) | Done. Six tapes, normalised and schema-checked |
+| C2 | `apps/site/src/islands` | Done. Six playgrounds with the table alternative for the graph, keyboard operation and reduced motion |
+| C3 | `apps/sandbox`, `deploy/sandbox`, `scripts/sandbox_smoke.py` | Done and tested; **deploying and verifying it on a host is an owner action** |
+| C4 | `apps/site/src/pages/api`, `docs/reference/api-recipes` | Done. Scalar with a "use my sandbox key" fill and five starter calls |
+| D1 | `scripts/site/check.sh` (`make site-check`) | Done |
+| D2 | `.github/workflows/site.yml`, additions to `ci.yml` | Written; **not yet run on GitHub** |
+| D3 | `robots.txt`, titles, descriptions, sitemap, Open Graph card | Done |
+| D4 | the launch list | **Open** (section 13) |
+
+### Deviations from the plan, and why
+1. **The sandbox gives a visitor the workspace administrator key, not a "reviewer" key.** Only agents and apps can be registered through the API (people come from the CLI or OIDC), and the console needs a human role. The administrator of a throwaway workspace that holds only the visitor's own data is the honest choice, contained by per-principal limits, session caps, edge allowlisting and a mock router with no way out. Documented in `deploy/sandbox/README.md`.
+2. **The console is served at the sandbox host's root**, not under `/console`, and has no sandbox-mode build; the visitor pastes the admin key. A banner and a read-only Agents screen were not built.
+3. **Tailwind was not used on the site** (plain CSS tokens, mirrored from the console's graph colours instead of importing its file).
+4. **Tapes are recorded against the running dev stack**, not a separate `kg-tapes` compose project. Each run creates its own workspaces (as every example does), and the raw recording, which contains plaintext keys, goes to the git-ignored `.local/tapes/`.
+5. **`make tapes-check` compares the shape** of a fresh recording (steps, methods, paths, statuses), not bytes, because polling counts vary.
+6. **Lighthouse CI was replaced** by `scripts/site/budgets.py` (JavaScript and CSS gzipped per page, with the plan's 150 KB for the landing page) and an axe run in Playwright, because Lighthouse needs a browser download.
+7. **The sandbox seeds Sarah only** (no CRM option) and reuses the Sarah example's own steps except the command step, which asserts "zero model calls" by counting the mock router's global request log, which other visitors would disturb.
+8. **Tour progress is partly self-ticked.** Commands, corrections, deletions and context builds are counted by the broker; reads, searches and a denied context build leave no record, so the visitor ticks those.
+9. **The sandbox's pool starts at 5 workspaces but seeding is fast** (about 8 s on the dev stack), so an empty pool only costs a visitor a few seconds.
+10. **`apps/sandbox` is not a `uv` workspace member** (adding one changes `uv.lock`); it runs inside the platform's Python image with `PYTHONPATH` set.
+11. **The "router" in the sandbox is the mock router behind `ENV=production`'s live mode**, pointed at an internal URL with a random key, so none of the platform's production hardening is relaxed.
+12. **The router contract is not published on the site**, because it quotes a private path and a hosted router; the site links the file on GitHub and explains what any router must provide.
+
+### What was verified, and what was not
+Verified here: `make site-check` (all steps), `make sandbox-smoke`, `make sandbox-test` and `make demo-support` against the dev stack, `make lint typecheck` and the import contracts. **Not verified:** the GitHub workflows (never run), the deployed edge, the sandbox under load (`deploy/sandbox/load/soak.py` is written, not run), the live Turnstile check, the reaper over its real two-hour lifetime, Lighthouse scores, and the whole `make test-int test-security test-contract test-release` sweep (not re-run in this phase; no platform code changed).
+
+## 13. Left for the owner
+
+1. Confirm or change DEC-13..19 in [decisions.md](../release/decisions.md); pick the real domain.
+2. Set the repository description, homepage and topics; enable Discussions and private vulnerability reporting; confirm the security contact.
+3. Publish the site: create the Cloudflare Pages project, set `SITE_DEPLOY=true`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and the `SITE_URL` variable. Watch the first `site` run on GitHub and fix what it shows.
+4. Deploy the sandbox from `deploy/sandbox/README.md`, then run its pre-launch list: the leak suites against it (record `docs/release/sandbox-<date>.md`), `verify_edge.py`, `load/soak.py`, and a reaper test. Build the site with `PUBLIC_SANDBOX_URL` (and `PUBLIC_TURNSTILE_SITE_KEY`) once it is up.
+5. The fresh-reader test: someone new to the repository follows quickstart, the first-domain tutorial and connect-an-agent from the site alone, on a clean machine, and the stuck points are fixed.
+6. Review the copy on the landing page (the status wording, DEC-19) and publish the announcement.
+7. Commit: the work is uncommitted. Suggested commits are in section 11 of this plan.

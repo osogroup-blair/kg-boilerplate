@@ -2,6 +2,15 @@
 
 *Written 2026-10-18 for the next agent or engineer. Everything below is in git; nothing important lives only on the previous machine.*
 
+## 0. Phase 11 (public site, docs, playgrounds, sandbox): built, not committed, not deployed
+*Added 2026-10-18.* The plan is [docs/plans/phase-11-public-site-and-playgrounds.md](../plans/phase-11-public-site-and-playgrounds.md); its section 12 is the implementation record and section 13 is what is left for the owner. In short:
+- **Run it:** `make site-install && make site-dev` (the site on :4321), `make site-check` (the whole gate, about 50 s), `make sandbox-smoke`, `make sandbox-test` (needs `make up seed`), `make demo-support`, `make demo-agent` (after `make demo-sarah`).
+- **What it is:** `apps/site` (Astro + Starlight), `scripts/site` (generators and checks), `tools/replay_capture` (records the playgrounds' tapes from the real platform), `apps/sandbox` and `deploy/sandbox` (the hosted sandbox), `examples/domains/support` (the tutorial domain), the open-source files at the repository root.
+- **Regenerate after changes:** after an API change `make openapi` then `make site-gen`; after a behaviour change that the playgrounds show, `make tapes` then `make tapes-check`; the console screenshots with `apps/site/scripts/console-shots.mjs` (needs the stack, a Sarah workspace and `make admin-dev`).
+- **Do not:** commit `.local/tapes/_raw.json` (it holds plaintext keys; it is git-ignored), commit anything under `apps/site/src/content/docs/docs` that `make site-gen` wrote (its names are listed in the generated block of `apps/site/.gitignore`), or deploy the sandbox next to real data (graph tenancy is application-enforced, so the sandbox is isolated by host).
+- **Owner actions** are listed in section 13 of the plan: confirm the licence and decisions DEC-13..19, publish the site, deploy and verify the sandbox, enable the repository settings, do the fresh-reader test.
+- **Known gaps:** the GitHub workflows have never run; the sandbox has not been load-tested or deployed; the router contract is deliberately not on the site.
+
 ## 1. Where it stands
 - Phases P0-P10 are implemented and committed (`git log --oneline`; tag `v0.8.0-offline` marks P0-P8 but was never pushed). Phase 9 ends at `88ddaa9` (load baseline, the memory-search fix, sizing, DEC-11 proposals, ROADMAP status). Phase 10 is the commits after it: the plan (`docs/plans/phase-10-closeout-and-examples.md`), the example kit, the Sarah scenario, the CRM second domain, the agent examples, seven notebooks, docs, `make examples` and the CI `examples` job.
 - **Verified green on the previous machine** (see ROADMAP Phase 9): lint, mypy strict, import-linter (22 contracts), 1465 unit, integration 528, security 105, contract 70, admin Vitest 183, `make test-release`, `make prod-smoke`, `make obs-test`. A full `make release-candidate` passed every step through `restore-rehearsal`, then died at `baseline` when that machine's disk filled. The load baseline has since been produced separately (`eval/reports/baseline-2026-10-18.*`).
