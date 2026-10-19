@@ -83,4 +83,4 @@ def check_reachable(ctx: Ctx) -> None:
         r = ctx.client.get(f"{ctx.root_url}/health", timeout=5)
         r.raise_for_status()
     except Exception as e:
-        raise RouterUnreachable(f"router not reachable at {ctx.root_url}/health ({type(e).__name__}). Start it (e.g. ./start-local.sh in oso_model_router) and retry.")
+        raise RouterUnreachable(f"router not reachable at {ctx.root_url}/health ({type(e).__name__}). Check the address (OSO_ROUTER_BASE_URL, default https://models.oso.group/v1) and your network, then retry.")

@@ -7,6 +7,8 @@ SPIKE   := cd spikes && $(UV) run
 ENVFILE := $(if $(wildcard .env),.env,.env.example)
 KG_COMPOSE := docker compose -f deploy/compose/docker-compose.yml --env-file $(ENVFILE)
 RUN := $(UV) run
+# the live-router targets read the router key from .env if it exists (a real environment variable still wins when it is already set)
+LIVE_ENV := set -a; [ ! -f .env ] || . ./.env; set +a;
 PYSRC := packages apps sdk tests scripts examples
 
 .PHONY: examples-install examples demo-sarah demo-crm eval-crm examples-agents notebooks test-examples help sync up stack-up down reset seed demo-p1 demo-p2 demo-p3 demo-p4 demo-p5 demo-p6 demo-p7 demo-p8 mcp-up sdk-models eval-extraction eval-extraction-live eval-memory eval-memory-live eval-context eval-context-live eval-consolidation eval-consolidation-live eval-simulation-live logs ps admin-dev admin-install \
@@ -107,28 +109,28 @@ eval-extraction:     ## extraction evaluation against the scenario gold set thro
 	$(RUN) python -m eval.extraction.run_eval --mode mock
 
 eval-extraction-live: ## extraction evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.extraction.run_eval --mode live
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.extraction.run_eval --mode live
 
 eval-memory:         ## memory evaluation against the scenario gold set through the strict mock router (offline, deterministic; must score 100%)
 	$(RUN) python -m eval.memory.run_eval --mode mock
 
 eval-memory-live:    ## memory evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.memory.run_eval --mode live
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.memory.run_eval --mode live
 
 eval-context:        ## context evaluation (16 frozen cases: 14 in Sarah's world, 2 with subject ACLs enforced) through the strict mock router (offline, deterministic): leakage 0, budget 100%, attribution 100%; ARGS="--ablate proximity" zeroes one ranking weight
 	$(RUN) python -m eval.context.run_eval --mode mock $(ARGS)
 
 eval-context-live:   ## context evaluation through the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.context.run_eval --mode live $(ARGS)
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.context.run_eval --mode live $(ARGS)
 
 eval-consolidation:  ## consolidation evaluation (reinforce clustering and the synthesis validator over a labelled gold set), offline and deterministic: every strict counter must be 0
 	$(RUN) python -m eval.consolidation.run_eval --mode mock
 
 eval-consolidation-live: ## the same synthesis groups answered by the REAL router (user action; needs OSO_ROUTER_API_KEY; costs model calls). Writes eval/reports/
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.consolidation.run_eval --mode live
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.consolidation.run_eval --mode live
 
 eval-simulation-live: ## ontology simulation sanity through the REAL router: well-formed report, cost within 0.2x-5x of the estimate, nothing left behind (user action; needs OSO_ROUTER_API_KEY; costs model calls)
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.simulation.run_eval --mode live
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.simulation.run_eval --mode live
 
 eval-conflicts:      ## conflicts + identity: 151 frozen cases through the pure policy code (offline, no stack): every mismatch is a failure
 	$(RUN) python -m eval.conflicts.run_eval
@@ -170,7 +172,7 @@ release-candidate:   ## EVERY gate, in order, from a clean tree (drops the dev v
 	$(RUN) python scripts/release_candidate.py $(ARGS)
 
 live-session:        ## OWNER ACTION: the one run against the REAL router (preflight, cost estimate, steps a-h, calibration, proposed diff). Needs OSO_ROUTER_MODE=live, OSO_ROUTER_BASE_URL, a NON-ADMIN OSO_ROUTER_API_KEY. Then read eval/reports/live/<date>/proposal.diff and `make live-session-apply`
-	OSO_ROUTER_MODE=live $(RUN) python -m tools.live_session run $(ARGS)
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m tools.live_session run $(ARGS)
 
 live-session-apply:  ## write the reviewed proposal (.env.example thresholds, model-purposes status, ADR-012/013/020 status, latency profile)
 	$(RUN) python -m tools.live_session apply
@@ -192,7 +194,7 @@ scan-third-party:    ## the same, plus the Postgres and Neo4j images (their find
 	$(RUN) python scripts/scan.py --third-party
 
 eval-gate-live:      ## the same gate against the REAL router (user action; costs model calls): the record CI requires for a change to an alias, a price, a prompt, a ranker/packer version or a Graphiti pin
-	OSO_ROUTER_MODE=live $(RUN) python -m eval.all --mode live
+	$(LIVE_ENV) OSO_ROUTER_MODE=live $(RUN) python -m eval.all --mode live
 	$(RUN) python -m eval.gate --live
 
 logs:
@@ -309,5 +311,5 @@ test-mock:
 sync-catalog:        ## regenerate tools/mock_router/catalog.json from the router seed
 	$(UV) run --project spikes python -m tools.mock_router.sync_catalog
 
-verify-router:       ## LIVE kit; needs the router running locally: OSO_ROUTER_MODE=live OSO_ROUTER_API_KEY=... (see spikes/README.md)
-	@$(UV) run --project spikes python -m tools.verify_router; rc=$$?; if [ $$rc -ne 2 ]; then $(MAKE) -s spike-report; fi; exit $$rc
+verify-router:       ## LIVE kit against https://models.oso.group: reads OSO_ROUTER_API_KEY from .env (or the environment); a handful of small calls
+	@$(LIVE_ENV) OSO_ROUTER_MODE=live $(UV) run --project spikes python -m tools.verify_router; rc=$$?; if [ $$rc -ne 2 ]; then $(MAKE) -s spike-report; fi; exit $$rc

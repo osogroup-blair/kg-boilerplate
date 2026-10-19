@@ -58,6 +58,8 @@ def ctx_from_env() -> Ctx:
     env = os.environ
     base = (env.get("OSO_ROUTER_BASE_URL") or env.get("OSO_ROUTER_LIVE_URL") or "https://models.oso.group/v1").rstrip("/")
     key = env.get("OSO_ROUTER_API_KEY") or env.get("OSO_ROUTER_API_KEY_API") or ""
+    if key == "mock-key":  # the development placeholder is not a router key
+        key = ""
     if env.get("OSO_ROUTER_MODE") != "live":
         raise SystemExit("OSO_ROUTER_MODE is not 'live'.")
     if not key:
