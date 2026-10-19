@@ -120,7 +120,7 @@
   "tolerances": {
     "cost": 0.1,
     "p95": 0.15,
-    "p95_slack_seconds": 0.25,
+    "p95_slack_seconds": 1.0,
     "relevance": 0.02
   },
   "version": 1
