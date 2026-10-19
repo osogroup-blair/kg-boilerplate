@@ -240,7 +240,7 @@ One run in a fresh workspace, in blueprint order. Every step records its AT ids 
 - **CI (`.github/workflows/ci.yml`):** after the existing clean-start demos, run `make examples-install examples test-examples`. A GitHub runner is a fresh clone by definition, so this job **is** the fresh-clone gate. Upload the Sarah and CRM reports as artifacts.
 - **Release candidate:** add an `examples` step to `scripts/release_candidate.py` (`STEPS`) after `test-e2e`, with the reports as evidence.
 
-- **Built (2026-10-18):** `make examples`, a CI `examples` job (independent of `check`, because `check` is red for four unrelated integration failures: see the handoff), and an `examples` step in `scripts/release_candidate.py`. The CI job ran green on a fresh GitHub runner (run 39183766065, about 4 minutes).
+- **Built (2026-10-18):** `make examples`, a CI `examples` job (independent of `check`, because `check` is red for four unrelated integration failures: see the handoff), and an `examples` step in `scripts/release_candidate.py`. The CI job ran green on a fresh GitHub runner (about 4 minutes), and after the test-environment fixes in `tests/conftest.py` and `tests/support/p9.py` all four CI jobs are green (run 39187196101).
 
 #### WP-B7: Final release-candidate run and hand-over
 1. Clean tree; disk check (WP-A2); the perf stack is down (`make perf-down`).

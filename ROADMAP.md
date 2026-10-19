@@ -447,7 +447,7 @@ All examples run against `docker compose up` plus one seed command and are cover
 - **Docs:** a quickstart README, an architecture overview linked to the blueprint, and an "extend this boilerplate" guide.
 - **Gate:** a fresh clone, `make up seed examples` and `make test-examples` all pass.
 
-**Status (2026-10-18): implemented; passing locally and in the CI `examples` job on a fresh runner (run 39183766065); the final release-candidate run has not been done.**
+**Status (2026-10-18): implemented; passing locally and in CI on a fresh runner (all four jobs green on run 39187196101); the final release-candidate run has not been done.**
 - Verified: `make examples` (Sarah 11/11 steps, the CRM benchmark with leakage 0, budget and attribution 100%, the agents example 5/5) and `make test-examples` (26 passed, including the seven notebooks run top to bottom) on the dev stack with the mock router; `make lint typecheck` clean (import-linter 22 contracts); the mock router suite passes (50). The scorer of the CRM benchmark was checked to fail on deliberately wrong cases.
 - Built: the example kit and shared runner (`examples/_kit`), `make demo-sarah`, `make demo-crm`, `make eval-crm`, `make examples-agents`, seven notebooks generated from text sources, Claude Code and Claude Desktop MCP configs, the quickstart README, `examples/README.md`, `docs/architecture/overview.md`, `docs/guides/extend.md` and `add-a-domain.md`, the `examples` CI job and a release-candidate step. Details and decisions D1-D5: [docs/plans/phase-10-closeout-and-examples.md](docs/plans/phase-10-closeout-and-examples.md).
 - Deviations: the CRM benchmark has its own scorer (the `eval/context` runner builds Sarah's world in Python); the agents talk to the router with plain `httpx`, and offline the mock router *scripts* the model (`_message` tool calls), so the offline transcripts prove the platform side, not a model; notebook 1 does not show ciphertext (the examples never read the database); legal hold and identity split are linked, not shown.
@@ -455,7 +455,7 @@ All examples run against `docker compose up` plus one seed command and are cover
   - **`known_at` is record time set by the database and ending a fact edits it in place**, so `known_at` cannot "un-know" an end date; the examples show `known_at` on a fact that was recorded later. `source_recorded_at` is informational.
   - **A missing mock fixture does not fail an example, it makes a job retry until a wait times out** (details in the handoff gotchas).
   - **The first `settle` helper used a wrong path and silently did nothing**; the examples hid two retrying jobs until it was fixed. Prefer waits that name what they wait for.
-  - **CI `check` is red on `main`** with four integration failures that have not been investigated (see the handoff).
+  - **CI had been red since the first push** and only went green once three environment assumptions were removed: Graphiti's indices were built only by the compose worker, the dump helpers needed the compose `postgres` service, and `make up` collided with the job's own service containers on host ports. A fresh CI database is the cheapest way to find tests that quietly depend on a long-lived dev stack.
 
 
 ---
