@@ -1,0 +1,161 @@
+{
+  "mode": "mock",
+  "date": "2026-10-19",
+  "reinforce": {
+    "cases": {
+      "paraphrases fold": {
+        "got": [
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "want": [
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "ok": true
+      },
+      "distinct claims stay": {
+        "got": [],
+        "want": [],
+        "ok": true
+      },
+      "same words different vectors": {
+        "got": [],
+        "want": [],
+        "ok": true
+      },
+      "different scope sets never mix": {
+        "got": [],
+        "want": [],
+        "ok": true
+      },
+      "different classification never mixes": {
+        "got": [],
+        "want": [],
+        "ok": true
+      },
+      "conflicting assertions never fold": {
+        "got": [],
+        "want": [],
+        "ok": true
+      },
+      "two independent clusters": {
+        "got": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c",
+            "d"
+          ]
+        ],
+        "want": [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c",
+            "d"
+          ]
+        ],
+        "ok": true
+      }
+    },
+    "merged_distinct": 0,
+    "crossed_scope": 0,
+    "missed_duplicates": 0,
+    "ok": true
+  },
+  "synthesis": {
+    "cases": {
+      "cycling": {
+        "good_ok": true,
+        "good_reason": "",
+        "bad": [
+          {
+            "label": "invented number",
+            "expected": "invented_detail",
+            "got": "invented_detail",
+            "ok": true
+          },
+          {
+            "label": "invented name",
+            "expected": "invented_detail",
+            "got": "invented_detail",
+            "ok": true
+          },
+          {
+            "label": "missing citation",
+            "expected": "missing_citation",
+            "got": "missing_citation",
+            "ok": true
+          },
+          {
+            "label": "foreign citation",
+            "expected": "foreign_citation",
+            "got": "foreign_citation",
+            "ok": true
+          },
+          {
+            "label": "one source only",
+            "expected": "bad_sources",
+            "got": "bad_sources",
+            "ok": true
+          },
+          {
+            "label": "merges a ride with a club",
+            "expected": "merged_distinct_claims",
+            "got": "merged_distinct_claims",
+            "ok": true
+          },
+          {
+            "label": "echoes an instruction",
+            "expected": "echoed_instruction",
+            "got": "echoed_instruction",
+            "ok": true
+          }
+        ]
+      },
+      "considerations": {
+        "good_ok": true,
+        "good_reason": "",
+        "bad": [
+          {
+            "label": "a consideration becomes a decision",
+            "expected": "escalated_claim",
+            "got": "escalated_claim",
+            "ok": true
+          },
+          {
+            "label": "a hedge becomes a plan",
+            "expected": "escalated_claim",
+            "got": "escalated_claim",
+            "ok": true
+          }
+        ]
+      }
+    },
+    "bad_accepted": 0,
+    "good_refused": 0,
+    "wrong_reason": 0,
+    "ok": true
+  },
+  "strict": {
+    "merged_distinct": 0,
+    "crossed_scope": 0,
+    "missed_duplicates": 0,
+    "bad_accepted": 0,
+    "good_refused": 0,
+    "merged_distinct_escaped": 0,
+    "escalations_escaped": 0
+  },
+  "ok": true
+}

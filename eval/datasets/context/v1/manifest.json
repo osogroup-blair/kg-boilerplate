@@ -17,7 +17,7 @@
     "C15_hidden_person_is_denied",
     "C16_hidden_relationship_is_absent"
   ],
-  "frozen_on": "2026-10-17",
+  "frozen_on": "2026-10-19",
   "note": "P6's 16 frozen cases; the authorization, deleted-subject and corrected-fact cases live in their own suites",
   "ontology": "v1.3.0 + v1.4.0 (subject ACLs)",
   "provenance": "synthetic only: no real person's data",

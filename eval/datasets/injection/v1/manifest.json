@@ -46,7 +46,7 @@
     "social-04",
     "social-05"
   ],
-  "frozen_on": "2026-10-17",
+  "frozen_on": "2026-10-19",
   "note": "SEC-04 / AT-15: hostile text pushed through every ingress",
   "ontology": "v1.5.0",
   "provenance": "synthetic only: no real person's data",

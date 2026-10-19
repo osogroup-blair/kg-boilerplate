@@ -152,7 +152,7 @@
     "ext-005",
     "ext-006"
   ],
-  "frozen_on": "2026-10-17",
+  "frozen_on": "2026-10-19",
   "note": "authority x overlap matrix for the conflict policy, and identity cases (same-name people, aliases, external-id conflicts)",
   "ontology": "(pure policy)",
   "provenance": "synthetic only: no real person's data",

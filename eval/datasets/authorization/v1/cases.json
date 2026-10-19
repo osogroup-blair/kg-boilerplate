@@ -4392,6 +4392,68 @@
   {
    "caller": "unauth",
    "expect": "401",
+   "id": "GET /v1/operations/alerts :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/alerts :: admin",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/alerts :: operator",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/alerts :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/alerts :: app",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/alerts :: agent",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/alerts :: reader",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/alerts :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/alerts"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
    "id": "GET /v1/operations/backlog :: unauth",
    "method": "GET",
    "path": "/v1/operations/backlog"
@@ -4450,6 +4512,192 @@
    "id": "GET /v1/operations/backlog :: foreign",
    "method": "GET",
    "path": "/v1/operations/backlog"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
+   "id": "GET /v1/operations/backups :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/backups :: admin",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/backups :: operator",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/backups :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/backups :: app",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/backups :: agent",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/backups :: reader",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/backups :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/backups"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
+   "id": "GET /v1/operations/cost :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/cost :: admin",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/cost :: operator",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/cost :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/cost :: app",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/cost :: agent",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/cost :: reader",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/cost :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/cost"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
+   "id": "GET /v1/operations/freshness :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/freshness :: admin",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/freshness :: operator",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/freshness :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/freshness :: app",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/freshness :: agent",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/freshness :: reader",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/freshness :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/freshness"
   },
   {
    "caller": "unauth",
@@ -4760,6 +5008,130 @@
    "id": "POST /v1/operations/jobs/{job_id}/retry :: foreign",
    "method": "POST",
    "path": "/v1/operations/jobs/{job_id}/retry"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
+   "id": "GET /v1/operations/latency :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/latency :: admin",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/latency :: operator",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/latency :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/latency :: app",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/latency :: agent",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/latency :: reader",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/latency :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/latency"
+  },
+  {
+   "caller": "unauth",
+   "expect": "401",
+   "id": "GET /v1/operations/live-eval :: unauth",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "admin",
+   "expect": "allowed",
+   "id": "GET /v1/operations/live-eval :: admin",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "operator",
+   "expect": "allowed",
+   "id": "GET /v1/operations/live-eval :: operator",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reviewer",
+   "expect": "403",
+   "id": "GET /v1/operations/live-eval :: reviewer",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "app",
+   "expect": "403",
+   "id": "GET /v1/operations/live-eval :: app",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "agent",
+   "expect": "403",
+   "id": "GET /v1/operations/live-eval :: agent",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "action": "operations.read",
+   "caller": "reader",
+   "expect": "403",
+   "id": "GET /v1/operations/live-eval :: reader",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
+  },
+  {
+   "caller": "foreign",
+   "expect": "no_leak",
+   "id": "GET /v1/operations/live-eval :: foreign",
+   "method": "GET",
+   "path": "/v1/operations/live-eval"
   },
   {
    "caller": "unauth",

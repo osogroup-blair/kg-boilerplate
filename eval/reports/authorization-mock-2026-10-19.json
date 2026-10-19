@@ -1,0 +1,16 @@
+{
+  "mode": "mock",
+  "date": "2026-10-19",
+  "summary": {
+    "cases": 959,
+    "probes": 989,
+    "policy_mismatches": 0,
+    "leakage": 0,
+    "server_errors": 0,
+    "foreign_mutations": 0,
+    "frozen_leaks": 0,
+    "deleted_leaks": 0
+  },
+  "failures": [],
+  "problems": []
+}

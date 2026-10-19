@@ -9,7 +9,7 @@
     "mem_trivial",
     "mem_unmapped"
   ],
-  "frozen_on": "2026-10-17",
+  "frozen_on": "2026-10-19",
   "note": "P5's scenarios and the labelled retrieval queries",
   "ontology": "v1.2.0",
   "provenance": "synthetic only: no real person's data",
@@ -17,15 +17,15 @@
   "sources": {
     "eval/memory/gold.py": "01df239c59c7fba1b34d796f5a2c93e79998167be5107cc686bf93ea7aa3a417",
     "eval/memory/queries.py": "e0d9172c40bb81a4d4eb680e822a0e4d0360a820723c727177a31eab3f81c155",
-    "tools/mock_router/fixtures/scenarios/memory_bad_json.json": "4f351e8ea0527b2f448c6d757f8f157159f0f08f1b79e9c26371c8c6b347f246",
-    "tools/mock_router/fixtures/scenarios/memory_cyclist.json": "270e7b61ac5c8df202966334472bf66b6bfd06698452315c56b5609f091b7f4f",
-    "tools/mock_router/fixtures/scenarios/memory_escalation.json": "5ddbbcfc28076014704f4762f88e3b9a1f6f560480793bb5d8d3406246eb2cd5",
-    "tools/mock_router/fixtures/scenarios/memory_evt003.json": "be8424bcdd473f2184c316f9294619e6fe715fd91d6958cfd5ab32dba9669f60",
-    "tools/mock_router/fixtures/scenarios/memory_evt004.json": "48dc630a3b3c51332b30a895a84a6265c017e77b6d428c82c01e617530e4032b",
-    "tools/mock_router/fixtures/scenarios/memory_injection.json": "0e3a4527ce8512bd3fe9c7fc14d17d9bff2943ca8b78c6f128e0f8ce2d89e166",
-    "tools/mock_router/fixtures/scenarios/memory_research.json": "2aee0036ea948effeb6fba777f3e1965fb3be34ddbe2d7882f310fe88eb91483",
-    "tools/mock_router/fixtures/scenarios/memory_trivial.json": "b98d5626cffe45844e5ce8e2b981574141e376002f33b3a7ffcd57e6951a00dd",
-    "tools/mock_router/fixtures/scenarios/memory_unmapped.json": "9f6c7cb476c414b2c9039a2be8fa5da37f7b36c5e43ab0b42a4656a5cb5c36c5"
+    "tools/mock_router/fixtures/scenarios/memory_bad_json.json": "aed873029b9598e2d4a3203ea94eab32677ae828350b11e95a95258dbe76aacd",
+    "tools/mock_router/fixtures/scenarios/memory_cyclist.json": "b1cf5c7e7054cda9b5ce114080d3bebbf46a40be5f8b0cad2dd890aabbe97d56",
+    "tools/mock_router/fixtures/scenarios/memory_escalation.json": "bda5260f0f7817d879d13a2425e721c0724963d3a8d52dd7162c819d52438cbf",
+    "tools/mock_router/fixtures/scenarios/memory_evt003.json": "446dbd27857f8275ce5bd4f055999164cd6ec827255dfee71fdf9250af6fa4d7",
+    "tools/mock_router/fixtures/scenarios/memory_evt004.json": "dff363150571efaa2928ef1d8c8988c66eabe27381f8e37cb8a4bac164e72043",
+    "tools/mock_router/fixtures/scenarios/memory_injection.json": "38eaaec2371a826e73739220c020b20b46ed469ae3c9348aa88564a6a1089a5c",
+    "tools/mock_router/fixtures/scenarios/memory_research.json": "e7fe02e47e290c9ed6da588b97909c5be5b9edd5606954a7b41ab37b4d904f56",
+    "tools/mock_router/fixtures/scenarios/memory_trivial.json": "9976ce794e61aeec10ce0f5d17cd17c7f30a3c0289e2e1a8be23287dce35f08a",
+    "tools/mock_router/fixtures/scenarios/memory_unmapped.json": "2644ea95f48077aa4813258c1bbfa218e3c0859e5465b51052d0eed1e3efd291"
   },
   "suite": "memory",
   "version": "v1"

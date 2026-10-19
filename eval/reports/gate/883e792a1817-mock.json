@@ -1,0 +1,10 @@
+{
+  "kind": "eval_gate",
+  "mode": "mock",
+  "date": "2026-10-19",
+  "commit": "883e792a18174479ea9c55eeba11cdc2472f05a7",
+  "dirty": true,
+  "status": "passed",
+  "report": "eval/reports/2026-10-19/all.json",
+  "problems": []
+}
