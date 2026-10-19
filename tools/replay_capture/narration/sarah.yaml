@@ -1,0 +1,67 @@
+# Text shown beside each step in the Scenario Player. Edit freely: tapes do not need re-recording for a wording change.
+"1":
+  title: A workspace, an ontology, and the people who may use it
+  story: >
+    Every workspace starts with a published ontology (the schema for what can be known) and registered principals. A trusted
+    conversation app, a Research agent, a Planning agent and an agent with no grants are registered, each with its own key and its own grants.
+  look_for: The ontology version and content hash, and that each principal gets a key shown exactly once.
+"2":
+  title: Facts that come from systems are commands, not guesses
+  story: >
+    The HR system's facts (Sarah works at Acme, first as an engineer, then as a manager) go in as deterministic commands. They are
+    projected into the graph with zero model calls, and sending the same Idempotency-Key twice is one logical write.
+  look_for: model_calls is 0, and the repeated request returns the same entity.
+"3":
+  title: A conversation is processed through the model pipeline
+  story: >
+    Sarah says she is "considering entrepreneurship" and mentions Michael. This one goes through the full pipeline: normalise, extract
+    entities and facts, resolve identities, write curated memory. The interaction record shows each stage.
+  look_for: The stage list reaching "indexed" - this is the write path the Write path page animates.
+"4":
+  title: Verified facts and unverified claims stay separate
+  story: >
+    Sarah currently works at Acme as an Engineering Manager, a verified fact from the HR system. "Considering entrepreneurship" is a
+    separate, unverified conversation report, and an episodic memory records the conversation itself.
+  look_for: evidence_status verified versus unverified, and authority_class authoritative_system versus conversation_report.
+"5":
+  title: The Research agent publishes a sourced finding, keeps a private note
+  story: >
+    The Research agent reads context, ingests its source document, saves a private working note, and proposes a project-scoped finding
+    that cites the document. The finding becomes active and shared; the note stays private to the agent.
+  look_for: The finding's status "active" with its source event, and the working note that no other agent will ever see.
+"6":
+  title: The Planning agent gets a bounded, cited context
+  story: >
+    The Planning agent asks for context for a task at a 600-token budget. It gets current facts, the shared finding, the open question
+    ("how long is the runway?") as an explicit unknown, and citations. The cycling distractor and the research agent's private note are absent.
+  look_for: used_tokens within the budget, the unknowns list, citations, and that nothing off-topic made it in.
+"7":
+  title: "Time: Sarah leaves Acme in 2027"
+  story: >
+    A 2027 event ends the Acme fact. Asking "as of December 2026" still shows Acme; "as of March 2027" does not. A second axis, known_at,
+    shows what the system knew at a given moment, so you can answer "what did we believe then?".
+  look_for: The relationship lists at different as_of values, and the CONSIDERING fact that did not exist before the conversation was recorded.
+"8":
+  title: Outsiders learn nothing
+  story: >
+    An agent from another workspace, and an agent with no grants, ask about Sarah. A hidden entity returns exactly the same 404 as one
+    that never existed, and the context comes back "denied" or empty. Nothing about Sarah leaks, not even that she exists.
+  look_for: Byte-identical 404 bodies for a real and a made-up id.
+"9":
+  title: "A wrong extraction is rejected and disappears"
+  story: >
+    The model extracted "Michael manages Sarah" from a message. It is labelled unverified in context, a reviewer rejects it with a
+    reason, and the next context no longer contains it. The original message stays on record.
+  look_for: The MANAGES fact in the first context, absent in the second; the interaction still retrievable.
+"10":
+  title: Deleting a person, with a receipt
+  story: >
+    A deletion request for Michael blocks reads immediately, then a purge removes his data from the ledger, the graph, the vector index
+    and traces. A receipt proves what was removed and that no identifiers remain.
+  look_for: The 404 right after the request, then a receipt listing each store and zero residual ids.
+"V":
+  title: When the model is down, nothing is lost
+  story: >
+    With the model provider failing, a new event is accepted and queued. Context keeps serving what the ledger already holds. After
+    the fault clears, replaying the event completes the pipeline.
+  look_for: processing_status "processing" during the outage, context still "complete", then "indexed" after replay.

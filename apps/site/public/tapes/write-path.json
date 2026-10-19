@@ -1,0 +1,562 @@
+{
+ "tape_version": 1,
+ "scenario": "write-path",
+ "title": "The write path",
+ "recorded_with": {
+  "git_sha": "946ae18",
+  "ontology": "personal-knowledge-governance.yaml",
+  "router": "mock (strict fixtures)"
+ },
+ "steps": [
+  {
+   "id": "w",
+   "title": "One conversation event, stage by stage",
+   "calls": [
+    {
+     "method": "POST",
+     "path": "/v1/interactions",
+     "query": {},
+     "caller": "conversation-app",
+     "request": {
+      "source_system": "chat",
+      "source_ref": "evt_003",
+      "kind": "message",
+      "content": "Sarah Johnson: I'm considering entrepreneurship, and Michael, who I've known for years, keeps encouraging me.",
+      "occurred_at": "2026-10-10T09:00:00Z",
+      "subject_refs": [
+       {
+        "entity_id": "sarah"
+       },
+       {
+        "entity_id": "michael"
+       },
+       {
+        "entity_id": "topic"
+       }
+      ]
+     },
+     "status": 202,
+     "response": {
+      "event_id": "interaction_evt_003",
+      "status": "accepted",
+      "status_url": "/v1/interactions/interaction_evt_003",
+      "request_id": "req_example"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/interactions/interaction_evt_003",
+     "query": {},
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": {
+      "id": "interaction_evt_003",
+      "source_system": "chat",
+      "source_ref": "evt_003",
+      "kind": "message",
+      "content_type": null,
+      "occurred_at": "2026-10-10T09:00:00Z",
+      "occurred_at_unknown": false,
+      "recorded_at": "2026-10-18T09:00:20Z",
+      "submitted_by": "id_5",
+      "submitted_by_handle": "conversation-app",
+      "classification": "internal",
+      "processing_status": "accepted",
+      "status_changed_at": "2026-10-18T09:00:20Z",
+      "byte_size": 373,
+      "token_estimate": 20,
+      "consent_external": true,
+      "pipeline_version": "p5.v1",
+      "ontology_version_id": "id_1",
+      "stages": [
+       {
+        "stage": "normalize",
+        "status": "pending",
+        "generation": 0,
+        "attempts": 0,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": null,
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       },
+       {
+        "stage": "graph_ingest",
+        "status": "pending",
+        "generation": 0,
+        "attempts": 0,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": null,
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       },
+       {
+        "stage": "memory_propose",
+        "status": "pending",
+        "generation": 0,
+        "attempts": 0,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": null,
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       }
+      ],
+      "subjects": [
+       {
+        "role": "subject",
+        "entity_id": "sarah",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "michael",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "topic",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       }
+      ],
+      "status_url": "/v1/interactions/interaction_evt_003",
+      "raw_content_expired": false,
+      "normalized_content_expired": false
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/interactions/interaction_evt_003",
+     "query": {},
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": {
+      "id": "interaction_evt_003",
+      "source_system": "chat",
+      "source_ref": "evt_003",
+      "kind": "message",
+      "content_type": null,
+      "occurred_at": "2026-10-10T09:00:00Z",
+      "occurred_at_unknown": false,
+      "recorded_at": "2026-10-18T09:00:20Z",
+      "submitted_by": "id_5",
+      "submitted_by_handle": "conversation-app",
+      "classification": "internal",
+      "processing_status": "processing",
+      "status_changed_at": "2026-10-18T09:00:21Z",
+      "byte_size": 373,
+      "token_estimate": 20,
+      "consent_external": true,
+      "pipeline_version": "p5.v1",
+      "ontology_version_id": "id_1",
+      "stages": [
+       {
+        "stage": "normalize",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:21Z",
+        "finished_at": "2026-10-18T09:00:22Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "form": "normalized",
+         "byte_size": 109,
+         "token_estimate": 20
+        },
+        "derivatives": [
+         {
+          "kind": "normalized_content",
+          "id": "id_26"
+         }
+        ]
+       },
+       {
+        "stage": "graph_ingest",
+        "status": "running",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:23Z",
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       },
+       {
+        "stage": "memory_propose",
+        "status": "pending",
+        "generation": 0,
+        "attempts": 0,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": null,
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       }
+      ],
+      "subjects": [
+       {
+        "role": "subject",
+        "entity_id": "sarah",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "michael",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "topic",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       }
+      ],
+      "status_url": "/v1/interactions/interaction_evt_003",
+      "raw_content_expired": false,
+      "normalized_content_expired": false
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/interactions/interaction_evt_003",
+     "query": {},
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": {
+      "id": "interaction_evt_003",
+      "source_system": "chat",
+      "source_ref": "evt_003",
+      "kind": "message",
+      "content_type": null,
+      "occurred_at": "2026-10-10T09:00:00Z",
+      "occurred_at_unknown": false,
+      "recorded_at": "2026-10-18T09:00:20Z",
+      "submitted_by": "id_5",
+      "submitted_by_handle": "conversation-app",
+      "classification": "internal",
+      "processing_status": "processing",
+      "status_changed_at": "2026-10-18T09:00:21Z",
+      "byte_size": 373,
+      "token_estimate": 20,
+      "consent_external": true,
+      "pipeline_version": "p5.v1",
+      "ontology_version_id": "id_1",
+      "stages": [
+       {
+        "stage": "normalize",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:21Z",
+        "finished_at": "2026-10-18T09:00:22Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "form": "normalized",
+         "byte_size": 109,
+         "token_estimate": 20
+        },
+        "derivatives": [
+         {
+          "kind": "normalized_content",
+          "id": "id_26"
+         }
+        ]
+       },
+       {
+        "stage": "graph_ingest",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:23Z",
+        "finished_at": "2026-10-18T09:00:24Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "facts": {
+          "active": 2
+         },
+         "claims": 0,
+         "reused": false,
+         "reverts": 0,
+         "reviews": 0,
+         "fact_ids": [
+          "id_27",
+          "id_28"
+         ],
+         "chat_calls": 6,
+         "entity_ids": [],
+         "review_ids": [],
+         "entities_new": 0,
+         "episode_uuid": "id_29",
+         "name_variants": 0,
+         "prompt_tokens": 5335,
+         "skipped_edges": 0,
+         "evidence_added": 0,
+         "embedding_calls": 8,
+         "entities_forked": 0,
+         "entities_linked": 3,
+         "revert_fact_ids": [],
+         "completion_tokens": 241,
+         "revert_entity_ids": [],
+         "ontology_version_id": "id_1"
+        },
+        "derivatives": [
+         {
+          "kind": "graph_episode",
+          "id": "id_29"
+         }
+        ]
+       },
+       {
+        "stage": "memory_propose",
+        "status": "pending",
+        "generation": 0,
+        "attempts": 0,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": null,
+        "finished_at": null,
+        "enabled": true,
+        "enabled_in": null,
+        "result": {},
+        "derivatives": []
+       }
+      ],
+      "subjects": [
+       {
+        "role": "subject",
+        "entity_id": "sarah",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "michael",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "topic",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       }
+      ],
+      "status_url": "/v1/interactions/interaction_evt_003",
+      "raw_content_expired": false,
+      "normalized_content_expired": false
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/interactions/interaction_evt_003",
+     "query": {},
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": {
+      "id": "interaction_evt_003",
+      "source_system": "chat",
+      "source_ref": "evt_003",
+      "kind": "message",
+      "content_type": null,
+      "occurred_at": "2026-10-10T09:00:00Z",
+      "occurred_at_unknown": false,
+      "recorded_at": "2026-10-18T09:00:20Z",
+      "submitted_by": "id_5",
+      "submitted_by_handle": "conversation-app",
+      "classification": "internal",
+      "processing_status": "indexed",
+      "status_changed_at": "2026-10-18T09:00:26Z",
+      "byte_size": 373,
+      "token_estimate": 20,
+      "consent_external": true,
+      "pipeline_version": "p5.v1",
+      "ontology_version_id": "id_1",
+      "stages": [
+       {
+        "stage": "normalize",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:21Z",
+        "finished_at": "2026-10-18T09:00:22Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "form": "normalized",
+         "byte_size": 109,
+         "token_estimate": 20
+        },
+        "derivatives": [
+         {
+          "kind": "normalized_content",
+          "id": "id_26"
+         }
+        ]
+       },
+       {
+        "stage": "graph_ingest",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:23Z",
+        "finished_at": "2026-10-18T09:00:24Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "facts": {
+          "active": 2
+         },
+         "claims": 0,
+         "reused": false,
+         "reverts": 0,
+         "reviews": 0,
+         "fact_ids": [
+          "id_27",
+          "id_28"
+         ],
+         "chat_calls": 6,
+         "entity_ids": [],
+         "review_ids": [],
+         "entities_new": 0,
+         "episode_uuid": "id_29",
+         "name_variants": 0,
+         "prompt_tokens": 5335,
+         "skipped_edges": 0,
+         "evidence_added": 0,
+         "embedding_calls": 8,
+         "entities_forked": 0,
+         "entities_linked": 3,
+         "revert_fact_ids": [],
+         "completion_tokens": 241,
+         "revert_entity_ids": [],
+         "ontology_version_id": "id_1"
+        },
+        "derivatives": [
+         {
+          "kind": "graph_episode",
+          "id": "id_29"
+         }
+        ]
+       },
+       {
+        "stage": "memory_propose",
+        "status": "succeeded",
+        "generation": 0,
+        "attempts": 1,
+        "last_error_category": null,
+        "last_error_code": null,
+        "started_at": "2026-10-18T09:00:25Z",
+        "finished_at": "2026-10-18T09:00:26Z",
+        "enabled": true,
+        "enabled_in": null,
+        "result": {
+         "kept": 1,
+         "alias": "oso/code",
+         "drops": {},
+         "statuses": {
+          "active": 1
+         },
+         "candidates": 1,
+         "chat_calls": 1,
+         "memory_ids": [
+          "mem_episodic"
+         ],
+         "review_ids": [],
+         "prompt_tokens": 511,
+         "prompt_version": "mem.v1",
+         "completion_tokens": 111
+        },
+        "derivatives": []
+       }
+      ],
+      "subjects": [
+       {
+        "role": "subject",
+        "entity_id": "sarah",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "michael",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       },
+       {
+        "role": "subject",
+        "entity_id": "topic",
+        "resolved": true,
+        "ref_type": null,
+        "ref_system": null,
+        "hidden": false
+       }
+      ],
+      "status_url": "/v1/interactions/interaction_evt_003",
+      "raw_content_expired": false,
+      "normalized_content_expired": false
+     }
+    }
+   ]
+  }
+ ]
+}

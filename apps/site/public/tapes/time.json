@@ -1,0 +1,2260 @@
+{
+ "tape_version": 1,
+ "scenario": "time",
+ "title": "Sarah's relationships over time",
+ "recorded_with": {
+  "git_sha": "946ae18",
+  "ontology": "personal-knowledge-governance.yaml",
+  "router": "mock (strict fixtures)"
+ },
+ "steps": [
+  {
+   "id": "t",
+   "title": "Sarah's relationships over time",
+   "calls": [
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2022-03-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_engineer",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Software Engineer"
+       },
+       "fact_text": null,
+       "valid_from": "2022-01-10T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2024-06-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:12Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": "fact_works_at_manager",
+       "status": "active",
+       "phase": "historical",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_12",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_001",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:12Z",
+         "added_at": "2026-10-18T09:00:12Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_12",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_001",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2022-12-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_engineer",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Software Engineer"
+       },
+       "fact_text": null,
+       "valid_from": "2022-01-10T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2024-06-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:12Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": "fact_works_at_manager",
+       "status": "active",
+       "phase": "historical",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_12",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_001",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:12Z",
+         "added_at": "2026-10-18T09:00:12Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_12",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_001",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2023-09-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_engineer",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Software Engineer"
+       },
+       "fact_text": null,
+       "valid_from": "2022-01-10T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2024-06-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:12Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": "fact_works_at_manager",
+       "status": "active",
+       "phase": "historical",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_12",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_001",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:12Z",
+         "added_at": "2026-10-18T09:00:12Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_12",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_001",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2024-03-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_engineer",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Software Engineer"
+       },
+       "fact_text": null,
+       "valid_from": "2022-01-10T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2024-06-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:12Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": "fact_works_at_manager",
+       "status": "active",
+       "phase": "historical",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_12",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_001",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:12Z",
+         "added_at": "2026-10-18T09:00:12Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_12",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_001",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2024-09-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2025-06-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2026-03-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2026-10-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2026-12-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2027-01-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2027-02-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2027-03-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "as_of": "2027-06-15T00:00:00Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {
+      "known_at": "2026-10-18T09:00:19Z"
+     },
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    },
+    {
+     "method": "GET",
+     "path": "/v1/entities/sarah/relationships",
+     "query": {},
+     "caller": "admin",
+     "request": null,
+     "status": 200,
+     "response": [
+      {
+       "id": "id_27",
+       "rel_type": "CONSIDERING",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "topic",
+        "type": "Topic",
+        "name": "Entrepreneurship"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson is considering entrepreneurship",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "id_28",
+       "rel_type": "KNOWS",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "michael",
+        "type": "Person",
+        "name": "Michael"
+       },
+       "attributes": {},
+       "fact_text": "Sarah Johnson knows Michael",
+       "valid_from": null,
+       "valid_from_unknown": true,
+       "valid_to": null,
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:20Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "conversation_report",
+       "classification": "internal",
+       "source_type": "extracted",
+       "evidence_status": "unverified",
+       "evidence": [
+        {
+         "kind": "episode",
+         "command_id": null,
+         "interaction_id": "interaction_evt_003",
+         "episode_uuid": "id_29",
+         "source_system": "chat",
+         "source_ref": "evt_003",
+         "occurred_at": "2026-10-10T09:00:00Z",
+         "recorded_at": "2026-10-18T09:00:20Z",
+         "added_at": "2026-10-18T09:00:24Z"
+        }
+       ],
+       "decision_code": "no_conflict",
+       "decided_at": null,
+       "source_command_id": null,
+       "source_interaction_id": "interaction_evt_003",
+       "source_system": "chat",
+       "source_ref": "evt_003",
+       "ontology_version_id": "id_1",
+       "revision": 1,
+       "projection_status": "projected"
+      },
+      {
+       "id": "fact_works_at_manager",
+       "rel_type": "WORKS_AT",
+       "source": {
+        "id": "sarah",
+        "type": "Person",
+        "name": "Sarah Johnson"
+       },
+       "target": {
+        "id": "acme",
+        "type": "Organization",
+        "name": "Acme"
+       },
+       "attributes": {
+        "role": "Engineering Manager"
+       },
+       "fact_text": null,
+       "valid_from": "2024-06-01T00:00:00Z",
+       "valid_from_unknown": false,
+       "valid_to": "2027-02-01T00:00:00Z",
+       "source_recorded_at": null,
+       "recorded_at": "2026-10-18T09:00:13Z",
+       "superseded_at": null,
+       "succeeded_by_fact_id": null,
+       "status": "active",
+       "phase": "current",
+       "authority_class": "authoritative_system",
+       "classification": "internal",
+       "source_type": "command",
+       "evidence_status": "verified",
+       "evidence": [
+        {
+         "kind": "command",
+         "command_id": "id_13",
+         "interaction_id": null,
+         "episode_uuid": null,
+         "source_system": "hr",
+         "source_ref": "evt_002",
+         "occurred_at": null,
+         "recorded_at": "2026-10-18T09:00:13Z",
+         "added_at": "2026-10-18T09:00:13Z"
+        }
+       ],
+       "decision_code": null,
+       "decided_at": null,
+       "source_command_id": "id_13",
+       "source_interaction_id": null,
+       "source_system": "hr",
+       "source_ref": "evt_002",
+       "ontology_version_id": "id_1",
+       "revision": 2,
+       "projection_status": "projected"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

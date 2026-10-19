@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/osogroup-blair/kg-boilerplate/tools/replay_capture/tape.schema.json",
+  "title": "A replay tape",
+  "description": "A recording of real platform traffic, replayed by the site's static playgrounds.",
+  "type": "object",
+  "required": ["tape_version", "scenario", "title", "recorded_with", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "tape_version": {"const": 1},
+    "scenario": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "title": {"type": "string", "minLength": 1},
+    "recorded_with": {
+      "type": "object",
+      "required": ["git_sha", "ontology", "router"],
+      "properties": {"git_sha": {"type": "string"}, "ontology": {"type": "string"}, "router": {"type": "string"}}
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "calls"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "title": {"type": "string"},
+          "story": {"type": "string"},
+          "look_for": {"type": "string"},
+          "at_ids": {"type": "array", "items": {"type": "string"}},
+          "calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["method", "path", "caller", "status", "response"],
+              "properties": {
+                "method": {"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
+                "path": {"type": "string", "pattern": "^/(v1/|health)"},
+                "query": {"type": "object", "additionalProperties": {"type": "string"}},
+                "caller": {"type": "string"},
+                "request": {},
+                "status": {"type": "integer", "minimum": 100, "maximum": 599},
+                "response": {},
+                "snapshot": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
