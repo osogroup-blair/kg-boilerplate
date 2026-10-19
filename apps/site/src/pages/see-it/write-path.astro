@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import StageTimeline from "../../islands/StageTimeline";
+---
+<PlaygroundPage
+  title="The write path"
+  lead="Follow one conversation from the moment it is accepted to the moment it is searchable, stage by stage."
+  learn={["Interactions are durable and idempotent: the ledger row and outbox job commit together","Workers lease, retry with backoff and dead-letter, so crashes lose nothing","The model only proposes: extraction results start unverified","You can poll an interaction and see exactly where it is"]}
+  docs={[{href:"/docs/concepts/commands-vs-extraction/",label:"Commands vs extraction"},{href:"/docs/tutorials/ingest-a-source/",label:"Ingest your own source"},{href:"/docs/operations/stuck-job-replay/",label:"When a job is stuck"}]}
+  next={{href:"/sandbox/",label:"Try it in the sandbox"}}
+>
+  <StageTimeline client:load />
+</PlaygroundPage>

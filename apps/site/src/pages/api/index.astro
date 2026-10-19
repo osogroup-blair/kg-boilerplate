@@ -1,0 +1,52 @@
+---
+import Layout from "../../layouts/Layout.astro";
+const starters = [
+  { n: "Who am I?", c: "curl -s $KG_BASE_URL/v1/me -H \"Authorization: Bearer $KG_API_KEY\"" },
+  { n: "Which context profiles can I use?", c: "curl -s $KG_BASE_URL/v1/context/profiles -H \"Authorization: Bearer $KG_API_KEY\"" },
+  { n: "Build a context", c: "curl -s -X POST $KG_BASE_URL/v1/context/build -H \"Authorization: Bearer $KG_API_KEY\" -H \"Content-Type: application/json\" \\\n  -d '{\"task\":\"Help Sarah assess starting a business\",\"subject_ids\":[\"<sarah id>\"],\"profile\":\"planning\",\"max_tokens\":600}'" },
+  { n: "Search memory", c: "curl -s -X POST $KG_BASE_URL/v1/memories/search -H \"Authorization: Bearer $KG_API_KEY\" -H \"Content-Type: application/json\" -d '{\"query\":\"state licence\",\"limit\":5}'" },
+  { n: "Search the graph", c: "curl -s -X POST $KG_BASE_URL/v1/graph/search -H \"Authorization: Bearer $KG_API_KEY\" -H \"Content-Type: application/json\" -d '{\"query\":\"Sarah\"}'" },
+];
+---
+<Layout title="API reference · Knowledge Graph Boilerplate" description="The interactive API reference for the knowledge and memory platform, generated from its OpenAPI contract.">
+  <div class="wrap" style="padding-block: 1.5rem 1rem">
+    <h1>API reference</h1>
+    <p class="lead">Generated from <code class="inline">contracts/openapi.json</code>, the same contract the SDK and console are generated from. Pick a server below, paste a key, and try any call.</p>
+    <div class="card" id="session" hidden>
+      <b>You have a live sandbox session.</b> <span id="sess-info" class="muted"></span> The reference below is using its server and your planning-agent key.
+    </div>
+    <details class="card" style="margin-top:1rem">
+      <summary><b>Five calls to try first</b> <span class="muted">(each works on a fresh Sarah sandbox, or locally after <code class="inline">make up seed demo-sarah</code>)</span></summary>
+      <p class="muted">Set <code class="inline">KG_BASE_URL</code> and <code class="inline">KG_API_KEY</code>. In a local stack the key is in <code class="inline">.local/dev-credentials.json</code>; in the sandbox it is on your <a href="/sandbox/">session page</a>.</p>
+      {starters.map((s) => <div><b>{s.n}</b><pre>{s.c}</pre></div>)}
+      <p class="muted">Also see the <a href="/docs/reference/api-recipes/">tested recipes</a> for curl, Python and MCP.</p>
+    </details>
+    <p class="muted">Servers: your local stack at <code class="inline">http://localhost:8000</code>, or a sandbox session. Browsers need the server to allow this site's origin (CORS); the sandbox does, and a local stack does when <code class="inline">CORS_ALLOW_ORIGINS</code> includes it.</p>
+  </div>
+  <div id="app" style="min-height: 70vh"></div>
+  <script is:inline src="/vendor/scalar.js"></script>
+  <script is:inline>
+    (function () {
+      var servers = [{ url: "http://localhost:8000", description: "Your local stack (make up seed)" }];
+      var token = "";
+      try {
+        var s = JSON.parse(sessionStorage.getItem("kg-sandbox") || "null");
+        if (s && new Date(s.expires_at).getTime() > Date.now()) {
+          servers.unshift({ url: s.api_url, description: "Your sandbox session" });
+          token = s.keys.planning_agent;
+          document.getElementById("session").hidden = false;
+          document.getElementById("sess-info").textContent = "Scenario: " + s.scenario + ".";
+        }
+      } catch (e) {}
+      window.Scalar.createApiReference("#app", {
+        url: "/openapi.json",
+        servers: servers,
+        theme: "default",
+        layout: "modern",
+        hideDownloadButton: false,
+        authentication: { preferredSecurityScheme: "bearerAuth", securitySchemes: { bearerAuth: { token: token } } },
+        metaData: { title: "Knowledge & Memory Platform API" },
+      });
+    })();
+  </script>
+</Layout>

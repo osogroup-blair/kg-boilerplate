@@ -1,0 +1,24 @@
+---
+import Layout from "../../layouts/Layout.astro";
+const items = [
+  { href: "/see-it/sarah/", t: "The Sarah scenario", d: "Eleven steps, from a trusted HR feed to a verified deletion, with the real API traffic behind each.", tag: "Start here" },
+  { href: "/see-it/context/", t: "Context explorer", d: "One task, many callers, profiles and budgets. See what the engine includes, leaves out and flags as unknown.", tag: "Core idea" },
+  { href: "/see-it/time/", t: "Time travel", d: "Drag across five years. What was true, and what did we know?", tag: "Bitemporal" },
+  { href: "/see-it/permissions/", t: "Permission lens", d: "Four callers, five questions. Hidden is indistinguishable from missing.", tag: "Security" },
+  { href: "/see-it/graph/", t: "Graph viewer", d: "Click through the projected graph of Sarah's world and a CRM account.", tag: "Graph" },
+  { href: "/see-it/write-path/", t: "The write path", d: "Watch one conversation move through the pipeline, stage by stage.", tag: "Pipeline" },
+];
+---
+<Layout title="See it work · Knowledge Graph Boilerplate" description="Interactive replays of the real platform: no install, no backend.">
+  <div class="wrap" style="padding-block: 2.5rem 3rem">
+    <h1>See it work</h1>
+    <p class="lead">Six interactive playgrounds. They need no install and no backend: each replays a recording of the real platform, so what you see is what the API returned.</p>
+    <div class="grid c3" style="margin-top:1.5rem">
+      {items.map((i) => <a class="card" href={i.href}><span class="pill">{i.tag}</span><h3 style="margin-top:.6rem">{i.t}</h3><p class="muted">{i.d}</p></a>)}
+    </div>
+    <div class="card" style="margin-top:1.5rem">
+      <h3>Want to change things yourself?</h3>
+      <p class="muted">The <a href="/sandbox/">hosted sandbox</a> gives you a private workspace and API keys for two hours, and the <a href="/docs/get-started/quickstart/">quickstart</a> runs everything on your own machine.</p>
+    </div>
+  </div>
+</Layout>

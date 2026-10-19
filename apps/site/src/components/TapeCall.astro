@@ -1,0 +1,53 @@
+---
+// Shows one real request and response from a recorded tape (public/tapes/*.json), so concept pages never show invented traffic.
+import fs from "node:fs";
+import path from "node:path";
+import { Code } from "@astrojs/starlight/components";
+
+interface Props {
+  tape: string; // sarah | context-matrix | time | permissions | write-path | crm
+  step?: string; // step id within the tape; omitted: search every step
+  path: string; // substring of the call path
+  method?: string;
+  nth?: number; // which match (0-based)
+  caller?: string;
+  pick?: string[]; // keep only these top-level response keys (dotted paths allowed one level: "budgets.used_tokens")
+  items?: number; // truncate arrays to this many items
+  request?: boolean; // show the request body (default true)
+  note?: string;
+}
+const { tape, step, path: p, method, nth = 0, caller, pick, items = 3, request = true, note } = Astro.props;
+const data = JSON.parse(fs.readFileSync(path.resolve("public/tapes", `${tape}.json`), "utf8"));
+const calls = data.steps
+  .filter((s: any) => !step || s.id === step)
+  .flatMap((s: any) => s.calls)
+  .filter((c: any) => c.path.includes(p) && (!method || c.method === method) && (!caller || c.caller === caller) && !c.snapshot);
+const call = calls.at(nth);
+if (!call) throw new Error(`TapeCall: no call matches ${tape}/${step ?? "*"}/${p} #${nth}`);
+
+const trim = (v: any): any => (Array.isArray(v) ? [...v.slice(0, items).map(trim), ...(v.length > items ? [`… ${v.length - items} more`] : [])] : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, trim(x)])) : v);
+let body = call.response;
+if (pick && body && typeof body === "object" && !Array.isArray(body)) {
+  const out: Record<string, any> = {};
+  for (const key of pick) {
+    const [a, b] = key.split(".");
+    if (b) (out[a] ??= {})[b] = body[a]?.[b];
+    else out[a] = body[a];
+  }
+  body = out;
+}
+const q = Object.entries(call.query ?? {}).map(([k, v]) => `${k}=${v}`).join("&");
+const title = `${call.method} ${call.path.replace(/\/(id_\d+)\b/g, "/{id}")}${q ? "?" + q : ""}  →  ${call.status}   (as ${call.caller})`;
+---
+<figure class="tapecall">
+  <figcaption>{title}<span class="tape-src"> · recorded from the <a href="/see-it/">real platform</a></span></figcaption>
+  {request && call.request ? <Code code={JSON.stringify(trim(call.request), null, 2)} lang="json" title="request" /> : null}
+  <Code code={JSON.stringify(trim(body), null, 2)} lang="json" title="response" />
+  {note ? <p class="tape-note">{note}</p> : null}
+</figure>
+<style>
+  .tapecall { margin: 1.25rem 0; }
+  .tapecall figcaption { font-family: var(--sl-font-mono); font-size: 0.8rem; color: var(--sl-color-gray-2); margin-bottom: 0.25rem; }
+  .tape-src { font-family: var(--sl-font); color: var(--sl-color-gray-3); }
+  .tape-note { font-size: 0.85rem; color: var(--sl-color-gray-2); margin-top: 0.25rem; }
+</style>

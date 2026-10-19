@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import ContextExplorer from "../../islands/ContextExplorer";
+---
+<PlaygroundPage
+  title="Context explorer"
+  lead="Pick a task, a caller, a profile and a token budget, and see the exact package the context engine built for each combination, recorded from the real engine."
+  learn={["A package is a hard-capped, cited bundle, not a pile of search hits","Profiles shape what is asked for and what counts as unknown","A budget too small is reported, not silently truncated","Different callers get different packages for the same task"]}
+  docs={[{href:"/docs/concepts/context-engine/",label:"The context engine"},{href:"/docs/guides/write-context-profiles/",label:"Write your own profile"},{href:"/docs/reference/api-recipes/",label:"Call it yourself: recipes"}]}
+  next={{href:"/see-it/time/",label:"Travel through time"}}
+>
+  <ContextExplorer client:load />
+</PlaygroundPage>

@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import GraphViewer from "../../islands/GraphViewer";
+---
+<PlaygroundPage
+  title="Graph viewer"
+  lead="Pan, click and read the graph the platform projects from its ledger: Sarah's world after several steps, and a CRM account."
+  learn={["The graph is a projection of the Postgres ledger, rebuildable at any time","Verified facts and unverified claims look different","Every edge carries its evidence class and validity","The same platform draws a CRM with no code changes"]}
+  docs={[{href:"/docs/concepts/ledger-and-graph/",label:"Ledger and graph"},{href:"/docs/get-started/tour-of-the-console/",label:"The console's Graph Explorer"},{href:"/docs/tutorials/first-domain/",label:"Model your own domain"}]}
+  next={{href:"/see-it/write-path/",label:"Watch the write path"}}
+>
+  <GraphViewer client:load />
+</PlaygroundPage>

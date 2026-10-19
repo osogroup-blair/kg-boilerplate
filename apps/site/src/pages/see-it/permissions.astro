@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import PermissionLens from "../../islands/PermissionLens";
+---
+<PlaygroundPage
+  title="Permission lens"
+  lead="The same five questions, asked by four callers. See who gets what, and why a hidden record is indistinguishable from one that never existed."
+  learn={["Subject ACLs: an agent sees a person only with a grant","A hidden id and a missing id answer with the same bytes","An agent from another workspace learns nothing, not even that Sarah exists","Empty results are allowed; leaks are not"]}
+  docs={[{href:"/docs/concepts/multi-agent/",label:"Multi-agent access"},{href:"/docs/concepts/security-model/",label:"The security model"},{href:"/docs/tutorials/connect-an-agent-mcp/",label:"The same denials over MCP"}]}
+  next={{href:"/see-it/graph/",label:"Open the graph viewer"}}
+>
+  <PermissionLens client:load />
+</PlaygroundPage>

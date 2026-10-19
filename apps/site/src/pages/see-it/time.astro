@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import TimeSlider from "../../islands/TimeSlider";
+---
+<PlaygroundPage
+  title="Time travel"
+  lead="Drag through 2022 to 2027 and watch what was true change. Then switch to record time to see what the platform knew, and when."
+  learn={["as_of (valid time) is when a fact was true in the world","known_at (record time) is when the platform learned it, set by the database","A later role succeeds an earlier one; a correction supersedes","Nothing is overwritten: history stays queryable"]}
+  docs={[{href:"/docs/concepts/time/",label:"Time in the platform"},{href:"/docs/reference/api-recipes/",label:"The as_of recipe"}]}
+  next={{href:"/see-it/permissions/",label:"See the permission lens"}}
+>
+  <TimeSlider client:load />
+</PlaygroundPage>

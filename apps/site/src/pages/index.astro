@@ -1,0 +1,149 @@
+---
+import fs from "node:fs";
+import path from "node:path";
+import Layout from "../layouts/Layout.astro";
+import Architecture from "../components/Architecture.astro";
+import proof from "../data/generated/proof.json";
+
+// The hero card is a real planning-agent context package from the recorded Sarah scenario (step 6): nothing on this page is mocked up.
+const tape = JSON.parse(fs.readFileSync(path.resolve("public/tapes/sarah.json"), "utf8"));
+const step6 = tape.steps.find((s: any) => s.id === "6");
+const ctx = step6.calls.find((c: any) => c.path === "/v1/context/build").response;
+const lines: string[] = ctx.context_text.split("\n");
+const tokens = `${ctx.budgets.used_tokens} / ${ctx.budgets.max_tokens} tokens`;
+
+const features = [
+  { t: "Commands never call a model", d: "Systems of record write facts through validated commands, projected with zero model calls. The same key twice is one write.", href: "/see-it/sarah/" },
+  { t: "Extracted facts start unverified", d: "What a model pulls from a conversation is labelled, reviewable, and never silently trusted.", href: "/see-it/write-path/" },
+  { t: "Time is built in", d: "Every fact has valid time (as_of) and record time (known_at). Ask what was true, and what you knew.", href: "/see-it/time/" },
+  { t: "Memory with scopes", d: "Episodic, semantic and working memory, scoped to subjects and projects, with hybrid search and TTLs.", href: "/docs/concepts/curated-memory/" },
+  { t: "A bounded, cited context", d: "One call returns the facts, memories, unknowns and citations an agent needs, inside a hard token budget.", href: "/see-it/context/" },
+  { t: "Many agents, real permissions", d: "Subject ACLs, a publish model with labels, immediate revocation. Hidden looks the same as missing.", href: "/see-it/permissions/" },
+  { t: "Correct and delete for real", d: "Rejecting a fact changes the next context. Deleting a person ends with a receipt that proves it.", href: "/docs/concepts/governance/" },
+  { t: "Any domain, by configuration", d: "A CRM runs on the same platform with another ontology and no platform code changes.", href: "/docs/tutorials/first-domain/" },
+  { t: "SDK, MCP and a console", d: "A Python client, nine MCP tools, and an admin console with a graph explorer and a context lab.", href: "/docs/tutorials/connect-an-agent-mcp/" },
+];
+---
+<Layout title="Knowledge Graph Boilerplate: memory for agents you can trust" path="/">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Open-source knowledge graph and memory platform</p>
+        <h1>Memory and knowledge for agents that you can trust</h1>
+        <p class="lead">Sourced, time-aware, permissioned and correctable. A Postgres ledger, a Graphiti/Neo4j graph, scoped memory search and a context engine, behind one API, a Python SDK and an MCP server.</p>
+        <div class="cta">
+          <a class="btn primary" href="/see-it/sarah/">See it work</a>
+          <a class="btn" href="/sandbox/">Try the sandbox</a>
+          <a class="btn" href="/docs/get-started/quickstart/">Quickstart</a>
+        </div>
+        <p class="muted small">No model key needed to try it: the examples run on a deterministic mock router.</p>
+      </div>
+      <figure class="ctxcard" aria-label="A real context package from the Sarah scenario">
+        <figcaption><b>A real answer</b> a planning agent got for “Help Sarah assess the implications of starting a business”<span class="pill good">{tokens}</span></figcaption>
+        <pre tabindex="0" aria-label="The context text">{lines.join("\n")}</pre>
+        <a href="/see-it/sarah/">Step through the scenario →</a>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <h2>Agents forget, guess, and leak</h2>
+      <div class="grid c3">
+        <div class="card"><h3>They forget or invent history</h3><p class="muted">A chat log is not memory, and a model's guess about last quarter is not a fact.</p></div>
+        <div class="card"><h3>They don't know when, or who may see</h3><p class="muted">A vector store has no idea a fact stopped being true in February, or that one customer's contacts must stay out of another's context.</p></div>
+        <div class="card"><h3>They can't unlearn</h3><p class="muted">Nothing lets you correct a wrong extraction, or delete a person from every place the fact spread, and prove it.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block alt">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="lead">Facts from systems of record go in as commands. Conversations go through a model pipeline and come out as reviewable proposals. Everything an agent sees passes one gate.</p>
+      <Architecture />
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <h2>What you get</h2>
+      <div class="grid c3">
+        {features.map((f) => <a class="card" href={f.href}><h3>{f.t}</h3><p class="muted">{f.d}</p></a>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="block alt" id="proof">
+    <div class="wrap">
+      <h2>Proof, not promises</h2>
+      <p class="lead">Every number below is read from the repository's own evaluation reports when this site is built. Frozen datasets, the strict mock router, run on {proof.date} ({proof.commit}).</p>
+      <div class="grid c3 tiles">
+        {proof.tiles.map((t: any) => <a class="card tile" href={(proof.sources as any)[t.src]}><div class="big">{t.value}</div><div>{t.label}</div><div class="muted small">{t.detail}</div></a>)}
+      </div>
+      {proof.tests.unit && (
+        <p class="muted">Test suites at the last full run: {proof.tests.unit} unit, {proof.tests.integration} integration, {proof.tests.security} security, {proof.tests.contract} contract, {proof.tests.console} console. <a href={proof.sources.handoff}>Source</a>.</p>
+      )}
+      <div class="card honest">
+        <h3>The honest limits</h3>
+        <p class="muted">Latency was measured against a <b>modelled</b> router, so treat it as provisional. A context build took p95 {proof.latency.context_p95_ms.S} ms in a workspace of {proof.latency.memories.S.toLocaleString()} memories and {proof.latency.context_p95_ms.M} ms at {proof.latency.memories.M.toLocaleString()}. Memory search is the capacity limit: p95 {proof.latency.search_p95_ms.S} ms at {proof.latency.memories.S.toLocaleString()} memories and about {proof.latency.search_p95_ms.M} ms at {proof.latency.memories.M.toLocaleString()}, because the search is an exact scan. An approximate-nearest-neighbour index is the next step before any workspace passes 50,000 memories. <a href={proof.sources.baseline}>Full baseline</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <h2>Is this for you?</h2>
+      <div class="grid c2">
+        <div class="card"><h3>Use it when</h3><ul><li>agents act on people, customers or projects</li><li>facts change over time and you need to ask "as of when?"</li><li>several agents or apps share memory with different rights</li><li>you need audit, correction and provable deletion</li></ul></div>
+        <div class="card"><h3>It is overkill when</h3><ul><li>a single-user chatbot with a chat history is enough</li><li>you only need question answering over static documents</li><li>nothing about time, ownership or permissions matters</li></ul><p class="muted small">New to the idea? Read <a href="/docs/get-started/faq/">“Why not just RAG?”</a></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block alt">
+    <div class="wrap">
+      <h2>Run it in ten minutes</h2>
+      <p class="lead">You need Docker (about 6 GB of memory), Node 20 and git. No API key.</p>
+      <pre>git clone https://github.com/osogroup-blair/kg-boilerplate.git &amp;&amp; cd kg-boilerplate
+make tools sync admin-install examples-install   # uv, the Python workspace, the console, notebook tooling
+make up seed                                     # postgres, neo4j, mock router, migrations, api, worker
+make examples                                    # Sarah, a second domain (CRM) and agents through the SDK and MCP</pre>
+      <a class="btn primary" href="/docs/get-started/quickstart/">Read the quickstart</a>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="wrap">
+      <h2>Build your own</h2>
+      <div class="grid c3">
+        <a class="card" href="/docs/tutorials/first-domain/"><h3>Model your domain</h3><p class="muted">A support desk from an empty ontology to a context package, with no platform code.</p></a>
+        <a class="card" href="/docs/tutorials/connect-an-agent-sdk/"><h3>Connect your agent</h3><p class="muted">About sixty lines of Python, or point Claude Code at the MCP server.</p></a>
+        <a class="card" href="/docs/guides/deploy-to-production/"><h3>Deploy it</h3><p class="muted">The production reference: TLS, secrets, backups, observability.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block alt">
+    <div class="wrap narrow">
+      <h2>Status</h2>
+      <p>Phases 0 to 10 are built and tested: the platform, the console, the SDK and MCP server, the evaluation gate, and the examples. This is <b>pre-1.0</b>: the release candidate and the live-router session are still owner actions, and one production decision (graph tenancy) is recorded but open. <a href="/docs/project/roadmap/">Roadmap and status</a> · <a href="https://github.com/osogroup-blair/kg-boilerplate/blob/main/docs/release/checklist.md">Release checklist</a></p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero { padding: 4rem 0 3rem; background: radial-gradient(1200px 400px at 80% -10%, var(--kg-accent-soft), transparent 70%); }
+  .hero-grid { display: grid; gap: 2rem; grid-template-columns: 1.05fr 1fr; align-items: center; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+  .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; font-weight: 700; color: var(--kg-accent); margin: 0 0 .5rem; }
+  .cta { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0 .75rem; }
+  .small { font-size: .85rem; }
+  .ctxcard { margin: 0; background: var(--kg-surface); border: 1px solid var(--kg-border); border-radius: 16px; padding: 1rem; box-shadow: 0 10px 40px rgba(20, 30, 70, .08); }
+  .ctxcard figcaption { font-size: .88rem; margin-bottom: .6rem; display: flex; gap: .5rem; flex-wrap: wrap; align-items: baseline; }
+  .ctxcard pre { max-height: 330px; font-size: .74rem; margin-bottom: .5rem; white-space: pre-wrap; }
+  .tiles .tile { text-align: left; }
+  .tile .big { font-size: 2.4rem; font-weight: 800; color: var(--kg-accent); line-height: 1.1; }
+  .honest { margin-top: 1rem; border-inline-start: 4px solid var(--kg-warn); }
+  ul { padding-inline-start: 1.1rem; margin: 0; }
+</style>

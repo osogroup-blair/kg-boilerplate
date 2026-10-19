@@ -1,0 +1,13 @@
+---
+import PlaygroundPage from "../../components/PlaygroundPage.astro";
+import ScenarioPlayer from "../../islands/ScenarioPlayer";
+---
+<PlaygroundPage
+  title="The Sarah scenario"
+  lead="Step through the platform's reference story: a person, two agents, a job change, an outsider, a wrong guess and a deletion. Every step shows what happened and the real API traffic behind it."
+  learn={["Facts from systems are commands; facts from conversations are unverified proposals","A context package is bounded, cited, and permission-filtered","Valid time and record time answer different questions","Corrections and deletions change what agents see next"]}
+  docs={[{href:"/docs/get-started/introduction/",label:"What the platform is"},{href:"/docs/concepts/architecture/",label:"Architecture"},{href:"/docs/tutorials/notebooks/",label:"The same story as seven notebooks"}]}
+  next={{href:"/see-it/context/",label:"Explore context packages"}}
+>
+  <ScenarioPlayer client:load />
+</PlaygroundPage>

@@ -1,0 +1,46 @@
+---
+import Layout from "../layouts/Layout.astro";
+interface Props { title: string; lead: string; learn: string[]; docs: { href: string; label: string }[]; next?: { href: string; label: string } }
+const { title, lead, learn, docs, next } = Astro.props;
+const order = [
+  ["/see-it/sarah/", "The Sarah scenario"],
+  ["/see-it/context/", "Context explorer"],
+  ["/see-it/time/", "Time travel"],
+  ["/see-it/permissions/", "Permission lens"],
+  ["/see-it/graph/", "Graph viewer"],
+  ["/see-it/write-path/", "Write path"],
+];
+const here = Astro.url.pathname;
+---
+<Layout title={`${title} · Knowledge Graph Boilerplate`} description={lead}>
+  <div class="wrap pg">
+    <nav class="pgnav" aria-label="Playgrounds">
+      <a href="/see-it/">All playgrounds</a>
+      {order.map(([h, l]) => <a href={h} aria-current={here === h ? "page" : undefined}>{l}</a>)}
+    </nav>
+    <h1>{title}</h1>
+    <p class="lead">{lead}</p>
+    <div class="learn card">
+      <b>What this teaches</b>
+      <ul>{learn.map((l) => <li>{l}</li>)}</ul>
+    </div>
+    <div class="stage"><slot /></div>
+    <section class="after">
+      <h2>Go deeper</h2>
+      <ul>{docs.map((d) => <li><a href={d.href}>{d.label}</a></li>)}</ul>
+      {next && <p><a class="btn primary" href={next.href}>{next.label} →</a></p>}
+      <p class="muted">These pages replay real recordings of the platform: each call you open is the exact request and response, captured while the Sarah and CRM examples ran. <a href="/docs/reference/tapes/">How the recordings are made</a>.</p>
+    </section>
+  </div>
+</Layout>
+<style>
+  .pg { padding-block: 1.5rem 3rem; }
+  .pgnav { display: flex; gap: .4rem .9rem; flex-wrap: wrap; font-size: .88rem; margin-bottom: 1.25rem; }
+  .pgnav a { color: var(--kg-muted); text-decoration: none; padding: .2rem .55rem; border-radius: 99px; border: 1px solid transparent; }
+  .pgnav a:hover { border-color: var(--kg-border); }
+  .pgnav a[aria-current="page"] { background: var(--kg-accent-soft); color: var(--kg-accent); font-weight: 600; }
+  .learn { margin: 1rem 0 1.5rem; }
+  .learn ul { margin: .4rem 0 0; padding-inline-start: 1.1rem; }
+  .stage { margin: 1rem 0 2rem; }
+  .after ul { padding-inline-start: 1.1rem; }
+</style>
