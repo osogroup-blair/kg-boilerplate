@@ -134,27 +134,14 @@ def preflight(ctx: Ctx) -> dict[str, Any]:
             else ""
         ),
     }
-    for name, cmd in (
-        ("postgres", ["docker", "compose", "exec", "-T", "postgres", "pg_isready", "-U", "postgres"]),
-        (
-            "neo4j",
-            [
-                "docker",
-                "compose",
-                "exec",
-                "-T",
-                "neo4j",
-                "cypher-shell",
-                "-u",
-                "neo4j",
-                "-p",
-                os.environ.get("NEO4J_PASSWORD", "kg-neo4j-dev"),
-                "RETURN 1",
-            ],
-        ),
+    for name, port, cmd in (
+        ("postgres", "5544", ["pg_isready", "-U", "postgres"]),
+        ("neo4j", "7688", ["cypher-shell", "-u", "neo4j", "-p", os.environ.get("NEO4J_PASSWORD", "kg-neo4j-dev"), "RETURN 1"]),
     ):
-        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)  # noqa: S603
-        checks[name] = {"ok": r.returncode == 0}
+        # the container that publishes the stack's port, wherever it came from (this repo's compose file is not in the working directory)
+        cid = subprocess.run(["docker", "ps", "-q", "--filter", f"publish={port}"], capture_output=True, text=True, check=False).stdout.split()  # noqa: S603,S607
+        r = subprocess.run(["docker", "exec", cid[0], *cmd], cwd=ROOT, capture_output=True, text=True, check=False) if cid else None  # noqa: S603,S607
+        checks[name] = {"ok": bool(r and r.returncode == 0)} if cid else {"ok": False, "error": f"no container publishes port {port}: run `make up`"}
     checks["cost_estimate"] = {"ok": True, **estimate_cost()}
     return {"ok": all(c["ok"] for c in checks.values()), "checks": checks}
 
