@@ -180,6 +180,10 @@ async def api(migrated_db: str, test_settings: Settings) -> AsyncIterator[ApiSta
     apps = [build_app(settings) for _ in range(n)]
     async with contextlib.AsyncExitStack() as stack:
         managers = [await stack.enter_async_context(LifespanManager(a, startup_timeout=60, shutdown_timeout=60)) for a in apps]
+        # Graphiti's range and fulltext indices are built by the worker at startup (the API never does, L12), and a test run has no compose worker: on a Neo4j that
+        # has never seen one (a CI service container) every graph search then fails with "no such fulltext schema index" and identity resolution finds no candidates.
+        # Idempotent, so a developer's long-lived stack is unaffected.
+        await apps[0].state.kg.graph.ensure_indices()
         transports = [httpx.ASGITransport(app=m.app) for m in managers]
         transport = transports[0] if n == 1 else _round_robin(transports)
         async with httpx.AsyncClient(transport=transport, base_url="http://kg.test") as client:

@@ -66,7 +66,22 @@ async def replicas(api: Any, n: int = 2, **overrides: Any) -> AsyncIterator[list
 _REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def _postgres_container() -> str | None:
+    """The container that publishes the test Postgres port (5544): the compose `postgres` service on a developer machine, a service container in CI."""
+    out = subprocess.run(["docker", "ps", "-q", "--filter", "publish=5544"], capture_output=True, text=True, check=False)  # noqa: S603,S607
+    ids = out.stdout.split()
+    return ids[0] if ids else None
+
+
 def _compose_exec(*args: str) -> subprocess.CompletedProcess[bytes]:
+    """Runs a command inside the Postgres container, wherever it came from (compose on a developer machine, a service container in CI)."""
+    container = _postgres_container()
+    if container is not None:
+        return subprocess.run(  # noqa: S603
+            ["docker", "exec", "-e", "PGPASSWORD=kg_admin_dev", container, *args],  # noqa: S607
+            capture_output=True,
+            check=False,
+        )
     return subprocess.run(  # noqa: S603
         ["docker", "compose", *ROOT_COMPOSE_ARGS, "exec", "-T", "-e", "PGPASSWORD=kg_admin_dev", "postgres", *args],  # noqa: S607
         cwd=_REPO,
