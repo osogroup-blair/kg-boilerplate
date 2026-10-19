@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+# the sandbox session pages hold nothing indexable, and the API reference is a single-page app
+Disallow: /sandbox/session
+
+Sitemap: https://kg.oso.group/sitemap-index.xml

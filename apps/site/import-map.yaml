@@ -1,0 +1,24 @@
+# The allowlist of repository files that appear on the site. Anything not listed stays off it (the handoff, docs/plans/, solution_inputs/ ...).
+# `dest` is the page's path under /docs/. Order sets the sidebar position inside its group.
+files:
+  - {src: docs/architecture/overview.md, dest: concepts/architecture, title: "Architecture overview", order: 1}
+  - {src: docs/agent-integration.md, dest: guides/agent-integration, title: "The agent integration contract", order: 3, description: "How an agent gets an identity, asks for context, writes back, and treats retrieved text as quoted data."}
+  - {src: docs/guides/add-a-domain.md, dest: guides/add-a-domain, title: "Add a domain (no platform code)", order: 1}
+  - {src: docs/guides/extend.md, dest: guides/extend, title: "Extend this boilerplate", order: 2}
+  - {src: examples/README.md, dest: tutorials/examples-overview, title: "The examples at a glance", order: 10}
+  - {src: examples/sarah/README.md, dest: tutorials/example-sarah, title: "Example: the Sarah scenario", order: 11}
+  - {src: examples/domains/crm/README.md, dest: tutorials/example-crm, title: "Example: a second domain (CRM)", order: 12}
+  - {src: examples/agents/README.md, dest: tutorials/example-agents, title: "Example: agents over the SDK and MCP", order: 13}
+  - {src: examples/notebooks/README.md, dest: tutorials/notebooks, title: "The seven notebooks", order: 14}
+  - {src: ROADMAP.md, dest: project/roadmap, title: "Roadmap and status", order: 1}
+  - {src: deploy/sandbox/README.md, dest: guides/run-a-public-sandbox, title: "Run a public sandbox", order: 9, description: "How the hosted sandbox works, what a visitor can do, what contains them, and the checks before it is announced."}
+  - {src: docs/security/threat-model.md, dest: reference/threat-model, title: "Threat model", order: 21}
+  - {src: docs/release/checklist.md, dest: project/release-checklist, title: "Release checklist", order: 2}
+  - {src: docs/release/decisions.md, dest: project/decisions, title: "Open and settled decisions", order: 3}
+  - {src: CHANGELOG.md, dest: project/changelog, title: "Changelog", order: 4, optional: true}
+  - {src: CONTRIBUTING.md, dest: project/contributing, title: "Contributing", order: 5, optional: true}
+  - {src: SECURITY.md, dest: project/security, title: "Security policy", order: 6, optional: true}
+  - {src: CODE_OF_CONDUCT.md, dest: project/code-of-conduct, title: "Code of conduct", order: 7, optional: true}
+globs:
+  - {src: "docs/runbooks/*.md", dest: "operations/{stem}", order_start: 10}
+  - {src: "docs/adr/ADR-*.md", dest: "reference/adrs/{stem_lower}", order_start: 1}

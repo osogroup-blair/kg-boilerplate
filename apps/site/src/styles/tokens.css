@@ -1,0 +1,66 @@
+/* One set of tokens for the custom pages and Starlight. Light by default; dark follows the theme switch (data-theme) or the system. */
+:root {
+  --kg-bg: #fbfbfd;
+  --kg-surface: #ffffff;
+  --kg-surface-2: #f2f4f8;
+  --kg-border: #dde1ea;
+  --kg-text: #151a28;
+  --kg-muted: #566074;
+  --kg-accent: #3b4fd8;
+  --kg-accent-ink: #ffffff;
+  --kg-accent-soft: #e8ebff;
+  --kg-good: #0f7b4f;
+  --kg-good-soft: #dff5ea;
+  --kg-warn: #9a5b00;
+  --kg-warn-soft: #fff0d6;
+  --kg-bad: #b3261e;
+  --kg-bad-soft: #fde7e5;
+  --kg-code-bg: #0f1424;
+  --kg-code-text: #e6e9f5;
+  --kg-radius: 12px;
+  --kg-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --kg-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  /* graph colours, mirrored from apps/admin/src/graph/styles.ts */
+  --kg-node-person: #4f6bed;
+  --kg-node-org: #0f9d8a;
+  --kg-node-topic: #d9822b;
+  --kg-node-other: #7a8499;
+}
+:root[data-theme="dark"] {
+  --kg-bg: #0d111c;
+  --kg-surface: #151b2b;
+  --kg-surface-2: #1b2336;
+  --kg-border: #2a3550;
+  --kg-text: #e9ecf6;
+  --kg-muted: #9aa5bd;
+  --kg-accent: #8d9bff;
+  --kg-accent-ink: #0d111c;
+  --kg-accent-soft: #232c52;
+  --kg-good: #5fd6a2;
+  --kg-good-soft: #123a2a;
+  --kg-warn: #f1b95b;
+  --kg-warn-soft: #3d2c0d;
+  --kg-bad: #ff8a80;
+  --kg-bad-soft: #432020;
+  --kg-code-bg: #090c16;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kg-bg: #0d111c;
+    --kg-surface: #151b2b;
+    --kg-surface-2: #1b2336;
+    --kg-border: #2a3550;
+    --kg-text: #e9ecf6;
+    --kg-muted: #9aa5bd;
+    --kg-accent: #8d9bff;
+    --kg-accent-ink: #0d111c;
+    --kg-accent-soft: #232c52;
+    --kg-good: #5fd6a2;
+    --kg-good-soft: #123a2a;
+    --kg-warn: #f1b95b;
+    --kg-warn-soft: #3d2c0d;
+    --kg-bad: #ff8a80;
+    --kg-bad-soft: #432020;
+    --kg-code-bg: #090c16;
+  }
+}

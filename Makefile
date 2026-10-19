@@ -19,9 +19,9 @@ sync:                ## install the Python workspace (exact versions from uv.loc
 	$(UV) sync --frozen
 
 # ---- stack ------------------------------------------------------------------------------------------------------------------------
-examples:            ## run every example: the Sarah scenario, the CRM domain and the agents (starts the MCP server first; needs `make up seed examples-install`)
+examples:            ## run every example: the Sarah scenario, the CRM and support-desk domains and the agents (starts the MCP server first; needs `make up seed examples-install`)
 	$(MAKE) mcp-up
-	$(MAKE) demo-sarah demo-crm examples-agents
+	$(MAKE) demo-sarah demo-crm demo-support examples-agents
 
 demo-sarah:          ## example: the Sarah two-agent scenario in a fresh workspace, with a pass/fail report (needs `make up seed`)
 	$(RUN) python -m examples.sarah.run
@@ -29,8 +29,14 @@ demo-sarah:          ## example: the Sarah two-agent scenario in a fresh workspa
 demo-crm:            ## example: the second domain (Project / Customer CRM), config only, with its benchmark (needs `make up seed`)
 	$(RUN) python -m examples.domains.crm.run
 
+demo-support:        ## example: the support-desk domain from the "Model your own domain" tutorial, config only (needs `make up seed`)
+	$(RUN) python -m examples.domains.support.run
+
 eval-crm:            ## the CRM benchmark on its own: leakage 0, budget 100%, attribution 100% (needs `make up seed`)
 	$(RUN) python -m examples.domains.crm.run --eval
+
+demo-agent:          ## the tutorial agent (examples/agents/minimal_agent.py): register, ask for context, quote it in a prompt, write a finding back (needs `make demo-sarah` first)
+	$(RUN) python -m examples.agents.minimal_agent
 
 examples-agents:     ## example: Research and Planning agents through the SDK and MCP, plus the unauthorized-agent tour (needs `make up seed mcp-up`)
 	$(RUN) python -m examples.agents.run
@@ -245,6 +251,37 @@ restore-rehearsal:   ## AT-18: restore the newest backup into the separate kg-re
 
 reconcile:           ## drift between the ledger, the graph, the memory store and the deletion records: make reconcile WS=demo [ARGS="--repair"]
 	$(RUN) kg reconcile --workspace $(or $(WS),demo) $(ARGS)
+
+# ---- the public site (apps/site) and its recordings --------------------------------------------------------------------------------
+site-install:        ## install the public site's dependencies (npm ci in apps/site)
+	cd apps/site && npm ci
+
+site-gen:            ## generate what the site imports and derives: docs from docs/, the reference from the code, the proof numbers from eval/ (writes nothing that is committed)
+	$(RUN) python -m scripts.site.gen_all
+
+site-dev:            ## the site on http://localhost:4321 (regenerates first)
+	$(MAKE) site-gen
+	cd apps/site && npm run dev
+
+site-build:          ## build the static site into apps/site/dist
+	$(MAKE) site-gen
+	cd apps/site && npm run build
+
+site-check:          ## the whole site gate: deterministic generation, Python tests, snippets, types, unit tests, build, internal links, tapes, accessibility smoke
+	bash scripts/site/check.sh
+
+tapes:               ## record the playgrounds' tapes from the real platform: Sarah and CRM run against the dev stack (needs `make up seed`); writes apps/site/public/tapes/
+	$(RUN) python -m tools.replay_capture.record
+	$(RUN) python -m tools.replay_capture.normalize
+
+tapes-check:         ## the committed tapes validate, carry no key-shaped strings and match their narration; ARGS="--rerecord" also compares them with a fresh recording (needs the stack)
+	$(RUN) python -m tools.replay_capture.check $(ARGS)
+
+sandbox-smoke:       ## everything about the public sandbox that can be proved without deploying it: broker tests, merged compose files, the edge's denials, alert rules (needs docker; not the stack)
+	$(RUN) python scripts/sandbox_smoke.py
+
+sandbox-test:        ## the broker against the real dev stack: seed a workspace, use its keys, send scripted events, delete it (needs `make up seed`)
+	$(RUN) pytest tests/sandbox -q
 
 # ---- quality --------------------------------------------------------------------------------------------------------------------
 lint:                ## ruff (lint + format check), import-linter boundaries, eslint

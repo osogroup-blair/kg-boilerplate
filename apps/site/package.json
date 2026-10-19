@@ -1,0 +1,37 @@
+{
+  "name": "kg-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --port 4321",
+    "typecheck": "astro check",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/react": "7.1.0",
+    "@astrojs/starlight": "0.42.6",
+    "@scalar/api-reference": "1.75.0",
+    "astro": "7.4.0",
+    "astro-mermaid": "^2.1.0",
+    "cytoscape": "3.34.4",
+    "mermaid": "^11.12.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "sharp": "0.35.5",
+    "vscode-jsonrpc": "8.2.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/cytoscape": "3.31.0",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

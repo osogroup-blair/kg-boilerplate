@@ -1,0 +1,69 @@
+---
+import "../styles/tokens.css";
+import "../styles/site.css";
+interface Props { title: string; description?: string; path?: string; wide?: boolean }
+const { title, description = "A multi-tenant knowledge graph and curated-memory platform for agents: sourced, time-aware, permissioned and correctable.", path = Astro.url.pathname } = Astro.props;
+const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
+const nav = [
+  { href: "/see-it/", label: "See it", opt: false },
+  { href: "/sandbox/", label: "Sandbox", opt: false },
+  { href: "/docs/get-started/introduction/", label: "Docs", opt: false },
+  { href: "/api/", label: "API", opt: true },
+];
+const here = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.split("/").slice(0, 2).join("/") + "/"));
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={`${site}${path}`} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={`${site}/og.png`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>
+      try { var t = localStorage.getItem("starlight-theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="/" aria-label="Knowledge Graph Boilerplate, home">
+          <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><circle cx="8" cy="9" r="4" fill="var(--kg-node-person)"/><circle cx="24" cy="9" r="4" fill="var(--kg-node-org)"/><circle cx="16" cy="25" r="4" fill="var(--kg-node-topic)"/><path d="M8 9L24 9M8 9L16 25M24 9L16 25" stroke="var(--kg-muted)" stroke-width="2"/></svg>
+          <span>Knowledge Graph Boilerplate</span>
+        </a>
+        <nav class="main" aria-label="Site">
+          {nav.map((n) => <a href={n.href} class={n.opt ? "opt" : ""} aria-current={here(n.href) ? "page" : undefined}>{n.label}</a>)}
+          <a href="https://github.com/osogroup-blair/kg-boilerplate" rel="noopener">GitHub</a>
+          <button class="theme-btn" id="theme" type="button" aria-label="Toggle dark mode">◐</button>
+        </nav>
+      </div>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site">
+      <div class="wrap">
+        <span>Built by Oso Group. Licensed under the repository's licence.</span>
+        <span>
+          <a href="https://github.com/osogroup-blair/kg-boilerplate">GitHub</a> ·
+          <a href="/docs/project/changelog/">Changelog</a> ·
+          <a href="/docs/project/security/">Security</a> ·
+          <a href="/docs/project/contributing/">Contributing</a>
+        </span>
+      </div>
+    </footer>
+    <script is:inline>
+      document.getElementById("theme")?.addEventListener("click", function () {
+        var cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        var next = cur === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("starlight-theme", next); } catch (e) {}
+      });
+    </script>
+  </body>
+</html>
