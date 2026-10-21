@@ -1,7 +1,7 @@
 # One image for api, worker and cli. Build context: repository root.
 FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UV_LINK_MODE=copy UV_COMPILE_BYTECODE=0 UV_PYTHON_DOWNLOADS=never
-RUN pip install --no-cache-dir uv==0.13.0
+RUN pip install --no-cache-dir uv==0.13.4
 WORKDIR /app
 # dependency layer: only manifests, so source edits do not reinstall third-party packages
 COPY pyproject.toml uv.lock ./

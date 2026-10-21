@@ -6,7 +6,7 @@ refreshed_on: "2026-10-17"   # P9 dependency refresh (V11): patch/minor bumps in
 host: "macOS (Apple silicon), Docker Desktop 28.4.0"
 runtime:
   python: "3.12.15"          # uv-managed CPython; spikes/pyproject.toml requires ==3.12.*
-  uv: "0.13.0"
+  uv: "0.13.4"                # 2026-10-21 security bump from 0.13.0: GHSA-hq85-5cpj-mr62 (bundled CA store trusts a compromised emSign root); the Dockerfile and the CI workflows pin the same version
 services:
   neo4j:
     image: "neo4j:5.26-community"

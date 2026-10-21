@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          version: "0.13.0"
+          version: "0.13.4"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
-          version: "0.13.0"
+          version: "0.13.4"
       - run: make sync
       - name: Caddy image for the edge checks
         run: docker pull caddy:2-alpine
