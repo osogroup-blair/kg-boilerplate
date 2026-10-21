@@ -60,7 +60,7 @@
     "context.irrelevant_inclusion": 0.0,
     "context.latency_p95": 0.161,
     "context.temporal_correctness": 1.0,
-    "context.tokens_per_call": 230.7,
+    "context.tokens_per_call": 257.7,
     "context.wrongly_included": 0.0,
     "extraction.chat_calls_per_episode": 3.71,
     "extraction.fact_precision": 1.0,

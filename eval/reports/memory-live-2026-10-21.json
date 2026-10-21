@@ -1,0 +1,268 @@
+{
+  "mode": "live",
+  "date": "2026-10-21",
+  "summary": {
+    "scenarios": 8,
+    "candidate_precision": 0.3333,
+    "candidate_recall": 0.2,
+    "escalation_violations": 0,
+    "unmapped_subject_leaks": 0,
+    "procedural_auto_activations": 0,
+    "scope_violations": 0,
+    "stage_outcomes_ok": false,
+    "drop_reasons_ok": false,
+    "reviews_ok": false,
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "model_calls_per_event": 1,
+    "tokens_per_event": 748.8,
+    "latency_seconds": {
+      "p50": 96.66,
+      "p95": 145.74
+    }
+  },
+  "retrieval": {
+    "queries": [
+      {
+        "query": "starting a business",
+        "gold_rank": 1,
+        "distractor_rank": 8,
+        "top3": [
+          "Michael encourages Sarah Johnson toward ",
+          "Sarah Johnson is considering entrepreneu",
+          "Sarah Johnson wants options compared sid"
+        ]
+      },
+      {
+        "query": "entrepreneurship",
+        "gold_rank": 2,
+        "distractor_rank": 7,
+        "top3": [
+          "Sarah Johnson is considering entrepreneu",
+          "Michael encourages Sarah Johnson toward ",
+          "Sarah Johnson wants options compared sid"
+        ]
+      },
+      {
+        "query": "weekend cycling club ride",
+        "gold_rank": 1,
+        "distractor_rank": 4,
+        "top3": [
+          "Sarah Johnson completed a 40 km cycling ",
+          "Sarah Johnson is a member of a cycling c",
+          "Sarah's team ships a quarterly release o"
+        ]
+      },
+      {
+        "query": "how should options be compared when advising",
+        "gold_rank": 1,
+        "distractor_rank": 4,
+        "top3": [
+          "Sarah Johnson wants options compared sid",
+          "Michael encourages Sarah Johnson toward ",
+          "Sarah Johnson is considering entrepreneu"
+        ]
+      }
+    ],
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "cosine": {
+      "gold": {
+        "n": 4,
+        "min": 0.8017,
+        "mean": 0.8386,
+        "max": 0.8681
+      },
+      "distractor": {
+        "n": 4,
+        "min": 0.7209,
+        "mean": 0.7303,
+        "max": 0.7362
+      },
+      "filler": {
+        "n": 36,
+        "min": 0.6764,
+        "mean": 0.7456,
+        "max": 0.8716
+      },
+      "suggested_floor": null
+    }
+  },
+  "scenarios": [
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 471,
+      "completion_tokens": 151,
+      "seconds": 117.29
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 490,
+      "completion_tokens": 65,
+      "seconds": 154.01
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson expressed ongoing uncertainty about a software"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 385,
+      "seconds": 79.52
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson is considering entrepreneurship, with ongoing "
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 903,
+      "completion_tokens": 369,
+      "seconds": 78.93
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 273,
+      "seconds": 59.31
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 166,
+      "seconds": 86.86
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 62,
+      "seconds": 145.74
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 524,
+      "completion_tokens": 196,
+      "seconds": 106.45
+    }
+  ],
+  "problems": [
+    "candidate_precision = 0.3333 (needs 0.8)"
+  ]
+}

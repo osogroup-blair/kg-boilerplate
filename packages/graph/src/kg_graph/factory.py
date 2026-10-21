@@ -15,7 +15,7 @@ from graphiti_core import Graphiti
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
 from graphiti_core.llm_client.client import is_server_or_retry_error
-from graphiti_core.llm_client.config import DEFAULT_MAX_TOKENS, LLMConfig, ModelSize
+from graphiti_core.llm_client.config import DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, LLMConfig, ModelSize
 from graphiti_core.llm_client.openai_generic_client import OpenAIGenericClient
 from graphiti_core.prompts.models import Message
 from kg_common.settings import Settings
@@ -62,14 +62,21 @@ class QuietNeo4jDriver(Neo4jDriver):
             self._init_task = None
 
 
+def llm_config(config: ModelConfig, base_url: str) -> LLMConfig:
+    """Graphiti's LLM settings from the purposes file: the extraction and small-extraction aliases and the extraction temperature (Graphiti defaults to 1.0)."""
+    extraction, small = config.purposes["graph_extraction"], config.purposes["graph_extraction_small"]
+    temperature = DEFAULT_TEMPERATURE if extraction.temperature is None else extraction.temperature
+    return LLMConfig(
+        api_key="platform-managed", base_url=base_url, model=extraction.alias, small_model=small.alias, temperature=temperature
+    )
+
+
 def build_graphiti(settings: Settings, transport: RouterTransport, config: ModelConfig) -> Graphiti:
     base_url = settings.router_base_url
     http = httpx.AsyncClient(transport=transport, base_url=base_url, timeout=180)
     # the real key is set by RouterTransport; openai 3.x annotates httpx2 but httpx.AsyncClient works at runtime (asserted by T-GR-05)
     oai = AsyncOpenAI(api_key="platform-managed", base_url=base_url, http_client=http, max_retries=0)  # type: ignore[arg-type]
-    extraction = config.purposes["graph_extraction"].alias
-    small = config.purposes["graph_extraction_small"].alias
-    llm = PlatformLLMClient(LLMConfig(api_key="platform-managed", base_url=base_url, model=extraction, small_model=small), client=oai)
+    llm = PlatformLLMClient(llm_config(config, base_url), client=oai)
     emb = config.embedding
     embedder = E5Embedder(
         OpenAIEmbedder(

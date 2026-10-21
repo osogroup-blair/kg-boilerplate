@@ -194,7 +194,7 @@ p6_additions:
     version: "p5.v1"        # unchanged: a context build is a read, not a pipeline stage
   context:
     ranker: "ctx-rank.v1 (ADR-033)"
-    tokenizer: "tiktoken max(o200k_base, cl100k_base) x (1 + CONTEXT_TOKEN_MARGIN 0.10): PROVISIONAL until TK-02 measures the router's prompt_tokens (ADR-020)"
+    tokenizer: "tiktoken max(o200k_base, cl100k_base) x (1 + CONTEXT_TOKEN_MARGIN 0.20): TK-02 measured on 2026-10-21 (realistic context text within 1.0-1.2x on every alias; oso/code on synthetic UUID/number-heavy text up to 1.82x); still PROVISIONAL, see docs/release/decisions.md"
     compression: "structured (default) | extractive | summarized (opt-in per profile, validated, falls back); purpose context_compression -> oso/fast (PROVISIONAL until make verify-router)"
     query_embedding: "ONCE per build: ModelGateway.embed(kind=query) shared by the graph (graphiti search with query_vector) and the memory search (CX-01, ADR-032 §6)"
     thresholds: "evidence recall >= 0.9 (cases 1-8), irrelevant inclusion <= 10%, temporal correctness 100% (PROPOSED; strict: leakage 0, budget adherence 100%, attribution 100%)"

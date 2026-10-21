@@ -1,0 +1,957 @@
+{
+  "mode": "live",
+  "date": "2026-10-21",
+  "summary": {
+    "scenarios": 24,
+    "candidate_precision": 0.5,
+    "candidate_recall": 0.4,
+    "escalation_violations": 0,
+    "unmapped_subject_leaks": 0,
+    "procedural_auto_activations": 0,
+    "scope_violations": 0,
+    "stage_outcomes_ok": false,
+    "drop_reasons_ok": false,
+    "reviews_ok": false,
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "model_calls_per_event": 1,
+    "tokens_per_event": 810.9,
+    "latency_seconds": {
+      "p50": 22.56,
+      "p95": 47.81
+    },
+    "repeats": {
+      "runs": 3,
+      "precision": {
+        "mean": 0.5222,
+        "min": 0.4,
+        "max": 0.6667
+      },
+      "recall": {
+        "mean": 0.4,
+        "min": 0.4,
+        "max": 0.4
+      },
+      "strict_counters_all_zero": true
+    },
+    "semantic_match": true
+  },
+  "retrieval": {
+    "queries": [
+      {
+        "query": "starting a business",
+        "gold_rank": 2,
+        "distractor_rank": 9,
+        "top3": [
+          "Sarah Johnson is considering entrepreneu",
+          "Michael encourages Sarah Johnson toward ",
+          "Sarah Johnson prefers options presented "
+        ]
+      },
+      {
+        "query": "entrepreneurship",
+        "gold_rank": 2,
+        "distractor_rank": 8,
+        "top3": [
+          "Sarah Johnson is considering entrepreneu",
+          "Michael encourages Sarah Johnson toward ",
+          "Sarah Johnson prefers options presented "
+        ]
+      },
+      {
+        "query": "weekend cycling club ride",
+        "gold_rank": 2,
+        "distractor_rank": 6,
+        "top3": [
+          "Sarah Johnson is a member of the cycling",
+          "Sarah Johnson completed a 40 km ride on ",
+          "Sarah's team ships a quarterly release o"
+        ]
+      },
+      {
+        "query": "how should options be compared when advising",
+        "gold_rank": 1,
+        "distractor_rank": 6,
+        "top3": [
+          "Sarah Johnson prefers options presented ",
+          "Sarah Johnson is considering entrepreneu",
+          "Michael encourages Sarah Johnson toward "
+        ]
+      }
+    ],
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "cosine": {
+      "gold": {
+        "n": 4,
+        "min": 0.8017,
+        "mean": 0.8343,
+        "max": 0.8715
+      },
+      "distractor": {
+        "n": 4,
+        "min": 0.7105,
+        "mean": 0.7273,
+        "max": 0.7354
+      },
+      "filler": {
+        "n": 36,
+        "min": 0.675,
+        "mean": 0.7442,
+        "max": 0.8644
+      },
+      "suggested_floor": null
+    }
+  },
+  "scenarios": [
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 471,
+      "completion_tokens": 177,
+      "seconds": 16.83,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson is a member of a cycling club.",
+          "Sarah Johnson rode 40 km on a Saturday, accompanied by someo"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 474,
+      "completion_tokens": 825,
+      "seconds": 54.96,
+      "run": 1,
+      "judge": [
+        {
+          "required": [
+            "40 km",
+            "cycling"
+          ],
+          "memory": "Sarah Johnson rode 40 km on a Saturday, accompanied by someone named Tom.",
+          "conveys_all": false,
+          "missing": [
+            "cycling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 453,
+      "seconds": 27.88,
+      "run": 1,
+      "judge": [
+        {
+          "required": [
+            "unsure"
+          ],
+          "memory": "Sarah Johnson has expressed ongoing indecision about a software idea, saying she keeps going back and forth and is not sure it is right for her.",
+          "conveys_all": true,
+          "missing": []
+        }
+      ]
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson reports that Michael, whom she has known for y"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 509,
+      "completion_tokens": 1058,
+      "seconds": 101.17,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 305,
+      "seconds": 17.14,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 120,
+      "seconds": 17.72,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 63,
+      "seconds": 7.51,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 524,
+      "completion_tokens": 163,
+      "seconds": 41.87,
+      "run": 1,
+      "judge": []
+    },
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 471,
+      "completion_tokens": 225,
+      "seconds": 14.18,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 490,
+      "completion_tokens": 45,
+      "seconds": 45.78,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 474,
+      "seconds": 21.7,
+      "run": 2,
+      "judge": [
+        {
+          "required": [
+            "unsure"
+          ],
+          "memory": "Sarah Johnson has expressed ongoing uncertainty about a software idea, saying she keeps going back and forth about it and is not sure it is right for her.",
+          "conveys_all": true,
+          "missing": []
+        }
+      ]
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson is considering entrepreneurship as a path she ",
+          "Michael, whom Sarah Johnson has known for years, keeps encou"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 834,
+      "seconds": 36.03,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 252,
+      "seconds": 16.6,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 123,
+      "seconds": 18.49,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 60,
+      "seconds": 8.13,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 530,
+      "completion_tokens": 229,
+      "seconds": 38.68,
+      "run": 2,
+      "judge": []
+    },
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 471,
+      "completion_tokens": 220,
+      "seconds": 14.83,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 490,
+      "completion_tokens": 69,
+      "seconds": 25.47,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 453,
+      "seconds": 24.51,
+      "run": 3,
+      "judge": [
+        {
+          "required": [
+            "unsure"
+          ],
+          "memory": "Sarah Johnson has expressed ongoing indecision about a software idea, saying she keeps going back and forth and is not sure it is right for her.",
+          "conveys_all": true,
+          "missing": []
+        }
+      ]
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson reports that Michael, whom she has known for y"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 509,
+      "completion_tokens": 928,
+      "seconds": 37.59,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 199,
+      "seconds": 19.02,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 122,
+      "seconds": 23.43,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 61,
+      "seconds": 9.79,
+      "run": 3,
+      "judge": []
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 530,
+      "completion_tokens": 236,
+      "seconds": 47.81,
+      "run": 3,
+      "judge": []
+    }
+  ],
+  "repeats": {
+    "runs": 3,
+    "per_run": [
+      {
+        "run": 1,
+        "tp": 2,
+        "fp": 3,
+        "fn": 3,
+        "precision": 0.4,
+        "recall": 0.4
+      },
+      {
+        "run": 2,
+        "tp": 2,
+        "fp": 2,
+        "fn": 3,
+        "precision": 0.5,
+        "recall": 0.4
+      },
+      {
+        "run": 3,
+        "tp": 2,
+        "fp": 1,
+        "fn": 3,
+        "precision": 0.6667,
+        "recall": 0.4
+      }
+    ],
+    "per_scenario": {
+      "mem_bad_json": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          0,
+          0,
+          0
+        ],
+        "tp_mean": 0,
+        "fp_mean": 0,
+        "fn_mean": 0,
+        "seconds": {
+          "mean": 15.28,
+          "min": 14.18,
+          "max": 16.83
+        }
+      },
+      "mem_cyclist": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          2,
+          0,
+          0
+        ],
+        "fn": [
+          1,
+          1,
+          1
+        ],
+        "tp_mean": 0,
+        "fp_mean": 0.67,
+        "fn_mean": 1,
+        "seconds": {
+          "mean": 42.07,
+          "min": 25.47,
+          "max": 54.96
+        }
+      },
+      "mem_escalation": {
+        "tp": [
+          1,
+          1,
+          1
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          0,
+          0,
+          0
+        ],
+        "tp_mean": 1,
+        "fp_mean": 0,
+        "fn_mean": 0,
+        "seconds": {
+          "mean": 24.6967,
+          "min": 21.7,
+          "max": 27.88
+        }
+      },
+      "mem_evt003": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          1,
+          2,
+          1
+        ],
+        "fn": [
+          1,
+          1,
+          1
+        ],
+        "tp_mean": 0,
+        "fp_mean": 1.33,
+        "fn_mean": 1,
+        "seconds": {
+          "mean": 58.2633,
+          "min": 36.03,
+          "max": 101.17
+        }
+      },
+      "mem_evt004": {
+        "tp": [
+          1,
+          1,
+          1
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          0,
+          0,
+          0
+        ],
+        "tp_mean": 1,
+        "fp_mean": 0,
+        "fn_mean": 0,
+        "seconds": {
+          "mean": 17.5867,
+          "min": 16.6,
+          "max": 19.02
+        }
+      },
+      "mem_injection": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          1,
+          1,
+          1
+        ],
+        "tp_mean": 0,
+        "fp_mean": 0,
+        "fn_mean": 1,
+        "seconds": {
+          "mean": 19.88,
+          "min": 17.72,
+          "max": 23.43
+        }
+      },
+      "mem_trivial": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          0,
+          0,
+          0
+        ],
+        "tp_mean": 0,
+        "fp_mean": 0,
+        "fn_mean": 0,
+        "seconds": {
+          "mean": 8.4767,
+          "min": 7.51,
+          "max": 9.79
+        }
+      },
+      "mem_unmapped": {
+        "tp": [
+          0,
+          0,
+          0
+        ],
+        "fp": [
+          0,
+          0,
+          0
+        ],
+        "fn": [
+          0,
+          0,
+          0
+        ],
+        "tp_mean": 0,
+        "fp_mean": 0,
+        "fn_mean": 0,
+        "seconds": {
+          "mean": 42.7867,
+          "min": 38.68,
+          "max": 47.81
+        }
+      }
+    },
+    "overall": {
+      "runs": 3,
+      "precision": {
+        "mean": 0.5222,
+        "min": 0.4,
+        "max": 0.6667
+      },
+      "recall": {
+        "mean": 0.4,
+        "min": 0.4,
+        "max": 0.4
+      },
+      "strict_counters_all_zero": true
+    }
+  },
+  "problems": [
+    "candidate_precision = 0.5 (needs 0.8)"
+  ]
+}

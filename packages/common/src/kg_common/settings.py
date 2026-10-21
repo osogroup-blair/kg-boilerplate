@@ -146,7 +146,9 @@ class Settings(BaseSettings):
 
     # Context engine (P6). The token margin is PROVISIONAL until TK-02 measures the router's prompt_tokens (ADR-020); every trace records the tokenizer id.
     context_api_enabled: bool = True  # False: POST /v1/context/build answers 503 feature_disabled (rollback switch)
-    context_token_margin: float = Field(default=0.10, ge=0.0, le=1.0)
+    context_token_margin: float = Field(
+        default=0.20, ge=0.0, le=1.0
+    )  # live TK-02: realistic context text is within 1.0-1.2x on every alias
     context_source_timeout_ms: int = Field(
         default=1500, ge=50, le=60_000
     )  # per retriever; a source over it is `unavailable` and the package `partial`

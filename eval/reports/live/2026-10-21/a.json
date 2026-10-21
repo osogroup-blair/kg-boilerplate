@@ -1,0 +1,815 @@
+{
+  "step": "a",
+  "command": "tools.verify_router",
+  "exit_code": 1,
+  "seconds": 372.5,
+  "spike_results": {
+    "live-G-05": {
+      "id": "G-05",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "tests": [
+          "test_gateway_live.py::test_g05_chat_usage_and_request_id_round_trip",
+          "test_gateway_live.py::test_g05_embeddings_are_384",
+          "test_gateway_live.py::test_g05_local_only_never_sent",
+          "test_gateway_live.py::test_g05_oso_fast_rejects_json_schema",
+          "test_gateway_live.py::test_g05_structured_output_on_general"
+        ]
+      },
+      "notes": "",
+      "versions": {
+        "python": "3.12.15",
+        "graphiti-core": "0.30.2",
+        "neo4j": "6.4.0",
+        "pydantic": "2.14.0",
+        "openai": "3.29.0",
+        "tiktoken": "0.14.0",
+        "psycopg": "3.3.6",
+        "pgvector": "0.5.1",
+        "fastapi": "0.143.0",
+        "httpx": "0.28.1",
+        "pyjwt": "2.15.1"
+      }
+    },
+    "live-GR-11": {
+      "id": "GR-11",
+      "tag": "LIVE",
+      "status": "fail",
+      "evidence": {
+        "tests": [
+          "test_graphiti_live.py::test_gr11_sarah_extraction_through_the_real_router"
+        ],
+        "failures": [
+          "ies > 0 and request_body_replay.rewind():\n                    await self._sleep_for_retry(\n                        retries_taken=retries_taken,\n                        max_retries=max_retries,\n                        options=input_options,\n                        response=None,\n                    )\n                    continue\n    \n                log.debug(\"Raising connection error\")\n>               raise APIConnectionError(request=request) from err\nE               openai.APIConnectionError: Connection error.\n\n.venv/lib/python3.12/site-packages/openai/_base_client.py:1808: APIConnectionError"
+        ]
+      },
+      "notes": "",
+      "versions": {
+        "python": "3.12.15",
+        "graphiti-core": "0.30.2",
+        "neo4j": "6.4.0",
+        "pydantic": "2.14.0",
+        "openai": "3.29.0",
+        "tiktoken": "0.14.0",
+        "psycopg": "3.3.6",
+        "pgvector": "0.5.1",
+        "fastapi": "0.143.0",
+        "httpx": "0.28.1",
+        "pyjwt": "2.15.1"
+      }
+    },
+    "live-GR-12": {
+      "id": "GR-12",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "tests": [
+          "test_graphiti_live.py::test_gr12_structured_output_aliases_and_single_candidate_fragility"
+        ],
+        "results": {
+          "oso/general": {
+            "status": 422,
+            "error": "unsupported_capability",
+            "valid_json": null
+          },
+          "oso/code": {
+            "status": 200,
+            "error": null,
+            "valid_json": true
+          },
+          "oso/code-high": {
+            "status": 200,
+            "error": null,
+            "valid_json": true
+          },
+          "oso/reasoning": {
+            "status": 503,
+            "error": "routing_failed",
+            "valid_json": null
+          },
+          "oso/frontier": {
+            "status": 200,
+            "error": null,
+            "valid_json": true
+          },
+          "oso/fast": {
+            "status": 422,
+            "error": "unsupported_capability",
+            "valid_json": null
+          },
+          "oso/general+primary_timeout": {
+            "status": 422,
+            "error": "unsupported_capability",
+            "valid_json": null
+          },
+          "oso/code+primary_timeout": {
+            "status": 200,
+            "error": null,
+            "valid_json": false
+          }
+        },
+        "aliases_with_valid_structured_output": [
+          "oso/code",
+          "oso/code-high",
+          "oso/frontier"
+        ],
+        "oso_general_single_candidate_fragile": true,
+        "oso_code_works_as_fallback": true,
+        "oso_fast_rejects_structured": true,
+        "recommend_oso_structured_alias": true
+      },
+      "notes": "Settles compat/model-purposes.yaml: structured purposes use oso/code (fallback oso/code-high) because oso/general has no structured output; request oso/structured (router-contract \u00a711) if oso/general fails under simulated primary_timeout.",
+      "versions": {
+        "python": "3.12.15",
+        "graphiti-core": "0.30.2",
+        "neo4j": "6.4.0",
+        "pydantic": "2.14.0",
+        "openai": "3.29.0",
+        "tiktoken": "0.14.0",
+        "psycopg": "3.3.6",
+        "pgvector": "0.5.1",
+        "fastapi": "0.143.0",
+        "httpx": "0.28.1",
+        "pyjwt": "2.15.1"
+      }
+    },
+    "live-GR-13": {
+      "id": "GR-13",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "tests": [
+          "test_graphiti_live.py::test_gr13_concurrency_probe"
+        ],
+        "probe": {
+          "2": {
+            "ok": 2,
+            "rate_limited": 0,
+            "retry_after": [],
+            "other": []
+          },
+          "4": {
+            "ok": 4,
+            "rate_limited": 0,
+            "retry_after": [],
+            "other": []
+          },
+          "8": {
+            "ok": 8,
+            "rate_limited": 0,
+            "retry_after": [],
+            "other": []
+          },
+          "16": {
+            "ok": 16,
+            "rate_limited": 0,
+            "retry_after": [],
+            "other": []
+          }
+        },
+        "max_clean_parallelism": 16,
+        "recommended_semaphore_limit": 8
+      },
+      "notes": "Largest parallelism with no 429 on oso/fast: 16. Recommended Graphiti SEMAPHORE_LIMIT = 8 (half, for headroom), plus a client-side token bucket under the key's RPM/TPM and Retry-After honoured by the ModelGateway.",
+      "versions": {
+        "python": "3.12.15",
+        "graphiti-core": "0.30.2",
+        "neo4j": "6.4.0",
+        "pydantic": "2.14.0",
+        "openai": "3.29.0",
+        "tiktoken": "0.14.0",
+        "psycopg": "3.3.6",
+        "pgvector": "0.5.1",
+        "fastapi": "0.143.0",
+        "httpx": "0.28.1",
+        "pyjwt": "2.15.1"
+      }
+    },
+    "live-LV-01": {
+      "id": "LV-01",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "health": 200,
+        "models_status": 200,
+        "missing_aliases": [],
+        "extra_aliases": [],
+        "alias_table": {
+          "oso/reasoning": {
+            "capabilities": [
+              "text",
+              "reasoning",
+              "code",
+              "tools",
+              "streaming",
+              "vision",
+              "structured_output"
+            ],
+            "context_length": 131072,
+            "max_output_tokens": 32768
+          },
+          "oso/code": {
+            "capabilities": [
+              "text",
+              "code",
+              "tools",
+              "streaming",
+              "structured_output",
+              "reasoning",
+              "vision"
+            ],
+            "context_length": 262144,
+            "max_output_tokens": 32768
+          },
+          "oso/code-high": {
+            "capabilities": [
+              "text",
+              "code",
+              "tools",
+              "structured_output",
+              "streaming",
+              "reasoning",
+              "vision"
+            ],
+            "context_length": 262144,
+            "max_output_tokens": 32768
+          },
+          "oso/vision": {
+            "capabilities": [
+              "text",
+              "vision",
+              "streaming",
+              "reasoning",
+              "code",
+              "tools",
+              "structured_output"
+            ],
+            "context_length": 262144,
+            "max_output_tokens": 32768
+          },
+          "oso/general-vision": {
+            "capabilities": [
+              "text",
+              "vision",
+              "streaming",
+              "reasoning",
+              "code",
+              "tools",
+              "structured_output"
+            ],
+            "context_length": 262144,
+            "max_output_tokens": 32768
+          },
+          "oso/frontier": {
+            "capabilities": [
+              "text",
+              "code",
+              "tools",
+              "structured_output",
+              "streaming",
+              "reasoning",
+              "vision"
+            ],
+            "context_length": 256000,
+            "max_output_tokens": 32768
+          },
+          "oso/embedding": {
+            "capabilities": [
+              "embedding"
+            ],
+            "context_length": 8192,
+            "max_output_tokens": null
+          },
+          "oso/fast": {
+            "capabilities": [
+              "text",
+              "reasoning",
+              "code",
+              "tools",
+              "streaming",
+              "vision"
+            ],
+            "context_length": 131072,
+            "max_output_tokens": 32768
+          },
+          "oso/general": {
+            "capabilities": [
+              "text",
+              "reasoning",
+              "code",
+              "tools",
+              "streaming",
+              "vision"
+            ],
+            "context_length": 131072,
+            "max_output_tokens": 32768
+          }
+        }
+      },
+      "notes": "",
+      "recorded_at": "2026-10-21T15:56:44Z"
+    },
+    "live-LV-02": {
+      "id": "LV-02",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "bad_key_status": 401,
+        "bad_key_code": "authentication_error",
+        "bad_key_has_request_id_header": true,
+        "good_status": 200,
+        "good_has_gateway_request_id": true,
+        "admin_headers_present": []
+      },
+      "notes": "",
+      "recorded_at": "2026-10-21T15:56:44Z"
+    },
+    "live-LV-03": {
+      "id": "LV-03",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "oso/fast": {
+          "status": 200,
+          "error": null,
+          "model_echo": "oso/fast",
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 16,
+            "total_tokens": 90
+          },
+          "has_content": false,
+          "gateway_request_id": "b15a3a4e-ad2c-4f14-84d9-81b10b62618c"
+        },
+        "oso/general": {
+          "status": 200,
+          "error": null,
+          "model_echo": "oso/general",
+          "usage": {
+            "prompt_tokens": 74,
+            "completion_tokens": 16,
+            "total_tokens": 90
+          },
+          "has_content": false,
+          "gateway_request_id": "8adbacfe-db35-4562-a6b6-c16417300c82"
+        },
+        "oso/code": {
+          "status": 200,
+          "error": null,
+          "model_echo": "oso/code",
+          "usage": {
+            "prompt_tokens": 15,
+            "completion_tokens": 2,
+            "total_tokens": 17
+          },
+          "has_content": true,
+          "gateway_request_id": "97fb990d-af2b-4840-b6cf-dafb2c352405"
+        },
+        "oso/reasoning": {
+          "status": 200,
+          "error": null,
+          "model_echo": "oso/reasoning",
+          "usage": {
+            "prompt_tokens": 14,
+            "completion_tokens": 36,
+            "total_tokens": 50
+          },
+          "has_content": true,
+          "gateway_request_id": "8123898a-2c17-4a01-beb9-cd7bb7a88ac2"
+        },
+        "developer_role_probe": {
+          "status": 400,
+          "error": "invalid_request"
+        }
+      },
+      "notes": "",
+      "recorded_at": "2026-10-21T15:57:07Z"
+    },
+    "live-LV-04": {
+      "id": "LV-04",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "oso/general": {
+          "status": 422,
+          "error": "unsupported_capability",
+          "valid_schema_json": false
+        },
+        "oso/code": {
+          "status": 200,
+          "error": null,
+          "valid_schema_json": true
+        },
+        "oso/code-high": {
+          "status": 200,
+          "error": null,
+          "valid_schema_json": true
+        },
+        "oso/fast": {
+          "status": 422,
+          "error": "unsupported_capability",
+          "valid_schema_json": false
+        },
+        "structured_purpose_aliases": [
+          "oso/code",
+          "oso/code-high"
+        ]
+      },
+      "notes": "",
+      "recorded_at": "2026-10-21T15:57:28Z"
+    },
+    "live-LV-05": {
+      "id": "LV-05",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "dimension": 384,
+        "batch_vectors": 3,
+        "determinism_cosine": 0.9999999999999999,
+        "long_700_tokens": {
+          "status": 502,
+          "error": null
+        },
+        "over_8192_tokens": {
+          "status": 503,
+          "error": "routing_failed"
+        },
+        "e5_semantic_sanity": {
+          "cos_related": 0.8186,
+          "cos_unrelated": 0.7221
+        }
+      },
+      "notes": "Similarity range note: if cos_unrelated is already high (E5 behaviour) Graphiti's 0.6 sim_min_score must be re-tuned.",
+      "recorded_at": "2026-10-21T15:57:30Z"
+    },
+    "live-LV-06": {
+      "id": "LV-06",
+      "tag": "LIVE",
+      "status": "fail",
+      "evidence": {
+        "matrix": {
+          "public": {
+            "oso/fast": {
+              "status": 200,
+              "error": null
+            },
+            "oso/general": {
+              "status": 200,
+              "error": null
+            }
+          },
+          "internal": {
+            "oso/fast": {
+              "status": 200,
+              "error": null
+            },
+            "oso/general": {
+              "status": 200,
+              "error": null
+            }
+          },
+          "confidential": {
+            "oso/fast": {
+              "status": 200,
+              "error": null
+            },
+            "oso/general": {
+              "status": 200,
+              "error": null
+            }
+          },
+          "restricted": {
+            "oso/fast": {
+              "status": 403,
+              "error": "classification_not_permitted"
+            },
+            "oso/general": {
+              "status": 403,
+              "error": "classification_not_permitted"
+            }
+          },
+          "local_only": {
+            "oso/fast": {
+              "status": 403,
+              "error": "classification_not_permitted"
+            },
+            "oso/general": {
+              "status": 403,
+              "error": "classification_not_permitted"
+            }
+          }
+        },
+        "classes_blocked_by_key_cap": [
+          "restricted"
+        ]
+      },
+      "notes": "Key is capped below ['restricted']: ask the router admin to raise maxClassification for the kg-api / kg-worker keys.",
+      "recorded_at": "2026-10-21T15:57:45Z"
+    },
+    "live-LV-07": {
+      "id": "LV-07",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "primary_timeout": {
+          "fallback_default": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          },
+          "fallback_false": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          }
+        },
+        "provider_unavailable": {
+          "fallback_default": {
+            "status": 200,
+            "error": null,
+            "retry_after": null
+          },
+          "fallback_false": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          }
+        },
+        "rate_limited": {
+          "fallback_default": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          },
+          "fallback_false": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          }
+        },
+        "http_500": {
+          "fallback_default": {
+            "status": 200,
+            "error": null,
+            "retry_after": null
+          },
+          "fallback_false": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          }
+        },
+        "circuit_breaker_open": {
+          "fallback_default": {
+            "status": 200,
+            "error": null,
+            "retry_after": null
+          },
+          "fallback_false": {
+            "status": 503,
+            "error": "routing_failed",
+            "retry_after": null
+          }
+        },
+        "structured_on_oso/general+primary_timeout": {
+          "status": 422,
+          "error": "unsupported_capability"
+        }
+      },
+      "notes": "A non-200 for the structured row means oso/general has no structured-output fallback: request oso/structured.",
+      "recorded_at": "2026-10-21T15:57:58Z"
+    },
+    "live-LV-08": {
+      "id": "LV-08",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "request_id": "dbcedc05-4e24-4788-b792-4b65cced2787",
+        "echoed_in_both_headers": true,
+        "manual_confirmation": "PENDING - user checks Operations > Request Logs"
+      },
+      "notes": "Automated half passes when the router reuses our UUID as its request id. The Admin-UI half is manual.",
+      "recorded_at": "2026-10-21T15:57:59Z"
+    },
+    "live-LV-09": {
+      "id": "LV-09",
+      "tag": "LIVE",
+      "status": "fail",
+      "evidence": {
+        "pytest_exit": 1,
+        "statuses": {
+          "G-05": "pass",
+          "GR-11": "fail",
+          "GR-12": "pass",
+          "GR-13": "pass",
+          "TK-02": "pass"
+        },
+        "tail": "                    await self._sleep_for_retry(\n                        retries_taken=retries_taken,\n                        max_retries=max_retries,\n                        options=input_options,\n                        response=None,\n                    )\n                    continue\n    \n                log.debug(\"Raising connection error\")\n>               raise APIConnectionError(request=request) from err\nE               openai.APIConnectionError: Connection error.\n\n.venv/lib/python3.12/site-packages/openai/_base_client.py:1808: APIConnectionError\n------------------------------ Captured log call -------------------------------\nERROR    graphiti_core.llm_client.openai_generic_client:openai_generic_client.py:173 Error in generating LLM response: Connection error.\n=============================== warnings summary ===============================\n.venv/lib/python3.12/site-packages/graphiti_core/driver/search_interface/search_interface.py:22\n  /srv/lab/Applications/boilerplate/kg-boilerplate/spikes/.venv/lib/python3.12/site-packages/graphiti_core/driver/search_interface/search_interface.py:22: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/\n    class SearchInterface(BaseModel):\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED graphiti/test_graphiti_live.py::test_gr11_sarah_extraction_through_the_real_router\n1 failed, 8 passed, 1 warning in 291.27s (0:04:51)\nwarning: `VIRTUAL_ENV=/srv/lab/Applications/boilerplate/kg-boilerplate/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead"
+      },
+      "notes": "Per-check evidence is in spikes/results/<ID>.json (tag LIVE).",
+      "recorded_at": "2026-10-21T16:02:52Z"
+    },
+    "live-LV-10": {
+      "id": "LV-10",
+      "tag": "LIVE",
+      "status": "fail",
+      "evidence": {
+        "exit": 1,
+        "tail": "  File \"/srv/lab/Applications/boilerplate/kg-boilerplate/spikes/.venv/lib/python3.12/site-packages/graphiti_core/llm_client/openai_generic_client.py\", line 155, in _generate_response\n    response = await self.client.chat.completions.create(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/srv/lab/Applications/boilerplate/kg-boilerplate/spikes/.venv/lib/python3.12/site-packages/openai/resources/chat/completions/completions.py\", line 2952, in create\n    return await self._post(\n           ^^^^^^^^^^^^^^^^^\n  File \"/srv/lab/Applications/boilerplate/kg-boilerplate/spikes/.venv/lib/python3.12/site-packages/openai/_base_client.py\", line 2053, in post\n    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/srv/lab/Applications/boilerplate/kg-boilerplate/spikes/.venv/lib/python3.12/site-packages/openai/_base_client.py\", line 1838, in request\n    raise self._make_status_error_from_response(err.response) from None\nopenai.UnprocessableEntityError: Error code: 422 - {'error': {'message': 'No target for \"oso/general\" satisfies the request (unsupported_capability)', 'type': 'unsupported_capability', 'code': 'unsupported_capability', 'request_id': '5d6adb13-5274-43c0-ad9a-81dabfa07695', 'details': {'excluded': [{'target': {'modelId': 'gpt-oss-120b', 'provider': 'google-vertex'}, 'reason': 'unsupported_capability', 'stage': 'requirements'}, {'target': {'modelId': 'gemma-4-26b', 'provider': 'google-vertex'}, 'reason': 'unsupported_capability', 'stage': 'requirements'}]}, 'routing_decision': {'requestedRoute': 'oso/general', 'routingMode': 'alias', 'selectedDeployment': None, 'policy': None, 'requirements': {'capabilities': ['text', 'structured_output'], 'privacy': 'closed_allowed', 'dataClassification': 'internal'}, 'whySummary': ['Request could not be routed to any model deployment', 'Primary candidate rejected: unsupported_capability (at requirements)', '2 candidate(s) excluded during policy evaluation'], 'candidates': [{'deployment': 'gpt-oss-120b', 'provider': 'google-vertex', 'eligible': False, 'selected': False, 'reasons': ['Excluded at requirements: unsupported_capability'], 'stage': 'requirements'}, {'deployment': 'gemma-4-26b', 'provider': 'google-vertex', 'eligible': False, 'selected': False, 'reasons': ['Excluded at requirements: unsupported_capability'], 'stage': 'requirements'}], 'stages': [{'stage': 'access', 'title': 'Stage 1: Access Verification', 'passed': True, 'summary': 'Client \"kg-boilerplate_local\" verified with active access'}, {'stage': 'data_policy', 'title': 'Stage 2: Data Policy & Classification', 'passed': True, 'summary': 'Effective privacy ceiling: closed_allowed (classification: internal, data policy: builtin-internal)', 'details': {'classification': 'internal', 'dataPolicySlug': 'builtin-internal', 'externalAllowed': True}}, {'stage': 'alias_resolution', 'title': 'Stage 3: Alias Resolution', 'passed': True, 'summary': 'Resolved alias \"oso/general\" to 2 candidate deployment(s)', 'details': {'targetModelIds': ['gpt-oss-120b', 'gemma-4-26b'], 'isDirectModel': False}}, {'stage': 'routing_policy_match', 'title': 'Stage 4: Routing Policy Match', 'passed': True, 'summary': 'Default routing policy applied (strategy: priority)', 'details': {'strategy': 'priority'}}, {'stage': 'requirements', 'title': 'Stage 5: Requirements & Health Evaluation', 'passed': False, 'summary': '0 of 2 candidate(s) passed technical and health checks', 'details': {'passedTargets': [], 'excludedCount': 2}}, {'stage': 'governance_limits', 'title': 'Stage 6: Governance & Limits Verification', 'passed': False, 'summary': 'No rate/usage limit or budget currently restricting this request', 'details': {}}, {'stage': 'selection_strategy', 'title': 'Stage 7: Selection Strategy (priority)', 'passed': False, 'summary': 'No deployment eligible for selection', 'details': {'strategy': 'priority', 'rankedCandidates': []}}, {'stage': 'fallback_chain', 'title': 'Stage 8: Fallback Chain Execution Order', 'passed': True, 'summary': 'No fallback steps available', 'details': {'fallbacks': [], 'triggers': ['provider_unavailable', 'timeout', 'rate_limited', 'context_limit_exceeded', 'http_5xx'], 'skippedSteps': [], 'suppressed': [], 'blockedByDataPolicy': []}}], 'governanceApplied': [], 'costRestrictionsApplied': [], 'fallbackChain': [], 'fallbackHops': [], 'attempts': [], 'traceEvents': [{'timestamp': '2026-10-21T16:02:55.191Z', 'event': 'Request received and authenticated', 'detail': {'route': 'oso/general', 'environment': 'development', 'client': 'kg-boilerplate_local'}}, {'timestamp': '2026-10-21T16:02:55.201Z', 'event': 'Stage 1: Access Verification: Passed', 'stage': 'access', 'detail': {'summary': 'Client \"kg-boilerplate_local\" verified with active access'}}, {'timestamp': '2026-10-21T16:02:55.206Z', 'event': 'Stage 2: Data Policy & Classification: Passed', 'stage': 'data_policy', 'detail': {'summary': 'Effective privacy ceiling: closed_allowed (classification: internal, data policy: builtin-internal)', 'classification': 'internal', 'dataPolicySlug': 'builtin-internal', 'externalAllowed': True}}, {'timestamp': '2026-10-21T16:02:55.211Z', 'event': 'Stage 3: Alias Resolution: Passed', 'stage': 'alias_resolution', 'detail': {'summary': 'Resolved alias \"oso/general\" to 2 candidate deployment(s)', 'targetModelIds': ['gpt-oss-120b', 'gemma-4-26b'], 'isDirectModel': False}}, {'timestamp': '2026-10-21T16:02:55.216Z', 'event': 'Stage 4: Routing Policy Match: Passed', 'stage': 'routing_policy_match', 'detail': {'summary': 'Default routing policy applied (strategy: priority)', 'strategy': 'priority'}}, {'timestamp': '2026-10-21T16:02:55.221Z', 'event': 'Stage 5: Requirements & Health Evaluation: Failed', 'stage': 'requirements', 'detail': {'summary': '0 of 2 candidate(s) passed technical and health checks', 'passedTargets': [], 'excludedCount': 2}}, {'timestamp': '2026-10-21T16:02:55.226Z', 'event': 'Stage 6: Governance & Limits Verification: Failed', 'stage': 'governance_limits', 'detail': {'summary': 'No rate/usage limit or budget currently restricting this request'}}, {'timestamp': '2026-10-21T16:02:55.231Z', 'event': 'Stage 7: Selection Strategy (priority): Failed', 'stage': 'selection_strategy', 'detail': {'summary': 'No deployment eligible for selection', 'strategy': 'priority', 'rankedCandidates': []}}, {'timestamp': '2026-10-21T16:02:55.236Z', 'event': 'Stage 8: Fallback Chain Execution Order: Passed', 'stage': 'fallback_chain', 'detail': {'summary': 'No fallback steps available', 'fallbacks': [], 'triggers': ['provider_unavailable', 'timeout', 'rate_limited', 'context_limit_exceeded', 'http_5xx'], 'skippedSteps': [], 'suppressed': [], 'blockedByDataPolicy': []}}, {'timestamp': '2026-10-21T16:02:55.291Z', 'event': 'Routing decision completed', 'detail': {'selected': 'none'}}]}}}",
+        "file": "tools/mock_router/fixtures/recorded-sarah.json"
+      },
+      "notes": "Fixtures contain synthetic Sarah content only. Re-run the mock tests after recording.",
+      "recorded_at": "2026-10-21T16:02:55Z"
+    },
+    "live-TK-02": {
+      "id": "TK-02",
+      "tag": "LIVE",
+      "status": "pass",
+      "evidence": {
+        "tests": [
+          "test_tokenizer_live.py::test_tk02_calibrate_against_router_prompt_tokens"
+        ],
+        "ratios": {
+          "oso/fast:planning_package": {
+            "observed": 130,
+            "platform_raw": 131,
+            "ratio": 0.992
+          },
+          "oso/fast:planning_x20": {
+            "observed": 2600,
+            "platform_raw": 2620,
+            "ratio": 0.992
+          },
+          "oso/fast:prose_english": {
+            "observed": 401,
+            "platform_raw": 401,
+            "ratio": 1.0
+          },
+          "oso/fast:json_facts": {
+            "observed": 2442,
+            "platform_raw": 2442,
+            "ratio": 1.0
+          },
+          "oso/fast:uuid_heavy": {
+            "observed": 2529,
+            "platform_raw": 2529,
+            "ratio": 1.0
+          },
+          "oso/fast:multilingual": {
+            "observed": 441,
+            "platform_raw": 649,
+            "ratio": 0.68
+          },
+          "oso/fast:code_and_paths": {
+            "observed": 456,
+            "platform_raw": 456,
+            "ratio": 1.0
+          },
+          "oso/fast:numbers_dates": {
+            "observed": 1838,
+            "platform_raw": 1838,
+            "ratio": 1.0
+          },
+          "oso/general:planning_package": {
+            "observed": 126,
+            "platform_raw": 131,
+            "ratio": 0.962
+          },
+          "oso/general:planning_x20": {
+            "observed": 2596,
+            "platform_raw": 2620,
+            "ratio": 0.991
+          },
+          "oso/general:prose_english": {
+            "observed": 397,
+            "platform_raw": 401,
+            "ratio": 0.99
+          },
+          "oso/general:json_facts": {
+            "observed": 2442,
+            "platform_raw": 2442,
+            "ratio": 1.0
+          },
+          "oso/general:uuid_heavy": {
+            "observed": 2525,
+            "platform_raw": 2529,
+            "ratio": 0.998
+          },
+          "oso/general:multilingual": {
+            "observed": 437,
+            "platform_raw": 649,
+            "ratio": 0.673
+          },
+          "oso/general:code_and_paths": {
+            "observed": 452,
+            "platform_raw": 456,
+            "ratio": 0.991
+          },
+          "oso/general:numbers_dates": {
+            "observed": 1834,
+            "platform_raw": 1838,
+            "ratio": 0.998
+          },
+          "oso/code:planning_package": {
+            "observed": 155,
+            "platform_raw": 131,
+            "ratio": 1.183
+          },
+          "oso/code:planning_x20": {
+            "observed": 3100,
+            "platform_raw": 2620,
+            "ratio": 1.183
+          },
+          "oso/code:prose_english": {
+            "observed": 401,
+            "platform_raw": 401,
+            "ratio": 1.0
+          },
+          "oso/code:json_facts": {
+            "observed": 2792,
+            "platform_raw": 2442,
+            "ratio": 1.143
+          },
+          "oso/code:uuid_heavy": {
+            "observed": 4614,
+            "platform_raw": 2529,
+            "ratio": 1.824
+          },
+          "oso/code:multilingual": {
+            "observed": 521,
+            "platform_raw": 649,
+            "ratio": 0.803
+          },
+          "oso/code:code_and_paths": {
+            "observed": 480,
+            "platform_raw": 456,
+            "ratio": 1.053
+          },
+          "oso/code:numbers_dates": {
+            "observed": 2946,
+            "platform_raw": 1838,
+            "ratio": 1.603
+          },
+          "oso/reasoning:planning_package": {
+            "observed": 190,
+            "platform_raw": 131,
+            "ratio": 1.45
+          },
+          "oso/reasoning:planning_x20": {
+            "observed": 2660,
+            "platform_raw": 2620,
+            "ratio": 1.015
+          },
+          "oso/reasoning:prose_english": {
+            "observed": 401,
+            "platform_raw": 401,
+            "ratio": 1.0
+          },
+          "oso/reasoning:json_facts": {
+            "observed": 2442,
+            "platform_raw": 2442,
+            "ratio": 1.0
+          },
+          "oso/reasoning:uuid_heavy": {
+            "observed": 2523,
+            "platform_raw": 2529,
+            "ratio": 0.998
+          },
+          "oso/reasoning:multilingual": {
+            "observed": 561,
+            "platform_raw": 649,
+            "ratio": 0.864
+          },
+          "oso/reasoning:code_and_paths": {
+            "observed": 456,
+            "platform_raw": 456,
+            "ratio": 1.0
+          },
+          "oso/reasoning:numbers_dates": {
+            "observed": 1838,
+            "platform_raw": 1838,
+            "ratio": 1.0
+          }
+        },
+        "worst_case_overshoot": 0.824,
+        "recommended_margin": 0.9,
+        "covers_all_samples": true
+      },
+      "notes": "Worst observed router/platform token ratio exceeds 1 by 82.4%; recommended margin 90%. Update TokenCounter.margin and ADR-020 with this number.",
+      "versions": {
+        "python": "3.12.15",
+        "graphiti-core": "0.30.2",
+        "neo4j": "6.4.0",
+        "pydantic": "2.14.0",
+        "openai": "3.29.0",
+        "tiktoken": "0.14.0",
+        "psycopg": "3.3.6",
+        "pgvector": "0.5.1",
+        "fastapi": "0.143.0",
+        "httpx": "0.28.1",
+        "pyjwt": "2.15.1"
+      }
+    }
+  }
+}

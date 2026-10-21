@@ -137,6 +137,8 @@ class ModelGateway:
                 body: dict[str, Any] = {"model": alias, "messages": messages}
                 if max_tokens:
                     body["max_tokens"] = max_tokens
+                if spec.temperature is not None:
+                    body["temperature"] = spec.temperature
                 if response_schema is not None:
                     body["response_format"] = {
                         "type": "json_schema",

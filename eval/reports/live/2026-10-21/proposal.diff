@@ -1,0 +1,83 @@
+--- a/.env.example
++++ b/.env.example
+@@ -51,7 +51,7 @@
+ MCP_PORT=8010
+ OTEL_EXPORTER_OTLP_ENDPOINT=
+ GRAPHITI_TELEMETRY_ENABLED=false
+-SEMAPHORE_LIMIT=4
++SEMAPHORE_LIMIT=8
+ 
+ # --- Graph projection (P2, moved onto the outbox in P3) -----------------------------
+ # Commands enqueue a graph_projection job in their own transaction; the worker's outbox dispatcher runs it (the P2 sweeper was deleted in P4).
+@@ -84,3 +84,4 @@
+ GRAPH_STORE_EPISODE_CONTENT=true
+ # Earlier episodes sent as extraction context. 0 = every interaction is extracted on its own (deterministic, and no cross-interaction content in a prompt).
+ GRAPH_PREVIOUS_EPISODES=0
++CONTEXT_TOKEN_MARGIN=0.85
+--- a/compat/model-purposes.yaml
++++ b/compat/model-purposes.yaml
+@@ -5,7 +5,7 @@
+ #   plain-text purposes stay on oso/general / oso/fast. If the router admin adds an `oso/structured` alias (router-contract section 11), change these lines only.
+ # Source for alias and capability facts: oso_model_router scripts/seed-logical-router.ts (ALIASES, DEPLOYMENTS).
+ version: 1
+-status: provisional
++status: accepted
+ model_purposes:
+   graph_extraction:
+     alias: oso/code                 # -> oso/structured if the router admin creates it (docs/router-contract.md section 11)
+--- a/docs/adr/ADR-012-model-gateway-and-router-contract.md
++++ b/docs/adr/ADR-012-model-gateway-and-router-contract.md
+@@ -1,6 +1,6 @@
+ # ADR-012: Model gateway and router contract
+ 
+-**Status:** Provisional (pending live router verification: G-05, GR-11, GR-12, GR-13, LV-01..LV-10)  **Decision refs:** DEC-02, SEC-06, ING-06
++**Status:** Accepted (live session 2026-10-21)  **Decision refs:** DEC-02, SEC-06, ING-06
+ **Evidence:** G-01..G-04, MR-01, GR-02, GR-05 · `docs/router-contract.md`, `compat/model-purposes.yaml`, `tools/mock_router`, `spikes/gateway`
+ 
+ ## Context
+--- a/docs/adr/ADR-013-embeddings.md
++++ b/docs/adr/ADR-013-embeddings.md
+@@ -1,6 +1,6 @@
+ # ADR-013: Embeddings
+ 
+-**Status:** Provisional (pending LV-05 and GR-11)  **Decision refs:** DEC-08 (part), DEC-02
++**Status:** Accepted (live session 2026-10-21)  **Decision refs:** DEC-08 (part), DEC-02
+ **Evidence:** G-04, PV-04, GR-02, GR-10, MR-01 · `docs/router-contract.md` §6
+ 
+ ## Context
+--- a/docs/adr/ADR-020-tokenizer-auth-networking.md
++++ b/docs/adr/ADR-020-tokenizer-auth-networking.md
+@@ -1,6 +1,6 @@
+ # ADR-020: Tokenizer and budget accounting; dev auth; dev networking
+ 
+-**Status:** Accepted for dev auth and networking; Provisional for the tokenizer margin (pending TK-02)  **Decision refs:** CTX-01, DEC-03  **Evidence:** TK-01, AU-01, NW-01
++**Status:** Accepted for dev auth and networking; tokenizer margin calibrated by TK-02 (live session 2026-10-21)  **Decision refs:** CTX-01, DEC-03  **Evidence:** TK-01, AU-01, NW-01
+ 
+ ## Tokenizer and budget (CTX-01)
+ - The router picks the model, so the platform counts **its own output** (the context package), not router calls.
+--- a/tools/mock_router/latency.live.json
++++ b/tools/mock_router/latency.live.json
+@@ -0,0 +1,23 @@
++{
++  "_note": "captured by the live session (tools/live_session, step g); replaces the PROVISIONAL profile",
++  "chat": {
++    "oso/fast": {
++      "p50_ms": 605,
++      "p95_ms": 2544
++    },
++    "oso/general": {
++      "p50_ms": 915,
++      "p95_ms": 39717
++    },
++    "oso/code": {
++      "p50_ms": 1098,
++      "p95_ms": 1679
++    }
++  },
++  "embedding": {
++    "oso/embedding": {
++      "p50_ms": 232,
++      "p95_ms": 549
++    }
++  }
++}

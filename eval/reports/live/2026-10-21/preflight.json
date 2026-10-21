@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "checks": {
+    "router_reachable": {
+      "ok": true,
+      "url": "https://models.oso.group"
+    },
+    "aliases": {
+      "ok": true,
+      "missing": []
+    },
+    "key_not_admin": {
+      "ok": true,
+      "status": 200,
+      "admin_headers": []
+    },
+    "classification_ceiling": {
+      "ok": true,
+      "highest_accepted": "confidential",
+      "note": "the test data is `internal`; `restricted` is what the egress policy allows"
+    },
+    "postgres": {
+      "ok": true
+    },
+    "neo4j": {
+      "ok": true
+    },
+    "cost_estimate": {
+      "ok": true,
+      "tokens": {
+        "extraction": 29020,
+        "memory": 20516,
+        "context": 11074,
+        "consolidation": 18000,
+        "simulation": 18000,
+        "verify_router_and_calibration": 48000
+      },
+      "total_tokens": 144610,
+      "price_per_mtok": {
+        "input": 0.22,
+        "output": 1.8
+      },
+      "safety_factor": 3,
+      "estimated_usd": 0.3
+    }
+  }
+}

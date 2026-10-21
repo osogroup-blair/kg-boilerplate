@@ -1,0 +1,271 @@
+{
+  "mode": "live",
+  "date": "2026-10-21",
+  "summary": {
+    "scenarios": 8,
+    "candidate_precision": 0.25,
+    "candidate_recall": 0.2,
+    "escalation_violations": 0,
+    "unmapped_subject_leaks": 0,
+    "procedural_auto_activations": 0,
+    "scope_violations": 0,
+    "stage_outcomes_ok": false,
+    "drop_reasons_ok": false,
+    "reviews_ok": false,
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 1,
+    "model_calls_per_event": 1,
+    "tokens_per_event": 790.2,
+    "latency_seconds": {
+      "p50": 42.47,
+      "p95": 55.82
+    }
+  },
+  "retrieval": {
+    "queries": [
+      {
+        "query": "starting a business",
+        "gold_rank": 1,
+        "distractor_rank": 5,
+        "top3": [
+          "Michael encourages Sarah Johnson's entre",
+          "Sarah Johnson prefers options laid out s",
+          "Sarah books conference travel through th"
+        ]
+      },
+      {
+        "query": "entrepreneurship",
+        "gold_rank": 1,
+        "distractor_rank": 4,
+        "top3": [
+          "Michael encourages Sarah Johnson's entre",
+          "Sarah Johnson prefers options laid out s",
+          "Sarah books conference travel through th"
+        ]
+      },
+      {
+        "query": "weekend cycling club ride",
+        "gold_rank": 1,
+        "distractor_rank": 3,
+        "top3": [
+          "Sarah Johnson is a cycling club member w",
+          "Sarah's team ships a quarterly release o",
+          "Michael encourages Sarah Johnson's entre"
+        ]
+      },
+      {
+        "query": "how should options be compared when advising",
+        "gold_rank": 1,
+        "distractor_rank": 4,
+        "top3": [
+          "Sarah Johnson prefers options laid out s",
+          "Michael encourages Sarah Johnson's entre",
+          "Sarah books conference travel through th"
+        ]
+      }
+    ],
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 1,
+    "cosine": {
+      "gold": {
+        "n": 4,
+        "min": 0.8174,
+        "mean": 0.8473,
+        "max": 0.8701
+      },
+      "distractor": {
+        "n": 4,
+        "min": 0.7215,
+        "mean": 0.7388,
+        "max": 0.7554
+      },
+      "filler": {
+        "n": 28,
+        "min": 0.6907,
+        "mean": 0.7378,
+        "max": 0.7847
+      },
+      "suggested_floor": 0.801
+    }
+  },
+  "scenarios": [
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 497,
+      "completion_tokens": 575,
+      "seconds": 55.82
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 490,
+      "completion_tokens": 113,
+      "seconds": 53.62
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Sarah Johnson has expressed ongoing uncertainty about whethe"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 246,
+      "seconds": 34.32
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Michael repeatedly and actively encourages Sarah Johnson to "
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 506,
+      "completion_tokens": 372,
+      "seconds": 50.62
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 255,
+      "seconds": 17.55
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 163,
+      "seconds": 23.8
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 40,
+      "seconds": 14.05
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "unexpected": [
+          "Priya Raman suggested a book about product design to Sarah J"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 512,
+      "completion_tokens": 618,
+      "seconds": 75.59
+    }
+  ],
+  "problems": [
+    "candidate_precision = 0.25 (needs 0.8)",
+    "distractor_in_top3 = 1 (must be 0)"
+  ]
+}

@@ -31,7 +31,7 @@ def _url(path: str) -> str:
 
 
 async def test_gr11_sarah_extraction_through_the_real_router(ontology):
-    rig = Rig(live=True, model="oso/code", small_model="oso/code")  # oso/general rejects structured output on this router (GR-12), so extraction uses oso/code
+    rig = Rig(live=True, model="oso/code-high", small_model="oso/code-high")  # oso/general rejects structured output on this router (GR-12), so extraction uses oso/code-high (glm-5.2 first)
     await rig.g.build_indices_and_constraints()
     gid = new_group()
     per_episode = []
@@ -94,7 +94,7 @@ async def test_gr12_structured_output_aliases_and_single_candidate_fragility():
     rp.note("GR-12", "Settles compat/model-purposes.yaml: structured purposes use oso/code (fallback oso/code-high) because oso/general has no structured output; "
                      "request oso/structured (router-contract §11) if oso/general fails under simulated primary_timeout.")
     # decision 2026-10-19 (live run): oso/general and oso/fast answer unsupported_capability; oso/code is the primary for structured purposes
-    assert out["oso/fast"]["error"] == "unsupported_capability" and "oso/code" in works
+    assert out["oso/fast"]["error"] == "unsupported_capability" and "oso/code-high" in works
 
 
 def _valid_people(body) -> bool:

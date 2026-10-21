@@ -1,0 +1,266 @@
+{
+  "mode": "live",
+  "date": "2026-10-21",
+  "summary": {
+    "scenarios": 8,
+    "candidate_precision": 0.6667,
+    "candidate_recall": 0.4,
+    "escalation_violations": 0,
+    "unmapped_subject_leaks": 0,
+    "procedural_auto_activations": 0,
+    "scope_violations": 0,
+    "stage_outcomes_ok": false,
+    "drop_reasons_ok": false,
+    "reviews_ok": false,
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "model_calls_per_event": 1,
+    "tokens_per_event": 781.5,
+    "latency_seconds": {
+      "p50": 46.53,
+      "p95": 81.62
+    }
+  },
+  "retrieval": {
+    "queries": [
+      {
+        "query": "starting a business",
+        "gold_rank": 1,
+        "distractor_rank": 7,
+        "top3": [
+          "Michael actively encourages Sarah Johnso",
+          "Sarah Johnson prefers side-by-side optio",
+          "Sarah books conference travel through th"
+        ]
+      },
+      {
+        "query": "entrepreneurship",
+        "gold_rank": 1,
+        "distractor_rank": 7,
+        "top3": [
+          "Michael actively encourages Sarah Johnso",
+          "Sarah Johnson prefers side-by-side optio",
+          "Sarah books conference travel through th"
+        ]
+      },
+      {
+        "query": "weekend cycling club ride",
+        "gold_rank": 2,
+        "distractor_rank": 6,
+        "top3": [
+          "Sarah Johnson is a member of the cycling",
+          "Sarah Johnson completed a 40 km cycling ",
+          "Sarah's team ships a quarterly release o"
+        ]
+      },
+      {
+        "query": "how should options be compared when advising",
+        "gold_rank": 1,
+        "distractor_rank": 6,
+        "top3": [
+          "Sarah Johnson prefers side-by-side optio",
+          "Michael actively encourages Sarah Johnso",
+          "Sarah books conference travel through th"
+        ]
+      }
+    ],
+    "recall_at_3": 1.0,
+    "distractor_in_top3": 0,
+    "cosine": {
+      "gold": {
+        "n": 4,
+        "min": 0.8052,
+        "mean": 0.8379,
+        "max": 0.8612
+      },
+      "distractor": {
+        "n": 4,
+        "min": 0.7065,
+        "mean": 0.7273,
+        "max": 0.7421
+      },
+      "filler": {
+        "n": 32,
+        "min": 0.675,
+        "mean": 0.7376,
+        "max": 0.8244
+      },
+      "suggested_floor": null
+    }
+  },
+  "scenarios": [
+    {
+      "id": "mem_bad_json",
+      "stage_ok": false,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": false,
+      "chat_calls": 1,
+      "prompt_tokens": 471,
+      "completion_tokens": 205,
+      "seconds": 16.89
+    },
+    {
+      "id": "mem_cyclist",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 521,
+      "completion_tokens": 332,
+      "seconds": 81.62
+    },
+    {
+      "id": "mem_escalation",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 484,
+      "completion_tokens": 467,
+      "seconds": 27.69
+    },
+    {
+      "id": "mem_evt003",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 1,
+        "unexpected": [
+          "Michael, whom Sarah Johnson has known for years, has been co"
+        ]
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 509,
+      "completion_tokens": 519,
+      "seconds": 60.42
+    },
+    {
+      "id": "mem_evt004",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 491,
+      "completion_tokens": 354,
+      "seconds": 65.63
+    },
+    {
+      "id": "mem_injection",
+      "stage_ok": true,
+      "drops_ok": true,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1,
+        "unexpected": []
+      },
+      "reviews_ok": false,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 494,
+      "completion_tokens": 128,
+      "seconds": 32.63
+    },
+    {
+      "id": "mem_trivial",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 466,
+      "completion_tokens": 59,
+      "seconds": 29.94
+    },
+    {
+      "id": "mem_unmapped",
+      "stage_ok": true,
+      "drops_ok": false,
+      "memories": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "unexpected": []
+      },
+      "reviews_ok": true,
+      "escalation_violations": 0,
+      "unmapped_subject_leaks": 0,
+      "procedural_auto_activations": 0,
+      "scope_violations": 0,
+      "error_code_ok": true,
+      "chat_calls": 1,
+      "prompt_tokens": 522,
+      "completion_tokens": 230,
+      "seconds": 93.65
+    }
+  ],
+  "problems": [
+    "candidate_precision = 0.6667 (needs 0.8)"
+  ]
+}

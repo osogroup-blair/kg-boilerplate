@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CLASSIFICATION_ORDER = ["public", "internal", "confidential", "restricted", "local_only"]
 
@@ -21,6 +21,9 @@ class PurposeSpec(BaseModel):
     requires: list[str] = []
     fallback_alias: str | None = None
     task_type: str = "general"
+    # Sampling temperature sent with every request of this purpose. None = the router's default (documented as 0.7), which is wrong for structured extraction:
+    # the same input then gives different answers on every run. Graphiti's own default is 1.0, so the Graphiti client takes this value too.
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
 
 
 class EmbeddingSpec(BaseModel):

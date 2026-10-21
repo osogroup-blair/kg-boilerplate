@@ -22,3 +22,17 @@ def test_group_id_only_from_workspace_context():
         GroupId("ws-x")  # type: ignore[call-arg]
     with pytest.raises(AttributeError):
         gid.value = "ws-other"  # type: ignore[misc]
+
+
+def test_graphiti_takes_the_extraction_aliases_and_temperature_from_the_purposes_file():
+    from kg_common.settings import Settings
+    from kg_graph.factory import llm_config
+    from kg_modelgw.config import load_config
+
+    s = Settings(_env_file=None, env="test")
+    cfg = load_config(s.model_purposes_path, s.pricing_path)
+    llm = llm_config(cfg, "http://router/v1")
+    assert (llm.model, llm.small_model) == (cfg.purposes["graph_extraction"].alias, cfg.purposes["graph_extraction_small"].alias)
+    assert llm.temperature == 0.0  # Graphiti's own default is 1.0
+    cfg.purposes["graph_extraction"].temperature = None
+    assert llm_config(cfg, "http://router/v1").temperature == 1  # unset: Graphiti's default, unchanged behaviour

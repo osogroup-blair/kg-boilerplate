@@ -1,5 +1,6 @@
 # Purpose -> router alias map (Phase 0 §2.3). The platform refers to PURPOSES, never models.
-# Status: PROVISIONAL until `make live-session-apply`. `make verify-router` ran against https://models.oso.group on 2026-10-19 (LV-04 / GR-12):
+# Status: PROVISIONAL until `make live-session-apply`. Live comparison 2026-10-21 (docs/release/decisions.md): extraction on oso/code-high (glm-5.2 first) scores
+#   precision 0.86 / recall 1.0 at a 28 s median, against 0.67 / 0.67 at 105 s on oso/code (qwen3-coder first); oso/code is the fallback. `make verify-router` ran against https://models.oso.group on 2026-10-19 (LV-04 / GR-12):
 #   oso/general and oso/fast answer 422 unsupported_capability to response_format json_schema; oso/code, oso/code-high and oso/frontier answer valid JSON;
 #   oso/reasoning was inconsistent (invalid JSON once, 503 routing_failed once). So every STRUCTURED purpose uses oso/code with oso/code-high as fallback, and only
 #   plain-text purposes stay on oso/general / oso/fast. If the router admin adds an `oso/structured` alias (router-contract section 11), change these lines only.
@@ -8,29 +9,34 @@ version: 1
 status: provisional
 model_purposes:
   graph_extraction:
-    alias: oso/code                 # -> oso/structured if the router admin creates it (docs/router-contract.md section 11)
+    alias: oso/code-high                 # -> oso/structured if the router admin creates it (docs/router-contract.md section 11)
     requires: [structured_output]
-    fallback_alias: oso/code-high
+    temperature: 0                  # structured extraction must be repeatable: the router default (0.7) and Graphiti's (1.0) gave different answers per run
+    fallback_alias: oso/code
     task_type: extraction
   graph_extraction_small:
-    alias: oso/code                 # NOT oso/fast or oso/general: neither supports structured output on the live router (422 unsupported_capability)
+    alias: oso/code-high                 # NOT oso/fast or oso/general: neither supports structured output on the live router (422 unsupported_capability)
     requires: [structured_output]
-    fallback_alias: oso/code-high
+    temperature: 0                  # structured extraction must be repeatable: the router default (0.7) and Graphiti's (1.0) gave different answers per run
+    fallback_alias: oso/code
     task_type: extraction
   memory_extraction:
-    alias: oso/code
+    alias: oso/code-high
     requires: [structured_output]
-    fallback_alias: oso/code-high
+    temperature: 0                  # structured extraction must be repeatable: the router default (0.7) and Graphiti's (1.0) gave different answers per run
+    fallback_alias: oso/code
     task_type: extraction
   memory_consolidation:
-    alias: oso/code                 # P8: a condensed group of memories, validated sentence by sentence and ALWAYS reviewed (ADR-043)
+    alias: oso/code-high                 # P8: a condensed group of memories, validated sentence by sentence and ALWAYS reviewed (ADR-043)
     requires: [structured_output]
-    fallback_alias: oso/code-high
+    temperature: 0                  # structured extraction must be repeatable: the router default (0.7) and Graphiti's (1.0) gave different answers per run
+    fallback_alias: oso/code
     task_type: summarization
   ontology_simulation:
-    alias: oso/code                 # P8: extraction of sample interactions under a DRAFT ontology, in an isolated staging namespace (ADR-046)
+    alias: oso/code-high                 # P8: extraction of sample interactions under a DRAFT ontology, in an isolated staging namespace (ADR-046)
     requires: [structured_output]
-    fallback_alias: oso/code-high
+    temperature: 0                  # structured extraction must be repeatable: the router default (0.7) and Graphiti's (1.0) gave different answers per run
+    fallback_alias: oso/code
     task_type: extraction
   graph_projection:
     alias: oso/embedding            # embedding-only: deterministic command projections write nodes/edges directly and never call a chat model (ADR-016)

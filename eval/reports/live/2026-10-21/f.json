@@ -1,0 +1,36 @@
+{
+  "step": "f",
+  "command": "eval.simulation.run_eval --mode live",
+  "exit_code": 1,
+  "seconds": 188.8,
+  "report": {
+    "mode": "live",
+    "date": "2026-10-21",
+    "checks": {
+      "estimate_calls": 12,
+      "estimate_usd": 0.008369,
+      "preview_status": "previewed",
+      "status": "completed",
+      "episodes": 3,
+      "runnable": 3,
+      "facts_by_type": {
+        "MANAGES": 3,
+        "WORKS_AT": 2,
+        "MEETS_WITH": 1
+      },
+      "new_relationship_types": [
+        "MANAGES",
+        "MEETS_WITH"
+      ],
+      "diff": 3,
+      "cost_actual": 0.011603,
+      "staging_nodes_left": 0,
+      "workspace_rows_changed": false
+    },
+    "problems": [
+      "a new relationship type the draft does not declare was reported"
+    ],
+    "id": "9ea5faae-b81e-4c5a-9e47-ee42680dc91a"
+  },
+  "report_file": "simulation-live-2026-10-21.json"
+}

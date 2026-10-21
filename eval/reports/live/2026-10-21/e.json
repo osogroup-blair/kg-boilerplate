@@ -1,0 +1,117 @@
+{
+  "step": "e",
+  "command": "eval.consolidation.run_eval --mode live",
+  "exit_code": 0,
+  "seconds": 128.7,
+  "report": {
+    "mode": "live",
+    "date": "2026-10-21",
+    "reinforce": {
+      "cases": {
+        "paraphrases fold": {
+          "got": [
+            [
+              "a",
+              "b",
+              "c"
+            ]
+          ],
+          "want": [
+            [
+              "a",
+              "b",
+              "c"
+            ]
+          ],
+          "ok": true
+        },
+        "distinct claims stay": {
+          "got": [],
+          "want": [],
+          "ok": true
+        },
+        "same words different vectors": {
+          "got": [],
+          "want": [],
+          "ok": true
+        },
+        "different scope sets never mix": {
+          "got": [],
+          "want": [],
+          "ok": true
+        },
+        "different classification never mixes": {
+          "got": [],
+          "want": [],
+          "ok": true
+        },
+        "conflicting assertions never fold": {
+          "got": [],
+          "want": [],
+          "ok": true
+        },
+        "two independent clusters": {
+          "got": [
+            [
+              "a",
+              "b"
+            ],
+            [
+              "c",
+              "d"
+            ]
+          ],
+          "want": [
+            [
+              "a",
+              "b"
+            ],
+            [
+              "c",
+              "d"
+            ]
+          ],
+          "ok": true
+        }
+      },
+      "merged_distinct": 0,
+      "crossed_scope": 0,
+      "missed_duplicates": 0,
+      "ok": true
+    },
+    "synthesis": {
+      "cases": {
+        "cycling": {
+          "accepted": false,
+          "reason": "empty",
+          "groups": 1
+        },
+        "considerations": {
+          "accepted": true,
+          "reason": "",
+          "groups": 0
+        }
+      },
+      "answers": 2,
+      "valid": 1,
+      "merged_distinct_escaped": 0,
+      "escalations_escaped": 0,
+      "drops": {
+        "empty": 1
+      },
+      "validity_rate": 0.5,
+      "ok": true
+    },
+    "strict": {
+      "merged_distinct": 0,
+      "crossed_scope": 0,
+      "missed_duplicates": 0,
+      "bad_accepted": 0,
+      "good_refused": 0,
+      "merged_distinct_escaped": 0,
+      "escalations_escaped": 0
+    },
+    "ok": true
+  },
+  "report_file": "consolidation-live-2026-10-21.json"
+}

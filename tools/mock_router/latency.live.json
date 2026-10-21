@@ -1,0 +1,23 @@
+{
+  "_note": "captured by the live session (tools/live_session, step g); replaces the PROVISIONAL profile",
+  "chat": {
+    "oso/fast": {
+      "p50_ms": 605,
+      "p95_ms": 2544
+    },
+    "oso/general": {
+      "p50_ms": 915,
+      "p95_ms": 39717
+    },
+    "oso/code": {
+      "p50_ms": 1098,
+      "p95_ms": 1679
+    }
+  },
+  "embedding": {
+    "oso/embedding": {
+      "p50_ms": 232,
+      "p95_ms": 549
+    }
+  }
+}

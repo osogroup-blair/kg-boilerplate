@@ -31,7 +31,7 @@ async def test_g01_chat_round_trip_records_usage_and_metadata_only_log(env, corr
 
 async def test_g01_json_schema_round_trip_is_typed(env, corr):
     r = await env.gw.complete("graph_extraction", MSGS, classification="confidential", correlation=corr, response_schema=Extraction)
-    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/code"
+    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/code-high"
 
 
 async def test_g01_embeddings_round_trip(env, corr):
@@ -118,9 +118,7 @@ async def test_g03_exhausted_primary_falls_back_to_fallback_alias(env, corr):
     env.faults({"code": "provider_unavailable", "count": 4})
     r = await env.gw.complete("graph_extraction", MSGS, classification="internal", correlation=corr, response_schema=Extraction)
     assert (
-        r.fallback_used
-        and r.alias == "oso/code-high"
-        and [x["body"]["model"] for x in env.spy.requests] == ["oso/code"] * 4 + ["oso/code-high"]
+        r.fallback_used and r.alias == "oso/code" and [x["body"]["model"] for x in env.spy.requests] == ["oso/code-high"] * 4 + ["oso/code"]
     )
     assert env.log[-1].fallback_used and env.log[0].outcome == "provider_unavailable"
 
@@ -205,3 +203,13 @@ async def test_g04_wrong_dimension_is_rejected(corr):
     bad = Env(embedding_dim=128)
     with pytest.raises(EmbeddingDimensionError):
         await bad.gw.embed("embedding", ["x"], kind="query", classification="internal", correlation=corr)
+
+
+async def test_a_purpose_temperature_is_sent_with_the_request_and_absent_when_unset(env, corr):
+    await env.gw.complete("graph_extraction", MSGS, classification="internal", correlation=corr, response_schema=Extraction)
+    assert env.spy.requests[-1]["body"]["temperature"] == 0.0
+    await env.gw.complete("context_compression", MSGS, classification="internal", correlation=corr)
+    assert "temperature" not in env.spy.requests[-1]["body"]  # unset: the router's default applies
+    env.gw.config.purposes["context_compression"].temperature = 0.3
+    await env.gw.complete("context_compression", MSGS, classification="internal", correlation=corr)
+    assert env.spy.requests[-1]["body"]["temperature"] == 0.3

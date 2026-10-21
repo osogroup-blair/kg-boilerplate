@@ -1,0 +1,6 @@
+{
+  "step": "h",
+  "command": "tools.verify_router --only LV-10",
+  "exit_code": 1,
+  "seconds": 3.3
+}

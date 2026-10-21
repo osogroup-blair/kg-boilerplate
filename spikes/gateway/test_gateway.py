@@ -29,7 +29,7 @@ async def test_g01_chat_round_trip_records_usage_and_metadata_only_log(env, corr
 
 async def test_g01_json_schema_round_trip_is_typed(env, corr):
     r = await env.gw.complete("graph_extraction", MSGS, classification="confidential", correlation=corr, response_schema=Extraction)
-    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/code"
+    assert r.parsed == Extraction(name="sample", n=0, tags=[]) and r.alias == "oso/code-high"
 
 
 async def test_g01_embeddings_round_trip(env, corr):
@@ -105,7 +105,7 @@ async def test_g03_exhausted_primary_falls_back_to_fallback_alias(env, corr):
     # first alias fails 4 times (all attempts), the fallback alias then succeeds
     env.faults({"code": "provider_unavailable", "count": 4})
     r = await env.gw.complete("graph_extraction", MSGS, classification="internal", correlation=corr, response_schema=Extraction)
-    assert r.fallback_used and r.alias == "oso/code-high" and [x["body"]["model"] for x in env.spy.requests] == ["oso/code"] * 4 + ["oso/code-high"]
+    assert r.fallback_used and r.alias == "oso/code" and [x["body"]["model"] for x in env.spy.requests] == ["oso/code-high"] * 4 + ["oso/code"]
     assert env.gw.call_log[-1].fallback_used and env.gw.call_log[0].outcome == "provider_unavailable"
 
 

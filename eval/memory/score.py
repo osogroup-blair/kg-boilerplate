@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from kg_memory.extract import asserts_decision
@@ -12,7 +13,9 @@ def _scope_of(scopes: list[tuple[str, str]]) -> str:
     return "subject" if kinds == {"subject"} else "workspace" if kinds == {"workspace"} else "+".join(sorted(kinds))
 
 
-def matches(want: dict[str, Any], got: dict[str, Any]) -> bool:
+def matches(want: dict[str, Any], got: dict[str, Any], conveys: Callable[[list[str], str], bool] | None = None) -> bool:
+    """`conveys(required, memory_text)` (live runs only) is a semantic fallback for `must_contain`: consulted when the exact substring check fails, after every cheaper
+    condition has passed. `must_not_contain` stays an exact check: a forbidden claim is never excused by a paraphrase test."""
     text = got["content"].lower()
     return (
         got["type"] == want["type"]
@@ -20,14 +23,23 @@ def matches(want: dict[str, Any], got: dict[str, Any]) -> bool:
         and got["evidence_status"] == want["evidence_status"]
         and sorted(got["subjects"]) == sorted(want["subjects"])
         and _scope_of(got["scopes"]) == want["scope"]
-        and all(p.lower() in text for p in want["must_contain"])
         and not any(p.lower() in text for p in want["must_not_contain"])
         and sorted(got["linked_facts"]) == sorted(want["linked_facts"])
+        and (
+            all(p.lower() in text for p in want["must_contain"])
+            or (conveys is not None and conveys(list(want["must_contain"]), got["content"]))
+        )
     )
 
 
 def score(
-    gold: dict[str, Any], memories: list[dict[str, Any]], stage: dict[str, Any], source_text: str, linked: set[str], reviews: int
+    gold: dict[str, Any],
+    memories: list[dict[str, Any]],
+    stage: dict[str, Any],
+    source_text: str,
+    linked: set[str],
+    reviews: int,
+    conveys: Callable[[list[str], str], bool] | None = None,
 ) -> dict[str, Any]:
     """`memories`: dicts with type, status, evidence_status, content, subjects (names), scopes [(kind, ref)], linked_facts (rel types), origin.
     `stage`: the memory_propose stage as the API reports it (status, last_error_code, result). `linked`: the names of the entities the interaction was linked to (subjects and accepted mentions)."""
@@ -36,7 +48,7 @@ def score(
     unmatched = list(memories)
     tp = 0
     for w in want:
-        hit = next((m for m in unmatched if matches(w, m)), None)
+        hit = next((m for m in unmatched if matches(w, m, conveys)), None)
         if hit is not None:
             unmatched.remove(hit)
             tp += 1

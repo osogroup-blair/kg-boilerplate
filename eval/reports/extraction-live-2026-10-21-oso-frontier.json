@@ -1,0 +1,359 @@
+{
+  "mode": "live",
+  "date": "2026-10-21",
+  "summary": {
+    "scenarios": 7,
+    "fact_precision": 0.8571,
+    "fact_recall": 1.0,
+    "status_correct": 1.0,
+    "valid_time_correct": 0.3333,
+    "identity_correct": 1.0,
+    "entities_ok": false,
+    "reviews_ok": false,
+    "reverts_ok": true,
+    "stage_outcomes_ok": false,
+    "missed_reverts": 0,
+    "cross_workspace_links": 0,
+    "unquarantined_unparseable": 1,
+    "chat_calls_per_episode": 4.29,
+    "tokens_per_episode": 6263.7,
+    "latency_seconds": {
+      "p50": 29.38,
+      "p95": 30.06
+    },
+    "embedding_distribution": {
+      "related": {
+        "pairs": [
+          [
+            "Sarah Johnson",
+            "S. Johnson"
+          ],
+          [
+            "Sarah Johnson",
+            "Sarah J."
+          ],
+          [
+            "Michael",
+            "Mike"
+          ],
+          [
+            "Acme",
+            "Acme Corp"
+          ],
+          [
+            "Entrepreneurship",
+            "Entrepreneur"
+          ]
+        ],
+        "cosine": [
+          0.8931,
+          0.9231,
+          0.9344,
+          0.9628,
+          0.9558
+        ],
+        "min": 0.8931,
+        "max": 0.9628,
+        "mean": 0.9338
+      },
+      "same_name": {
+        "pairs": [
+          [
+            "Sarah Johnson",
+            "Sarah Johnson"
+          ]
+        ],
+        "cosine": [
+          1.0
+        ],
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "unrelated": {
+        "pairs": [
+          [
+            "Sarah Johnson",
+            "Michael"
+          ],
+          [
+            "Acme",
+            "Entrepreneurship"
+          ],
+          [
+            "Sarah Johnson",
+            "Acme"
+          ],
+          [
+            "Michael",
+            "Velo Club"
+          ],
+          [
+            "Tom",
+            "NewCo"
+          ]
+        ],
+        "cosine": [
+          0.7913,
+          0.8107,
+          0.7617,
+          0.795,
+          0.8023
+        ],
+        "min": 0.7617,
+        "max": 0.8107,
+        "mean": 0.7922
+      },
+      "suggested_floor": 0.8519
+    }
+  },
+  "scenarios": [
+    {
+      "id": "backdated",
+      "stage_ok": true,
+      "facts": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        1,
+        1
+      ],
+      "valid_time_correct": [
+        1,
+        1
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 5,
+      "embedding_calls": 6,
+      "prompt_tokens": 5720,
+      "completion_tokens": 1269,
+      "seconds": 30.06,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "bad_json",
+      "stage_ok": false,
+      "facts": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        0,
+        0
+      ],
+      "valid_time_correct": [
+        0,
+        0
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 3,
+      "embedding_calls": 2,
+      "prompt_tokens": 4006,
+      "completion_tokens": 556,
+      "seconds": 17.32,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "cyclist",
+      "stage_ok": true,
+      "facts": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        1,
+        1
+      ],
+      "valid_time_correct": [
+        0,
+        1
+      ],
+      "entities_ok": false,
+      "identity_ok": true,
+      "reviews_ok": false,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 4,
+      "embedding_calls": 6,
+      "prompt_tokens": 5074,
+      "completion_tokens": 1352,
+      "seconds": 42.04,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "manager",
+      "stage_ok": true,
+      "facts": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        1,
+        1
+      ],
+      "valid_time_correct": [
+        0,
+        1
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 4,
+      "embedding_calls": 6,
+      "prompt_tokens": 5024,
+      "completion_tokens": 1322,
+      "seconds": 29.47,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "s_johnson",
+      "stage_ok": true,
+      "facts": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        0,
+        0
+      ],
+      "valid_time_correct": [
+        0,
+        0
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": false,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 4,
+      "embedding_calls": 2,
+      "prompt_tokens": 4946,
+      "completion_tokens": 820,
+      "seconds": 20.34,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "evt003",
+      "stage_ok": true,
+      "facts": {
+        "tp": 2,
+        "fp": 1,
+        "fn": 0,
+        "false_positives": [
+          [
+            "Michael",
+            "ENCOURAGES",
+            "Sarah Johnson"
+          ]
+        ],
+        "missing": []
+      },
+      "status_correct": [
+        2,
+        2
+      ],
+      "valid_time_correct": [
+        0,
+        2
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 5,
+      "embedding_calls": 10,
+      "prompt_tokens": 5500,
+      "completion_tokens": 1741,
+      "seconds": 29.38,
+      "attempts": 1,
+      "known_entities": 4
+    },
+    {
+      "id": "newco",
+      "stage_ok": true,
+      "facts": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "false_positives": [],
+        "missing": []
+      },
+      "status_correct": [
+        1,
+        1
+      ],
+      "valid_time_correct": [
+        1,
+        1
+      ],
+      "entities_ok": true,
+      "identity_ok": true,
+      "reviews_ok": true,
+      "reverts_ok": true,
+      "aliases_ok": true,
+      "unchanged_ok": true,
+      "missed_revert": 0,
+      "drift": [],
+      "chat_calls": 5,
+      "embedding_calls": 7,
+      "prompt_tokens": 5704,
+      "completion_tokens": 812,
+      "seconds": 28.4,
+      "attempts": 1,
+      "known_entities": 4
+    }
+  ],
+  "problems": [
+    "unquarantined_unparseable = 1 (strict: must be 0)"
+  ]
+}

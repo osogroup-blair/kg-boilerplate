@@ -10,6 +10,9 @@ candidate precision and recall, drop reasons, and the three STRICT counters (esc
 PART 2, retrieval (RET-02): one workspace with the extracted memories plus unrelated filler; a small labelled query set; recall@3 of the gold memory, whether a distractor
 reaches the top 3, and the cosine distribution of gold / distractor / filler (the data that sets MEMORY_VEC_MIN_COSINE, ADR-013).
 
+Live runs are not repeatable by nature, so `--repeat N` runs every scenario N times in fresh workspaces and reports the mean and range, and `--semantic` (on by default in live
+mode) lets a judge model accept a correct paraphrase of a `must_contain` phrase (eval/memory/judge.py); the offline run is unchanged.
+
 Output: eval/reports/memory-<mode>-<date>.json and a markdown summary next to it. Exit code 0 only when the thresholds hold."""
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from eval.memory.gold import load  # noqa: E402
+from eval.memory.judge import Judge  # noqa: E402
 from eval.memory.queries import FILLERS, QUERIES  # noqa: E402
 from eval.memory.score import score  # noqa: E402
 
@@ -70,6 +74,48 @@ def summarise(scenarios: list[dict[str, Any]], retrieval: dict[str, Any]) -> dic
         "latency_seconds": {
             "p50": round(statistics.median(s["seconds"] for s in scenarios), 2),
             "p95": round(sorted(s["seconds"] for s in scenarios)[max(0, int(len(scenarios) * 0.95) - 1)], 2),
+        },
+    }
+
+
+def aggregate(results: list[dict[str, Any]], repeat: int) -> dict[str, Any]:
+    """Mean and range over the repetitions: per run, and per scenario (the same scenario is run `repeat` times in fresh workspaces)."""
+
+    def rate(tp: int, other: int) -> float:
+        return round(tp / (tp + other), 4) if tp + other else 1.0
+
+    def spread(values: list[float]) -> dict[str, float]:
+        return {"mean": round(statistics.mean(values), 4), "min": round(min(values), 4), "max": round(max(values), 4)}
+
+    per_run = []
+    for run_no in range(1, repeat + 1):
+        rs = [r for r in results if r.get("run") == run_no]
+        tp, fp, fn = (sum(r["memories"][k] for r in rs) for k in ("tp", "fp", "fn"))
+        per_run.append({"run": run_no, "tp": tp, "fp": fp, "fn": fn, "precision": rate(tp, fp), "recall": rate(tp, fn)})
+    per_scenario: dict[str, Any] = {}
+    for sid in sorted({r["id"] for r in results}):
+        rs = [r for r in results if r["id"] == sid]
+        per_scenario[sid] = {
+            "tp": [r["memories"]["tp"] for r in rs],
+            "fp": [r["memories"]["fp"] for r in rs],
+            "fn": [r["memories"]["fn"] for r in rs],
+            "tp_mean": round(statistics.mean(r["memories"]["tp"] for r in rs), 2),
+            "fp_mean": round(statistics.mean(r["memories"]["fp"] for r in rs), 2),
+            "fn_mean": round(statistics.mean(r["memories"]["fn"] for r in rs), 2),
+            "seconds": spread([r["seconds"] for r in rs]),
+        }
+    return {
+        "runs": repeat,
+        "per_run": per_run,
+        "per_scenario": per_scenario,
+        "overall": {
+            "runs": repeat,
+            "precision": spread([r["precision"] for r in per_run]),
+            "recall": spread([r["recall"] for r in per_run]),
+            "strict_counters_all_zero": all(
+                r["escalation_violations"] == r["unmapped_subject_leaks"] == r["procedural_auto_activations"] == r["scope_violations"] == 0
+                for r in results
+            ),
         },
     }
 
@@ -147,6 +193,27 @@ def markdown(report: dict[str, Any]) -> str:
             for x in report["scenarios"]
         ],
     ]
+    if report.get("repeats"):
+        rp = report["repeats"]
+        o = rp["overall"]
+        lines += [
+            "",
+            f"## Repeated runs ({rp['runs']}; semantic match {'ON' if s.get('semantic_match') else 'off'})",
+            "",
+            f"Precision mean {o['precision']['mean']} (range {o['precision']['min']} to {o['precision']['max']}); recall mean {o['recall']['mean']} "
+            f"(range {o['recall']['min']} to {o['recall']['max']}); strict counters all zero in every run: {o['strict_counters_all_zero']}.",
+            "",
+            "| run | tp | fp | fn | precision | recall |",
+            "|---|---|---|---|---|---|",
+            *[f"| {x['run']} | {x['tp']} | {x['fp']} | {x['fn']} | {x['precision']} | {x['recall']} |" for x in rp["per_run"]],
+            "",
+            "| scenario | tp per run | fp per run | fn per run | seconds mean (min-max) |",
+            "|---|---|---|---|---|",
+            *[
+                f"| {sid} | {v['tp']} | {v['fp']} | {v['fn']} | {v['seconds']['mean']} ({v['seconds']['min']}-{v['seconds']['max']}) |"
+                for sid, v in rp["per_scenario"].items()
+            ],
+        ]
     if report["problems"]:
         lines += ["", "## Problems", "", *[f"- {p}" for p in report["problems"]]]
     return "\n".join(lines) + "\n"
@@ -266,7 +333,7 @@ async def retrieval_phase(api: Any, make_tenant: Any, clear_graph: Any) -> dict[
         await clear_graph(api, t.group_id)
 
 
-async def run(mode: str, only: set[str] | None) -> int:
+async def run(mode: str, only: set[str] | None, *, semantic: bool = False, repeat: int = 1) -> int:
     from asgi_lifespan import LifespanManager
     from kg_api.main import build_app
     from kg_db import migrate
@@ -294,6 +361,7 @@ async def run(mode: str, only: set[str] | None) -> int:
     settings = make_test_settings(**overrides)
     engine = create_app_engine(settings, pool_size=3, max_overflow=2, url=APP_URL)
     app = build_app(settings)
+    judge = Judge(settings.router_base_url, os.environ["OSO_ROUTER_API_KEY"]) if semantic and live else None
     results: list[dict[str, Any]] = []
     retrieval: dict[str, Any] = {}
     try:
@@ -301,44 +369,52 @@ async def run(mode: str, only: set[str] | None) -> int:
             transport = httpx.ASGITransport(app=manager.app)
             async with httpx.AsyncClient(transport=transport, base_url="http://kg.test") as client:
                 api = ApiStack(app, client, {}, engine, settings)
-                for gold in load():
-                    if only and gold["id"] not in only:
-                        continue
-                    t = await make_tenant(api, ontology=MEMORY_YAML)
-                    try:
-                        ids = await sarah_story(t)
-                        names = {
-                            "Sarah Johnson": ids["sarah"],
-                            "Michael": ids["michael"],
-                            "Entrepreneurship": ids["topic"],
-                            "Acme": ids["acme"],
-                        }
-                        started = time.perf_counter()
-                        detail = await run_event(
-                            api, t, gold["content"], subjects=[names[n] for n in gold["subjects"]], occurred_at=gold["occurred_at"]
-                        )
-                        seconds = time.perf_counter() - started
-                        memories = await memory_snapshot(api, t)
-                        scored = score(
-                            gold,
-                            memories,
-                            stage(detail, "memory_propose"),
-                            gold["content"]["content"],
-                            await linked_names(api, t, detail["id"]),
-                            await memory_review_count(api, t),
-                        )
-                        scored["seconds"] = round(seconds, 2)
-                        results.append(scored)
-                        ok = (
-                            scored["stage_ok"]
-                            and scored["drops_ok"]
-                            and scored["reviews_ok"]
-                            and not scored["memories"]["fp"]
-                            and not scored["memories"]["fn"]
-                        )
-                        print(f"  {gold['id']:<14} {'ok' if ok else 'CHECK'}  {seconds:5.1f}s", flush=True)
-                    finally:
-                        await clear_graph(api, t.group_id)
+                for rep in range(1, repeat + 1):
+                    if repeat > 1:
+                        print(f"-- run {rep} of {repeat}", flush=True)
+                    for gold in load():
+                        if only and gold["id"] not in only:
+                            continue
+                        t = await make_tenant(api, ontology=MEMORY_YAML)
+                        try:
+                            ids = await sarah_story(t)
+                            names = {
+                                "Sarah Johnson": ids["sarah"],
+                                "Michael": ids["michael"],
+                                "Entrepreneurship": ids["topic"],
+                                "Acme": ids["acme"],
+                            }
+                            started = time.perf_counter()
+                            detail = await run_event(
+                                api, t, gold["content"], subjects=[names[n] for n in gold["subjects"]], occurred_at=gold["occurred_at"]
+                            )
+                            seconds = time.perf_counter() - started
+                            memories = await memory_snapshot(api, t)
+                            scored = score(
+                                gold,
+                                memories,
+                                stage(detail, "memory_propose"),
+                                gold["content"]["content"],
+                                await linked_names(api, t, detail["id"]),
+                                await memory_review_count(api, t),
+                                judge.conveys if judge else None,
+                            )
+                            scored["seconds"] = round(seconds, 2)
+                            scored["run"] = rep
+                            if judge:
+                                scored["judge"], judge.log = judge.log, []
+                            results.append(scored)
+                            ok = (
+                                scored["stage_ok"]
+                                and scored["drops_ok"]
+                                and scored["reviews_ok"]
+                                and not scored["memories"]["fp"]
+                                and not scored["memories"]["fn"]
+                            )
+                            judged = f"  (judge asked {len(scored['judge'])}x)" if judge and scored["judge"] else ""
+                            print(f"  {gold['id']:<14} {'ok' if ok else 'CHECK'}  {seconds:5.1f}s{judged}", flush=True)
+                        finally:
+                            await clear_graph(api, t.group_id)
                 if not only:
                     retrieval = await retrieval_phase(api, make_tenant, clear_graph)
     finally:
@@ -349,6 +425,10 @@ async def run(mode: str, only: set[str] | None) -> int:
     if not retrieval:
         retrieval = {"queries": [], "recall_at_3": 1.0, "distractor_in_top3": 0, "cosine": {}}
     summary = summarise(results, retrieval)
+    repeats = aggregate(results, repeat) if repeat > 1 else None
+    if repeats:
+        summary["repeats"] = repeats["overall"]
+    summary["semantic_match"] = bool(judge)
     problems = verdict(summary, mode)
     report = {
         "mode": mode,
@@ -356,6 +436,7 @@ async def run(mode: str, only: set[str] | None) -> int:
         "summary": summary,
         "retrieval": retrieval,
         "scenarios": results,
+        **({"repeats": repeats} if repeats else {}),
         "problems": problems,
     }
     REPORTS.mkdir(parents=True, exist_ok=True)
@@ -371,11 +452,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--mode", choices=["mock", "live"], default=os.environ.get("OSO_ROUTER_MODE", "mock"))
     parser.add_argument("--only", default="", help="comma list of scenario ids (skips the retrieval phase)")
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="run every scenario this many times in fresh workspaces and report the mean and range (a live model does not repeat itself)",
+    )
+    parser.add_argument(
+        "--semantic",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="live mode only: when the exact must_contain check fails, ask a judge model whether the memory conveys the required elements in other words (auto = on in live mode)",
+    )
     args = parser.parse_args()
     if args.mode == "live" and not os.environ.get("OSO_ROUTER_API_KEY"):
         print("live mode needs OSO_ROUTER_API_KEY in the environment (it is never printed or written)", file=sys.stderr)
         sys.exit(2)
-    sys.exit(asyncio.run(run(args.mode, set(filter(None, args.only.split(","))) or None)))
+    semantic = args.semantic == "on" or (args.semantic == "auto" and args.mode == "live")
+    sys.exit(asyncio.run(run(args.mode, set(filter(None, args.only.split(","))) or None, semantic=semantic, repeat=max(1, args.repeat))))
 
 
 if __name__ == "__main__":
